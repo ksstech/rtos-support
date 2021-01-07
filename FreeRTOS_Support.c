@@ -520,7 +520,7 @@ int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size
 	if (FlagMask.bCore)		iRV += wsnprintfx(&pcBuf, &Size, "X ") ;
 #endif
 	iRV += wsnprintfx(&pcBuf, &Size, "%%Util ") ;
-#if		(configPRODUCTION == 0)
+#if		(!defined(NDEBUG) || defined(DEBUG))
 	if (FlagMask.bXtras)	iRV += wsnprintfx(&pcBuf, &Size, " Ticks Stack Base -Task TCB-") ;
 #endif
 	if (FlagMask.bColor)	iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET) ;
@@ -564,7 +564,7 @@ int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size
     	Fract = (u64RunTime * 100 / SystemRT) % 100 ;
 		iRV += wsnprintfx(&pcBuf, &Size, "%2u.%02u ", Units, Fract) ;
 
-#if		(configPRODUCTION == 0)
+#if		(!defined(NDEBUG) || defined(DEBUG))
 		if (FlagMask.bXtras)	iRV += wsnprintfx(&pcBuf, &Size, "%#'6llu %p %p", u64RunTime, pxTaskGetStackStart(psTS->xHandle), psTS->xHandle) ;
 #endif
 		iRV += wsnprintfx(&pcBuf, &Size, "\n") ;
