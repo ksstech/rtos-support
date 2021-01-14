@@ -602,7 +602,6 @@ NextTask:
 }
 
 void	vRtosReportMemory(void) {
-    printfx("Heap: %'#u / %'#u / %'#u\n\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin) ;
 #if		defined(ESP_PLATFORM)
 	halMCU_ReportMemory(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL | MALLOC_CAP_32BIT) ;
 	halMCU_ReportMemory(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) ;
@@ -611,6 +610,7 @@ void	vRtosReportMemory(void) {
 	halMCU_ReportMemory(MALLOC_CAP_IRAM_8BIT) ;
 	halMCU_ReportMemory(MALLOC_CAP_SPIRAM) ;
 #endif
+    printfx("%CFreeRTOS%C\tMin=%'#u  Free=%'#u  Orig=%'#u\n\n", xpfSGR(attrRESET, colourFG_CYAN, 0, 0), xpfSGR(attrRESET, 0, 0, 0), xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin) ;
 }
 
 /*
