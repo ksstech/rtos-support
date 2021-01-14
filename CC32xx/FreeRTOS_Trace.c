@@ -263,13 +263,13 @@ uint32_t	TraceIdx ;
 		puts(Buffer) ;
 		TraceWidth	+= pBuf - Buffer ;
 	// setup colors for TRACEd task name
-		vTermSetForeBackground(trcMASK_Tasks[TraceIdx].ColorFG, colourBLACK) ;
+		vANSIattrib(trcMASK_Tasks[TraceIdx].ColorFG, colourBLACK) ;
 	// print the TRACEd task name
 		TraceString(TraceName, 5) ;
 		TraceWidth += 5 ;
 
 	// Setup colors for TRACE function
-		vTermSetForeBackground(colourWHITE_BRIGHT,  (pTrcOut->code < trcCODE_QuC)	? colourRED		:
+		vANSIattrib(colourWHITE_BRIGHT,  (pTrcOut->code < trcCODE_QuC)	? colourRED		:
 													(pTrcOut->code < trcCODE_MuC)	? colourGREEN	:
 													(pTrcOut->code < trcCODE_CSC)	? colourYELLOW	:
 													(pTrcOut->code < trcCODE_TiC)	? colourBLUE	:
@@ -279,7 +279,7 @@ uint32_t	TraceIdx ;
 		TraceString(traceCODE[pTrcOut->code], 5) ;
 		TraceWidth += 5 ;
 	// Setup colors for TRACE parameters
-		vTermSetForeBackground(colourWHITE, colourBLACK) ;
+		vANSIattrib(colourWHITE, colourBLACK) ;
 	// Handle the parameters based on category
 		if (TraceMask & trcMASK_TaALL) {
 			if ((pTrcOut->code == trcCODE_TaIT) ||
