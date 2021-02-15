@@ -250,7 +250,7 @@ int32_t	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 						UBaseType_t uxPriority,
 						TaskHandle_t * pxCreatedTask,
 						const BaseType_t xCoreID) {
-	IF_SL_DBG(debugTRACK, "'%s' S=%d P=%d", pcName, usStackDepth, uxPriority) ;
+	IF_SL_INFO(debugTRACK, "'%s' S=%d P=%d", pcName, usStackDepth, uxPriority) ;
 #if		defined(ESP_PLATFORM) && defined(CONFIG_FREERTOS_UNICORE)
 	UNUSED(xCoreID) ;
 	return xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask) ;
