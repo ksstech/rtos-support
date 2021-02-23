@@ -73,6 +73,7 @@ void	vTaskDumpStack(void *, uint32_t ) ;
 #define	xRtosSetStatus(X)			xEventGroupSetBits(xEventStatus, X)
 #define	xRtosClearStatus(X)			xEventGroupClearBits(xEventStatus, X)
 #define	xRtosWaitStatus(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y)
+#define	bRtosWaitStatusALL(X,Y)		(((xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y) & X) == X) ? 1 : 0)
 #define	xRtosWaitStatusANY(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdFALSE, Y)
 
 bool	bRtosCheckStatus(const EventBits_t uxBitsToCheckFor) ;
