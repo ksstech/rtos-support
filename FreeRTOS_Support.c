@@ -188,9 +188,6 @@ void	myApplicationTickHook(void) {}
 #else
 
 void	vApplicationTickHook(void) {
-	#if		(halTIMER_RTOS_XTIMETICKHOOK == 1)
-	halTIMER_TickHook() ;						// update CurSecs & RunSecs
-	#endif
 	#if (configHAL_GPIO_DIG_IN > 0)
 	halGPIO_TickHook() ;						// button debounce functionality
 	#endif
@@ -382,8 +379,6 @@ bool	bRtosVerifyState(const EventBits_t uxBitsTasks) {
 
 static const char TaskState[] = "RPBSD" ;
 
-uint8_t * pxTaskGetStackStart( TaskHandle_t xTask) ;
-
 typedef struct	rtosinfo_s {
 	TaskStatus_t *	pTSA ;								// pointer to malloc'd status info
 	UBaseType_t 	NumTask ;							// Currently "active" tasks
@@ -451,7 +446,6 @@ int32_t	vRtosStatsUpdate(bool fFree) {
 			if (sTI[j].xHandle == NULL) {				// empty entry so just add the task info
 				sTI[j].xHandle			= sRI.pTSA[i].xHandle ;
 				sTI[j].u32RunTimeLSW	= sRI.pTSA[i].ulRunTimeCounter ;
-//				PRINT("New T#=%u  RT=%llu\n", sRI.pTSA[i].xTaskNumber, sTI[j].u64RunTime) ;
 				break ;
 			}
 			if (sTI[j].xHandle == sRI.pTSA[i].xHandle) {	// existing task?
@@ -464,7 +458,7 @@ int32_t	vRtosStatsUpdate(bool fFree) {
 		}
 		sRI.u64TotalRunTime += sTI[i].u64RunTime ;
 	}
-	if (fFree == true)
+	if (fFree)
 		free(sRI.pTSA) ;
 	return erSUCCESS ;
 }
@@ -485,7 +479,7 @@ uint64_t xRtosStatsGetRunTime(TaskHandle_t xHandle) {
 
 int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	int32_t	i, iRV = 0 ;
-	if (vRtosStatsUpdate(false) != erSUCCESS)
+	if (vRtosStatsUpdate(0) != erSUCCESS)
 		return erFAILURE ;
 
 	/* u64SystemRunTime is the running total number of ticks. If we have >1 MCU the "effective"
@@ -506,8 +500,8 @@ int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size
 	sRI.u64TasksRunTime = 0ULL ;
 	TaskHandle_t	pCurTCB		= xTaskGetCurrentTaskHandle() ;
 	// If no buffer is specified then we need to manually lock the stdout printfx semaphore
-	if (pcBuf == NULL)
-		printfx_lock() ;
+	if (pcBuf == NULL)		printfx_lock() ;
+
 	// build column organised header
 	if (FlagMask.bColor)	iRV += wsnprintfx(&pcBuf, &Size, "%C", xpfSGR(colourFG_CYAN, 0, 0, 0)) ;
 	if (FlagMask.bCount)	iRV += wsnprintfx(&pcBuf, &Size, "T# ") ;
@@ -529,12 +523,13 @@ int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size
 	uint32_t TaskMask = 0x00000001, Units, Fract ;
 	for (UBaseType_t xNum = 1; xNum <= sRI.MaxNum; ++xNum) {
 		TaskStatus_t *	psTS = psRtosStatsFindEntry(xNum) ;
-		if (psTS == NULL)								// task# missing
-			continue ;
+		if (psTS == NULL)		continue ;				// task# missing
 		uint64_t u64RunTime = xRtosStatsGetRunTime(psTS->xHandle) ;
 
 		// For IDLe task(s) we do not want to add RunTime %'s to the TasksRunTime or CoresRunTime
-	    for(i = 0; i < portNUM_PROCESSORS; ++i) { if (psTS->xHandle == IdleHandle[i]) break ; }
+	    for(i = 0; i < portNUM_PROCESSORS; ++i)
+	    	if (psTS->xHandle == IdleHandle[i]) break ;
+
 	    if (i == portNUM_PROCESSORS) {				// fell through so NOT an IDLE task
 	    	sRI.u64TasksRunTime += u64RunTime ;
 	#if		(portNUM_PROCESSORS > 1)
