@@ -253,7 +253,8 @@ int32_t	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 #elif	defined(ESP_PLATFORM)
 	return xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID ) ;
 #else
-	#error "No/invalid platform deefined"
+	#error "No/invalid platform defined"
+	return erFAILURE ;
 #endif
 }
 
@@ -512,9 +513,9 @@ int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size
 #if		(portNUM_PROCESSORS > 1)
 	if (FlagMask.bCore)		iRV += wsnprintfx(&pcBuf, &Size, "X ") ;
 #endif
-	iRV += wsnprintfx(&pcBuf, &Size, "%%Util ") ;
-#if		(!defined(NDEBUG) || defined(DEBUG))
-	if (FlagMask.bXtras)	iRV += wsnprintfx(&pcBuf, &Size, " Ticks Stack Base -Task TCB-") ;
+	iRV += wsnprintfx(&pcBuf, &Size, "%%Util Ticks") ;
+#if		((!defined(NDEBUG) || defined(DEBUG)) && (SL_LEVEL > SL_SEV_NOTICE))
+	if (FlagMask.bXtras)	iRV += wsnprintfx(&pcBuf, &Size, " Stack Base -Task TCB-") ;
 #endif
 	if (FlagMask.bColor)	iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET) ;
 	iRV += wsnprintfx(&pcBuf, &Size, "\n") ;
@@ -541,6 +542,8 @@ int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size
 	    // if task info display not enabled, skip....
 		if (!(FlagMask.uCount & TaskMask))
 			goto NextTask ;
+
+		// Now start displaying the actual task info....
 		if (FlagMask.bCount)	iRV += wsnprintfx(&pcBuf, &Size, "%2u ",psTS->xTaskNumber) ;
 		if (FlagMask.bPrioX)	iRV += wsnprintfx(&pcBuf, &Size, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority) ;
 		iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName) ;
@@ -556,12 +559,13 @@ int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size
 		// Calculate & display individual task utilization.
     	Units = u64RunTime / SystemRT ;
     	Fract = (u64RunTime * 100 / SystemRT) % 100 ;
-		iRV += wsnprintfx(&pcBuf, &Size, "%2u.%02u ", Units, Fract) ;
+		iRV += wsnprintfx(&pcBuf, &Size, "%2u.%02u %#'5llu", Units, Fract, u64RunTime) ;
 
-#if		(!defined(NDEBUG) || defined(DEBUG))
-		if (FlagMask.bXtras)	iRV += wsnprintfx(&pcBuf, &Size, "%#'6llu %p %p", u64RunTime, pxTaskGetStackStart(psTS->xHandle), psTS->xHandle) ;
-#endif
+#if		((!defined(NDEBUG) || defined(DEBUG)) && (SL_LEVEL > SL_SEV_NOTICE))
+		if (FlagMask.bXtras)	iRV += wsnprintfx(&pcBuf, &Size, " %p %p\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle) ;
+#else
 		iRV += wsnprintfx(&pcBuf, &Size, "\n") ;
+#endif
 NextTask:
 		TaskMask <<= 1 ;
 	}
