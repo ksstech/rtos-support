@@ -374,7 +374,7 @@ bool	bRtosVerifyState(const EventBits_t uxBitsTasks) {
 
 static const char TaskState[] = "RPBSD" ;
 
-typedef struct	rtosinfo_s {
+typedef struct	rtosinfo_t {
 	TaskStatus_t *	pTSA ;								// pointer to malloc'd status info
 	UBaseType_t 	NumTask ;							// Currently "active" tasks
 	UBaseType_t 	MaxNum ;							// Highest logical task number
@@ -392,7 +392,7 @@ typedef struct	rtosinfo_s {
 #endif
 } rtosinfo_t ;
 
-typedef struct	taskinfo_s {
+typedef struct	taskinfo_t {
 	TaskHandle_t	xHandle ;
 	union {
 		struct {
