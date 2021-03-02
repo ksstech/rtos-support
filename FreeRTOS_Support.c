@@ -342,32 +342,32 @@ bool	bRtosVerifyState(const EventBits_t uxBitsTasks) {
 // ################################# FreeRTOS Task statistics reporting ############################
 
 #if		(configMAX_TASK_NAME_LEN == 16)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"---Task Name---"
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-16.15s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"---Task Name--- "
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-16.15s"
 #elif	(configMAX_TASK_NAME_LEN == 15)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"---TaskName---"
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-15.14s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"---TaskName--- "
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-15.14s"
 #elif	(configMAX_TASK_NAME_LEN == 14)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"--Task Name--"
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-14.13s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"--Task Name-- "
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-14.13s"
 #elif	(configMAX_TASK_NAME_LEN == 13)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"--TaskName--"
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-13.12s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"--TaskName-- "
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-13.12s"
 #elif	(configMAX_TASK_NAME_LEN == 12)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"-Task Name-"
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-12.11s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"-Task Name- "
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-12.11s"
 #elif	(configMAX_TASK_NAME_LEN == 11)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"-TaskName-"
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-11.10s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"-TaskName- "
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-11.10s"
 #elif	(configMAX_TASK_NAME_LEN == 10)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"Task Name"
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-10.9s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"Task Name "
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-10.9s"
 #elif	(configMAX_TASK_NAME_LEN == 9)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"TaskName"
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"TaskName "
 	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-9.8s"
 #elif	(configMAX_TASK_NAME_LEN == 8)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"TaskNam"
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-8.7s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"TskName "
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-8.7s"
 #else
 	#error "configMAX_TASK_NAME_LEN is out of range !!!"
 #endif
