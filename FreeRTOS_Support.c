@@ -342,38 +342,32 @@ bool	bRtosVerifyState(const EventBits_t uxBitsTasks) {
 // ################################# FreeRTOS Task statistics reporting ############################
 
 #if		(configMAX_TASK_NAME_LEN == 16)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"----TaskName---- "
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-16s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"---Task Name---"
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-16.15s "
 #elif	(configMAX_TASK_NAME_LEN == 15)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"---Task Name--- "
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-15s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"---TaskName---"
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-15.14s "
 #elif	(configMAX_TASK_NAME_LEN == 14)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"---TaskName--- "
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-14s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"--Task Name--"
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-14.13s "
 #elif	(configMAX_TASK_NAME_LEN == 13)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"--Task Name-- "
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-13s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"--TaskName--"
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-13.12s "
 #elif	(configMAX_TASK_NAME_LEN == 12)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"--TaskName-- "
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-12s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"-Task Name-"
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-12.11s "
 #elif	(configMAX_TASK_NAME_LEN == 11)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"-Task Name- "
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-11s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"-TaskName-"
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-11.10s "
 #elif	(configMAX_TASK_NAME_LEN == 10)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"-TaskName- "
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-10s "
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"Task Name"
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-10.9s "
 #elif	(configMAX_TASK_NAME_LEN == 9)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"Task Name "
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-9s "
-#elif	(configMAX_TASK_NAME_LEN == 8)
 	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"TaskName"
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-8s "
-#elif	(configMAX_TASK_NAME_LEN == 7)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"TskName "
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-7s "
-#elif	(configMAX_TASK_NAME_LEN == 6)
-	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"TskNam "
-	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-6s "
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-9.8s"
+#elif	(configMAX_TASK_NAME_LEN == 8)
+	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"TaskNam"
+	#define	configFREERTOS_TASKLIST_FMT_DETAIL		"%-8.7s "
 #else
 	#error "configMAX_TASK_NAME_LEN is out of range !!!"
 #endif
@@ -509,7 +503,7 @@ int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size
 	if (FlagMask.bPrioX)	iRV += wsnprintfx(&pcBuf, &Size, "Pc/Pb ") ;
 	iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_HDR_DETAIL) ;
 	if (FlagMask.bState)	iRV += wsnprintfx(&pcBuf, &Size, "S ") ;
-	if (FlagMask.bStack)	iRV += wsnprintfx(&pcBuf, &Size, " LowS ") ;
+	if (FlagMask.bStack)	iRV += wsnprintfx(&pcBuf, &Size, "LowS ") ;
 #if		(portNUM_PROCESSORS > 1)
 	if (FlagMask.bCore)		iRV += wsnprintfx(&pcBuf, &Size, "X ") ;
 #endif
@@ -551,7 +545,7 @@ int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size
 		 * is also in a Ready/Waiting state, so change flag if processing current task
 		 * This fix still leaves the task running on the other MCU unidentified */
 		if (FlagMask.bState)	iRV += wsnprintfx(&pcBuf, &Size, "%c ", psTS->xHandle == pCurTCB ? CHR_R : TaskState[psTS->eCurrentState]) ;
-		if (FlagMask.bStack)	iRV += wsnprintfx(&pcBuf, &Size, "%'5u ", psTS->usStackHighWaterMark) ;
+		if (FlagMask.bStack)	iRV += wsnprintfx(&pcBuf, &Size, "%'4u ", psTS->usStackHighWaterMark) ;
 #if		(portNUM_PROCESSORS > 1)
 		if (FlagMask.bCore)		iRV += wsnprintfx(&pcBuf, &Size, "%c ", (psTS->xCoreID > 1) ? CHR_X : CHR_0 + psTS->xCoreID) ;
 #endif
