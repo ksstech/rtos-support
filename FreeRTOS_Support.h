@@ -76,7 +76,6 @@ void	vTaskDumpStack(void *, uint32_t ) ;
 #define	bRtosWaitStatusALL(X,Y)		(((xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y) & X) == X) ? 1 : 0)
 #define	xRtosWaitStatusANY(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdFALSE, Y)
 
-bool	bRtosCheckStatus(const EventBits_t uxBitsToCheckFor) ;
 bool	bRtosToggleStatus(const EventBits_t uxBitsToToggle) ;
 bool	bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
 

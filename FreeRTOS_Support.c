@@ -303,12 +303,6 @@ BaseType_t	xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
 
 // ################################### Event status manipulation ###################################
 
-bool	bRtosCheckStatus(const EventBits_t uxBitsToCheckFor) {
-	if (xEventStatus == 0)
-		return false ;
-	return (xEventGroupGetBits(xEventStatus) & uxBitsToCheckFor) == uxBitsToCheckFor ? true : false ;
-}
-
 bool	bRtosToggleStatus(const EventBits_t uxBitsToToggle) {
 	int8_t	bRV ;
 	if (bRtosCheckStatus(uxBitsToToggle) == 1) {
