@@ -34,6 +34,29 @@ extern "C" {
 
 extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
 
+// ################################### Event status manipulation ###################################
+
+#define	xRtosSetStateRUN(X)			xEventGroupSetBits(TaskRunState, X)
+#define	xRtosClearStateRUN(X)		xEventGroupClearBits(TaskRunState, X)
+#define	xRtosWaitStateRUN(X,Y)		xEventGroupWaitBits(TaskRunState, X, pdFALSE, pdTRUE, Y)
+
+#define	xRtosSetStateDELETE(X)		xEventGroupSetBits(TaskDeleteState, X)
+#define	xRtosClearStateDELETE(X)	xEventGroupClearBits(TaskDeleteState, X)
+#define	xRtosWaitStateDELETE(X,Y)	xEventGroupWaitBits(TaskDeleteState, X, pdFALSE, pdTRUE, Y)
+
+#define	xRtosSetStatus(X)			xEventGroupSetBits(xEventStatus, X)
+#define	xRtosClearStatus(X)			xEventGroupClearBits(xEventStatus, X)
+#define	xRtosWaitStatus(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y)
+
+#define	bRtosWaitStatusALL(X,Y)		(((xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y) & X) == X) ? 1 : 0)
+#define	xRtosWaitStatusANY(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdFALSE, Y)
+
+#define	bRtosCheckStatus(X)			(((xEventGroupGetBits(xEventStatus) & (X)) == (X)) ? 1 : 0)
+#define	xRtosGetStatus(X)			(xEventGroupGetBits(xEventStatus) & (X))
+
+bool	bRtosToggleStatus(const EventBits_t uxBitsToToggle) ;
+bool	bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
+
 // ##################################### global function prototypes ################################
 
 void	myApplicationTickHook( void ) ;
@@ -59,25 +82,6 @@ void	vRtosReportMemory(void) ;
 int32_t	xRtosReportTasks(char *, size_t) ;
 int32_t	xRtosReportTasksNew(const flagmask_t, char *, size_t) ;
 void	vTaskDumpStack(void *, uint32_t ) ;
-
-// ################################### Event status manipulation ###################################
-
-#define	xRtosSetStateRUN(X)			xEventGroupSetBits(TaskRunState, X)
-#define	xRtosClearStateRUN(X)		xEventGroupClearBits(TaskRunState, X)
-#define	xRtosWaitStateRUN(X,Y)		xEventGroupWaitBits(TaskRunState, X, pdFALSE, pdTRUE, Y)
-
-#define	xRtosSetStateDELETE(X)		xEventGroupSetBits(TaskDeleteState, X)
-#define	xRtosClearStateDELETE(X)	xEventGroupClearBits(TaskDeleteState, X)
-#define	xRtosWaitStateDELETE(X,Y)	xEventGroupWaitBits(TaskDeleteState, X, pdFALSE, pdTRUE, Y)
-
-#define	xRtosSetStatus(X)			xEventGroupSetBits(xEventStatus, X)
-#define	xRtosClearStatus(X)			xEventGroupClearBits(xEventStatus, X)
-#define	xRtosWaitStatus(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y)
-#define	bRtosWaitStatusALL(X,Y)		(((xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y) & X) == X) ? 1 : 0)
-#define	xRtosWaitStatusANY(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdFALSE, Y)
-
-bool	bRtosToggleStatus(const EventBits_t uxBitsToToggle) ;
-bool	bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
 
 #ifdef __cplusplus
 }
