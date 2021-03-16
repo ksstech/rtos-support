@@ -209,7 +209,7 @@ bool	myApplicationIdleHook(void) {
 		}
 	}
 #endif
-	return true ;
+	return 1 ;
 }
 
 /*
@@ -315,18 +315,18 @@ bool	bRtosToggleStatus(const EventBits_t uxBitsToToggle) {
 /**
  * bRtosVerifyState() - check a) if task should self delete else b) if task should run
  * @param uxTaskToVerify
- * @return	false if task should delete, true if it should run...
+ * @return	0 if task should delete, 1 if it should run...
  */
 bool	bRtosVerifyState(const EventBits_t uxBitsTasks) {
 	// step 1: if task is meant to delete/terminate, inform it as such
 	if ((xEventGroupGetBits(TaskDeleteState) & uxBitsTasks) == uxBitsTasks)
-		return false ;
+		return 0 ;
 
 	// step 2: if not meant to terminate, check if/wait until enabled to run again
 	xEventGroupWaitBits(TaskRunState, uxBitsTasks, pdFALSE, pdTRUE, portMAX_DELAY) ;
 
 	// step 3: since now definitely enabled to run, check for delete state again
-	return ((xEventGroupGetBits(TaskDeleteState) & uxBitsTasks) == uxBitsTasks) ? false : true ;
+	return ((xEventGroupGetBits(TaskDeleteState) & uxBitsTasks) == uxBitsTasks) ? 0 : 1 ;
 }
 
 // ################################# FreeRTOS Task statistics reporting ############################
