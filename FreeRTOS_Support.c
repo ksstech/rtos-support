@@ -181,17 +181,13 @@ uint64_t	ElapsedSCC, Correction ;
  */
 
 #if		defined(ESP_PLATFORM)
-
-void	myApplicationTickHook(void) {}
-
+	void	myApplicationTickHook(void) {}
 #else
-
-void	vApplicationTickHook(void) {
-	#if (configHAL_GPIO_DIG_IN > 0)
-	halGPIO_TickHook() ;						// button debounce functionality
-	#endif
-}
-
+	void	vApplicationTickHook(void) {
+		#if (configHAL_GPIO_DIG_IN > 0)
+		halGPIO_TickHook() ;						// button debounce functionality
+		#endif
+	}
 #endif
 
 /*
@@ -464,8 +460,9 @@ uint64_t xRtosStatsGetRunTime(TaskHandle_t xHandle) {
 
 int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	int32_t	i, iRV = 0 ;
-	if (vRtosStatsUpdate(0) != erSUCCESS)
+	if (vRtosStatsUpdate(0) != erSUCCESS) {
 		return erFAILURE ;
+	}
 
 	/* u64SystemRunTime is the running total number of ticks. If we have >1 MCU the "effective"
 	 * number of ticks available for task executions is a multiple of the number of MCU's */
@@ -505,12 +502,17 @@ int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size
 	uint32_t TaskMask = 0x00000001, Units, Fract ;
 	for (UBaseType_t xNum = 1; xNum <= sRI.MaxNum; ++xNum) {
 		TaskStatus_t *	psTS = psRtosStatsFindEntry(xNum) ;
-		if (psTS == NULL)		continue ;				// task# missing
+		if (psTS == NULL){
+			continue ;				// task# missing
+		}
 		uint64_t u64RunTime = xRtosStatsGetRunTime(psTS->xHandle) ;
 
 		// For IDLe task(s) we do not want to add RunTime %'s to the TasksRunTime or CoresRunTime
-	    for(i = 0; i < portNUM_PROCESSORS; ++i)
-	    	if (psTS->xHandle == IdleHandle[i]) break ;
+	    for(i = 0; i < portNUM_PROCESSORS; ++i) {
+	    	if (psTS->xHandle == IdleHandle[i]) {
+	    		break ;
+	    	}
+	    }
 
 	    if (i == portNUM_PROCESSORS) {				// fell through so NOT an IDLE task
 	    	sRI.u64TasksRunTime += u64RunTime ;
@@ -521,9 +523,9 @@ int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size
 	    }
 
 	    // if task info display not enabled, skip....
-		if (!(FlagMask.uCount & TaskMask))
+		if ((FlagMask.uCount & TaskMask) == 0) {
 			goto NextTask ;
-
+		}
 		// Now start displaying the actual task info....
 		if (FlagMask.bCount)	iRV += wsnprintfx(&pcBuf, &Size, "%2u ",psTS->xTaskNumber) ;
 		if (FlagMask.bPrioX)	iRV += wsnprintfx(&pcBuf, &Size, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority) ;

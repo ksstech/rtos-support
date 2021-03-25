@@ -11,7 +11,7 @@
 #include	"freertos/semphr.h"
 #include	"freertos/event_groups.h"
 
-#include	"x_struct_union.h"							// x_time x_definitions stdint.h time.h
+#include	"x_struct_union.h"							// x_time x_definitions stdint time
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,10 +59,10 @@ bool	bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
 
 // ##################################### global function prototypes ################################
 
-void	myApplicationTickHook( void ) ;
-bool	myApplicationIdleHook( void ) ;
-void	vApplicationStackOverflowHook( TaskHandle_t * , char * ) ;
-void	vApplicationMallocFailedHook( void ) ;
+void	myApplicationTickHook(void) ;
+bool	myApplicationIdleHook(void) ;
+void	vApplicationStackOverflowHook(TaskHandle_t *, char *) ;
+void	vApplicationMallocFailedHook(void) ;
 
 int32_t	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 							const char * const pcName,
@@ -75,8 +75,8 @@ int32_t	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 BaseType_t	xRtosSemaphoreTake(SemaphoreHandle_t * pSema, uint32_t mSec) ;
 BaseType_t	xRtosSemaphoreGive(SemaphoreHandle_t * pSema) ;
 
-void	vRtosHeapSetup( void ) ;
-void	vRtosHeapFreeSafely( void * * ) ;
+void	vRtosHeapSetup(void) ;
+void	vRtosHeapFreeSafely(void * *) ;
 
 void	vRtosReportMemory(void) ;
 int32_t	xRtosReportTasks(char *, size_t) ;
