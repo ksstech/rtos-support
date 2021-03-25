@@ -20,7 +20,7 @@ extern "C" {
 // ##################################### MACRO definitions #########################################
 
 #define	MALLOC_MARK				int32_t m0, m1 ; m0 = xPortGetFreeHeapSize() ;
-#define	MALLOC_CHECK			m1 = xPortGetFreeHeapSize() ; if (m0 != m1) PRINT("m0=%d m1=%d d=%d\n", m0, m1, m0-m1) ;
+#define	MALLOC_CHECK			m1 = xPortGetFreeHeapSize() ; if (m0 != m1) printfx("m0=%d m1=%d d=%d\n", m0, m1, m0-m1) ;
 
 //#define pdTICKS_TO_MS(xTicks)	(((TickType_t) (xTicks) * (TickType_t) 1000 ) / (TickType_t) configTICK_RATE_HZ )
 
