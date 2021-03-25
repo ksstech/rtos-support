@@ -484,9 +484,6 @@ int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size
 #endif
 	sRI.u64TasksRunTime = 0ULL ;
 	TaskHandle_t	pCurTCB		= xTaskGetCurrentTaskHandle() ;
-	// If no buffer is specified then we need to manually lock the stdout printfx semaphore
-	if (pcBuf == NULL)		printfx_lock() ;
-
 	// build column organised header
 	if (FlagMask.bColor)	iRV += wsnprintfx(&pcBuf, &Size, "%C", xpfSGR(colourFG_CYAN, 0, 0, 0)) ;
 	if (FlagMask.bCount)	iRV += wsnprintfx(&pcBuf, &Size, "T# ") ;
@@ -576,9 +573,6 @@ NextTask:
     }
 #endif
     iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\n\n" : "\n") ;
-	if (pcBuf == NULL)
-		printfx_unlock() ;
-
 	free(sRI.pTSA) ;	    						// Free from vRtosStatsUpdate()
 	return iRV ;
 }
@@ -619,6 +613,6 @@ void	vTaskDumpStack(void * pTCB, uint32_t StackSize) {
 
 	void * pxTopOfStack	= (void *) * ((uint32_t *) pTCB)  ;
 	void * pxStack		= (void *) * ((uint32_t *) pTCB + 12) ;		// 48 bytes / 4 = 12
-	PRINT("Cur SP : %08x - Stack HWM : %08x\r\n", pxTopOfStack,
+	printfx("Cur SP : %08x - Stack HWM : %08x\r\n", pxTopOfStack,
 			(uint8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
 }
