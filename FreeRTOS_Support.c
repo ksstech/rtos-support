@@ -184,9 +184,7 @@ uint64_t	ElapsedSCC, Correction ;
 	void	myApplicationTickHook(void) {}
 #else
 	void	vApplicationTickHook(void) {
-		#if (halSOC_DIG_IN > 0)
 		halGPIO_TickHook() ;						// button debounce functionality
-		#endif
 	}
 #endif
 
