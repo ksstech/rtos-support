@@ -79,8 +79,9 @@ void	vRtosHeapSetup(void) ;
 void	vRtosHeapFreeSafely(void * *) ;
 
 void	vRtosReportMemory(void) ;
-int32_t	xRtosReportTasks(char *, size_t) ;
+
 int32_t	xRtosReportTasksNew(const flagmask_t, char *, size_t) ;
+
 void	vTaskDumpStack(void *, uint32_t ) ;
 
 #ifdef __cplusplus

@@ -88,7 +88,7 @@ uint32_t			g_HeapBegin ;
 //	#warning "Anything specific for ESP32 here..."
 #endif
 
-/*
+/**
  * vRtosHeapSetup()
  */
 void	vRtosHeapSetup(void ) {
@@ -106,7 +106,7 @@ void	vRtosHeapSetup(void ) {
 	g_HeapBegin = xPortGetFreeHeapSize() ;
 }
 
-/*
+/**
  * vRtosHeapFreeSafely()
  */
 void	vRtosHeapFreeSafely(void ** MemBuf) {
@@ -176,16 +176,12 @@ uint64_t	ElapsedSCC, Correction ;
 
 // ####################################### FREERTOS HOOKS ##########################################
 
-/*
+/**
  * vApplicationTickHook()
  */
 
-#if		defined(ESP_PLATFORM)
-	void	myApplicationTickHook(void) {}
-#else
-	void	vApplicationTickHook(void) {
-		halGPIO_TickHook() ;						// button debounce functionality
-	}
+#ifndef	ESP_PLATFORM
+void	vApplicationTickHook(void) { halGPIO_TickHook() ; }	// button debounce functionality
 #endif
 
 /*
@@ -218,7 +214,7 @@ void	vApplicationStackOverflowHook(TaskHandle_t *pxTask, char * pcTaskName) {
 #endif
 }
 
-/*
+/**
  * vApplicationMallocFailedHook()
  */
 void	vApplicationMallocFailedHook(void) {
@@ -451,7 +447,9 @@ TaskStatus_t *	psRtosStatsFindEntry(UBaseType_t xNum) {
 
 uint64_t xRtosStatsGetRunTime(TaskHandle_t xHandle) {
 	for(int i = 0; sTI[i].xHandle != NULL && i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
-		if (sTI[i].xHandle == xHandle)			return sTI[i].u64RunTime ;
+		if (sTI[i].xHandle == xHandle) {
+			return sTI[i].u64RunTime ;
+		}
 	}
 	return 0ULL ;
 }
@@ -601,12 +599,11 @@ void	vRtosReportMemory(void) {
  * 	Example code:
 	uint32_t	OldStackMark, NewStackMark ;
 	OldStackMark = uxTaskGetStackHighWaterMark(NULL) ;
-
-    	NewStackMark = uxTaskGetStackHighWaterMark(NULL) ;
-    	if (NewStackMark != OldStackMark) {
-    		vFreeRTOSDumpStack(NULL, STACK_SIZE) ;
-    		OldStackMark = NewStackMark ;
-    	}
+   	NewStackMark = uxTaskGetStackHighWaterMark(NULL) ;
+   	if (NewStackMark != OldStackMark) {
+   		vFreeRTOSDumpStack(NULL, STACK_SIZE) ;
+   		OldStackMark = NewStackMark ;
+   	}
  */
 void	vTaskDumpStack(void * pTCB, uint32_t StackSize) {
 	if (pTCB == NULL)	pTCB = xTaskGetCurrentTaskHandle() ;
