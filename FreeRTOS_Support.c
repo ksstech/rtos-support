@@ -184,25 +184,7 @@ uint64_t	ElapsedSCC, Correction ;
 void	vApplicationTickHook(void) { halGPIO_TickHook() ; }	// button debounce functionality
 #endif
 
-/*
- * vApplicationIdleHook()
- */
-bool	myApplicationIdleHook(void) {
-#if 0
-	UBaseType_t		uxTasks	= uxTaskGetNumberOfTasks();		// get number of TCBs to reserve space for
-	TaskSnapshot_t *pTSA	= malloc(uxTasks * sizeof(TaskStatus_t)) ;
-	TaskSnapshot_t *psTS	= pTSA ;
-	UBaseType_t		uxTCBsz ;
-	uxTasks = uxTaskGetSnapshotAll(pTSA, uxTasks * sizeof(TaskStatus_t), &uxTCBsz ) ;
-	for (uint32_t Idx = 0; Idx < uxTasks; ++Idx, ++psTS) {
-		if (psTS->pxEndOfStack) {
-		}
-	}
-#endif
-	return 1 ;
-}
-
-/*
+/**
  * vApplicationStackOverflowHook()
  */
 void	vApplicationStackOverflowHook(TaskHandle_t *pxTask, char * pcTaskName) {
@@ -385,6 +367,22 @@ typedef struct	taskinfo_t {
 
 static	rtosinfo_t	sRI = { 0 } ;
 static	taskinfo_t	sTI[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] = { 0 } ;
+
+/**
+ * bRtosStatsUpdateHook()
+ */
+bool	bRtosStatsUpdateHook(void) {
+	UBaseType_t		uxTasks	= uxTaskGetNumberOfTasks();		// get number of TCBs to reserve space for
+	TaskSnapshot_t *pTSA	= malloc(uxTasks * sizeof(TaskStatus_t)) ;
+	TaskSnapshot_t *psTS	= pTSA ;
+	UBaseType_t		uxTCBsz ;
+	uxTasks = uxTaskGetSnapshotAll(pTSA, uxTasks * sizeof(TaskStatus_t), &uxTCBsz ) ;
+	for (uint32_t Idx = 0; Idx < uxTasks; ++Idx, ++psTS) {
+		if (psTS->pxEndOfStack) {
+		}
+	}
+	return 1 ;
+}
 
 int32_t	vRtosStatsUpdate(bool fFree) {
 	// Step 1: Update number of active running tasks
@@ -606,10 +604,11 @@ void	vRtosReportMemory(void) {
    	}
  */
 void	vTaskDumpStack(void * pTCB, uint32_t StackSize) {
-	if (pTCB == NULL)	pTCB = xTaskGetCurrentTaskHandle() ;
-
-	void * pxTopOfStack	= (void *) * ((uint32_t *) pTCB)  ;
-	void * pxStack		= (void *) * ((uint32_t *) pTCB + 12) ;		// 48 bytes / 4 = 12
-	printfx("Cur SP : %08x - Stack HWM : %08x\r\n", pxTopOfStack,
+	if (pTCB == NULL) {
+		pTCB = xTaskGetCurrentTaskHandle() ;
+	}
+	void * pxTOS	= (void *) * ((uint32_t *) pTCB)  ;
+	void * pxStack	= (void *) * ((uint32_t *) pTCB + 12) ;		// 48 bytes / 4 = 12
+	printfx("Cur SP : %08x - Stack HWM : %08x\r\n", pxTOS,
 			(uint8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
 }

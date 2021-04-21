@@ -60,7 +60,6 @@ bool	bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
 // ##################################### global function prototypes ################################
 
 void	myApplicationTickHook(void) ;
-bool	myApplicationIdleHook(void) ;
 void	vApplicationStackOverflowHook(TaskHandle_t *, char *) ;
 void	vApplicationMallocFailedHook(void) ;
 
@@ -80,6 +79,7 @@ void	vRtosHeapFreeSafely(void * *) ;
 
 void	vRtosReportMemory(void) ;
 
+bool	bRtosStatsUpdateHook(void) ;
 int32_t	xRtosReportTasksNew(const flagmask_t, char *, size_t) ;
 
 void	vTaskDumpStack(void *, uint32_t ) ;
