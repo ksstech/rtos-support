@@ -80,7 +80,7 @@ void	vRtosHeapFreeSafely(void * *) ;
 void	vRtosReportMemory(void) ;
 
 bool	bRtosStatsUpdateHook(void) ;
-int32_t	xRtosReportTasksNew(const flagmask_t, char *, size_t) ;
+int		xRtosReportTasksNew(const flagmask_t, char *, size_t) ;
 
 void	vTaskDumpStack(void *, uint32_t ) ;
 

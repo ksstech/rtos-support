@@ -6,6 +6,7 @@
  *	20150708	1.00	Separated from the main application module
  */
 
+#include	"hal_config.h"
 #include	"FreeRTOS_Support.h"						// Must be before hal_nvic.h"
 
 #include	"printfx.h"									// +x_definitions +stdarg +stdint +stdio
@@ -14,13 +15,12 @@
 #include	"x_errors_events.h"
 #include	"x_stdio.h"
 
-#include	"hal_config.h"
 #include	"hal_nvic.h"
 #include	"hal_mcu.h"									// halMCU_ReportMemory
 
 #include	<string.h>
 
-#define	debugFLAG					0x8000
+#define	debugFLAG					0xD000
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
@@ -217,16 +217,18 @@ int32_t	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 						UBaseType_t uxPriority,
 						TaskHandle_t * pxCreatedTask,
 						const BaseType_t xCoreID) {
-	IF_SL_INFO(debugTRACK, "'%s' S=%d P=%d", pcName, usStackDepth, uxPriority) ;
-#if		defined(ESP_PLATFORM) && defined(CONFIG_FREERTOS_UNICORE)
-	UNUSED(xCoreID) ;
-	return xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask) ;
-#elif	defined(ESP_PLATFORM)
-	return xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID ) ;
+	int32_t iRV = pdFAIL ;
+#if		defined(ESP_PLATFORM)
+	#if	defined(CONFIG_FREERTOS_UNICORE)
+	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask) ;
+	#else
+	iRV = xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID ) ;
+	#endif
 #else
 	#error "No/invalid platform defined"
-	return erFAILURE ;
 #endif
+	IF_myASSERT(debugRESULT, iRV == pdPASS) ;
+	return (iRV == pdPASS) ? erSUCCESS : erFAILURE ;
 }
 
 #define	rtosCHECK_CURTASK			0
@@ -235,8 +237,7 @@ int32_t	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 #endif
 
 BaseType_t	xRtosSemaphoreTake(SemaphoreHandle_t * pSema, uint32_t mSec) {
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING ||
-		halNVIC_CalledFromISR()) {
+	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || halNVIC_CalledFromISR()) {
 		return pdTRUE ;
 	}
 	if (*pSema == NULL) {
@@ -259,9 +260,7 @@ BaseType_t	xRtosSemaphoreTake(SemaphoreHandle_t * pSema, uint32_t mSec) {
 }
 
 BaseType_t	xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING ||
-		halNVIC_CalledFromISR() ||
-		*pSema == 0) {
+	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || halNVIC_CalledFromISR() || *pSema == 0) {
 		return pdTRUE ;
 	}
 #if		(rtosCHECK_CURTASK == 1)
