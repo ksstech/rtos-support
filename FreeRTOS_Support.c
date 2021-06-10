@@ -335,6 +335,184 @@ bool	bRtosVerifyState(const EventBits_t uxBitsTasks) {
 #endif
 
 static const char TaskState[] = "RPBSD" ;
+static const char caMCU[3] = { 'P', 'A', 'X' } ;
+
+#if 1
+typedef union {				// LSW then MSW sequence critical
+	struct { uint32_t LSW, MSW ; } ;
+	uint64_t U64 ;
+} u64rt_t ;
+
+typedef struct	RtosStatus_t {
+	TickType_t		Counter ;
+	UBaseType_t 	NumTask ;							// Currently "active" tasks
+	UBaseType_t 	MaxNum ;							// Highest logical task number
+	u64rt_t			Total ;								// Sum all tasks (incl IDLE)
+	u64rt_t			Active ;							// Sum non-IDLE tasks
+	u64rt_t			Tasks[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] ;
+	TaskHandle_t	Handle[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] ;
+#if		(portNUM_PROCESSORS > 1)
+	u64rt_t			Cores[portNUM_PROCESSORS+1] ;		// Sum of non-IDLE task runtime/core
+	TaskHandle_t	IdleHandle[portNUM_PROCESSORS] ;
+#endif
+} RtosStatus_t ;
+
+static	RtosStatus_t	sRS = { 0 } ;
+static	TaskStatus_t	sTS[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] = { 0 } ;
+
+bool	bRtosStatsUpdateHook(void) {
+	if (++sRS.Counter % CONFIG_FREERTOS_HZ)	return true ;
+
+	if (sRS.NumTask == 0) {
+		for (int i = 0; i < portNUM_PROCESSORS; ++i) {
+			sRS.IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i) ;
+		}
+		IF_SYSTIMER_INIT(debugTIMING, systimerRTOS, systimerCLOCKS, "STAT", myUS_TO_CLOCKS(1300), myUS_TO_CLOCKS(2200)) ;
+	}
+	IF_SYSTIMER_START(debugTIMING, systimerRTOS) ;
+	uint32_t NowTotal ;
+	memset(sTS, 0, sizeof(sTS)) ;
+	uint32_t NowTasks = uxTaskGetSystemState(sTS, CONFIG_ESP_COREDUMP_MAX_TASKS_NUM, &NowTotal ) ;
+	if (sRS.Total.LSW > NowTotal)					 	// Handle wrapped System counter
+		++sRS.Total.MSW ;
+	sRS.Total.LSW	= NowTotal ;
+
+	if (sRS.NumTask < NowTasks) {
+		IF_myASSERT(debugPARAM, NowTasks < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM) ;
+		sRS.NumTask = NowTasks ;
+	}
+	sRS.Active.U64 = 0 ;
+	memset(&sRS.Cores, 0, SIZEOF_MEMBER(RtosStatus_t,Cores)) ;
+	for (int a = 0; a < sRS.NumTask; ++a) {
+		TaskStatus_t * psTS = &sTS[a] ;
+		if (sRS.MaxNum < psTS->xTaskNumber)				// keep track of highest task#
+			sRS.MaxNum = psTS->xTaskNumber ;
+
+		for (int b = 0; b < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++b) {
+			if (sRS.Handle[b] == psTS->xHandle) {		// already there, update
+				if (sRS.Tasks[b].LSW > psTS->ulRunTimeCounter)
+					++sRS.Tasks[b].MSW ;
+				sRS.Tasks[b].LSW	= psTS->ulRunTimeCounter ;
+
+			} else if (sRS.Handle[b] == NULL) {			// Not in table, add ...
+				sRS.Handle[b] = psTS->xHandle ;
+				sRS.Tasks[b].LSW = psTS->ulRunTimeCounter ;
+
+			} else {
+				continue ;
+			}
+			// For IDLe task(s) we do not want to add RunTime %'s to the TasksRunTime or CoresRunTime
+			int c ;
+			for (c = 0; c < portNUM_PROCESSORS; ++c) {	// current handle = IDLE task ?
+				if (sRS.Handle[b] == sRS.IdleHandle[c])
+					break ;
+			}
+			if (c == portNUM_PROCESSORS) {				// NOT an IDLE task
+				sRS.Active.U64	+= sRS.Tasks[b].U64 ;
+				#if	(portNUM_PROCESSORS > 1)
+				c = (psTS->xCoreID != tskNO_AFFINITY) ? psTS->xCoreID : 2;
+				sRS.Cores[c].U64 += sRS.Tasks[b].U64 ;
+				#endif
+			}
+			break ;
+		}
+	}
+	IF_SYSTIMER_STOP(debugTIMING, systimerRTOS) ;
+	return true ;
+}
+
+TaskStatus_t *	psRtosStatsFindEntry(TaskHandle_t xHandle) {
+	for (int i = 0; i < sRS.NumTask; ++i) {
+		if (sTS[i].xHandle == xHandle) return &sTS[i] ;
+	}
+	return NULL ;
+}
+
+int		xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
+	int32_t	iRV = 0 ;
+	if (FlagMask.bColor)
+		iRV += wsnprintfx(&pcBuf, &Size, "%C", xpfSGR(colourFG_CYAN, 0, 0, 0)) ;
+	if (FlagMask.bCount)
+		iRV += wsnprintfx(&pcBuf, &Size, "T# ") ;
+	if (FlagMask.bPrioX)
+		iRV += wsnprintfx(&pcBuf, &Size, "Pc/Pb ") ;
+	iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_HDR_DETAIL) ;
+	if (FlagMask.bState)
+		iRV += wsnprintfx(&pcBuf, &Size, "S ") ;
+	if (FlagMask.bStack)
+		iRV += wsnprintfx(&pcBuf, &Size, "LowS ") ;
+	#if		(portNUM_PROCESSORS > 1)
+	if (FlagMask.bCore)
+		iRV += wsnprintfx(&pcBuf, &Size, "X ") ;
+	#endif
+	iRV += wsnprintfx(&pcBuf, &Size, "%%Util Ticks") ;
+	#if		(!defined(NDEBUG) || defined(DEBUG)) && (SL_LEVEL > SL_SEV_NOTICE)
+	if (FlagMask.bXtras)
+		iRV += wsnprintfx(&pcBuf, &Size, " Stack Base -Task TCB-") ;
+	#endif
+	if (FlagMask.bColor)
+		iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET) ;
+	iRV += wsnprintfx(&pcBuf, &Size, "\n") ;
+
+	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
+	uint64_t TotalAdj = sRS.Total.U64 / (100ULL / portNUM_PROCESSORS) ;
+	uint32_t TaskMask = 0x00000001, Units, Fract ;
+	for (int a = 0; a < sRS.MaxNum; ++a) {
+		TaskStatus_t *	psTS = psRtosStatsFindEntry(sRS.Handle[a]) ;
+		if (psTS == NULL) 								// check if possible ?
+			continue ;
+		uint64_t u64RunTime = sRS.Tasks[a].U64 ;
+
+	    // if task info display not enabled, skip....
+		if (FlagMask.uCount & TaskMask) {
+			// Now start displaying the actual task info....
+			if (FlagMask.bCount)
+				iRV += wsnprintfx(&pcBuf, &Size, "%2u ",psTS->xTaskNumber) ;
+			if (FlagMask.bPrioX)
+				iRV += wsnprintfx(&pcBuf, &Size, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority) ;
+			iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName) ;
+			if (FlagMask.bState)
+				iRV += wsnprintfx(&pcBuf, &Size, "%c ", TaskState[psTS->eCurrentState]) ;
+			if (FlagMask.bStack)
+				iRV += wsnprintfx(&pcBuf, &Size, "%'4u ", psTS->usStackHighWaterMark) ;
+			#if	(portNUM_PROCESSORS > 1)
+			if (FlagMask.bCore)
+				iRV += wsnprintfx(&pcBuf, &Size, "%c ", caMCU[(psTS->xCoreID > 1) ? 2 : psTS->xCoreID]) ;
+			#endif
+
+			// Calculate & display individual task utilization.
+	    	Units = u64RunTime / TotalAdj ;
+	    	Fract = (u64RunTime * 100 / TotalAdj) % 100 ;
+			iRV += wsnprintfx(&pcBuf, &Size, "%2u.%02u %#'5llu", Units, Fract, u64RunTime) ;
+
+			#if	(!defined(NDEBUG) || defined(DEBUG)) && (SL_LEVEL > SL_SEV_NOTICE)
+			if (FlagMask.bXtras)
+				iRV += wsnprintfx(&pcBuf, &Size, " %p %p\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle) ;
+			#else
+			iRV += wsnprintfx(&pcBuf, &Size, "\n") ;
+			#endif
+		}
+		TaskMask <<= 1 ;
+	}
+
+	// Calculate & display total for "real" tasks utilization.
+	Units = sRS.Active.U64 / TotalAdj ;
+	Fract = (sRS.Active.U64 * 100 / TotalAdj) % 100 ;
+	iRV += wsnprintfx(&pcBuf, &Size, "T=%u  U=%u.%02u", sRS.NumTask, Units, Fract) ;
+
+#if		(portNUM_PROCESSORS > 1)
+	// calculate & display individual core's utilization
+    for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
+    	Units = sRS.Cores[i].U64 / TotalAdj ;
+    	Fract = (sRS.Cores[i].U64 * 100 / TotalAdj) % 100 ;
+    	iRV += wsnprintfx(&pcBuf, &Size, "  %c=%u.%02u", caMCU[i], Units, Fract) ;
+    }
+#endif
+    iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\n\n" : "\n") ;
+	return iRV ;
+}
+
+#else // ################################### original code  ########################################
 
 typedef struct	rtosinfo_t {
 	TaskStatus_t *	pTSA ;								// pointer to malloc'd status info
@@ -356,33 +534,14 @@ typedef struct	rtosinfo_t {
 
 typedef struct	taskinfo_t {
 	TaskHandle_t	xHandle ;
-	union {
-		struct {
-			uint32_t	u32RunTimeLSW ;					// LSW then MSW sequence critical
-			uint32_t	u32RunTimeMSW ;
-		};
-		uint64_t	u64RunTime ;
-	};
+	union {				// LSW then MSW sequence critical
+		struct { uint32_t u32RunTimeLSW, u32RunTimeMSW ; } ;
+		uint64_t u64RunTime ;
+	} ;
 } taskinfo_t ;
 
 static	rtosinfo_t	sRI = { 0 } ;
 static	taskinfo_t	sTI[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] = { 0 } ;
-
-/**
- * bRtosStatsUpdateHook()
- */
-bool	bRtosStatsUpdateHook(void) {
-	UBaseType_t		uxTasks	= uxTaskGetNumberOfTasks();		// get number of TCBs to reserve space for
-	TaskSnapshot_t *pTSA	= malloc(uxTasks * sizeof(TaskStatus_t)) ;
-	TaskSnapshot_t *psTS	= pTSA ;
-	UBaseType_t		uxTCBsz ;
-	uxTasks = uxTaskGetSnapshotAll(pTSA, uxTasks * sizeof(TaskStatus_t), &uxTCBsz ) ;
-	for (uint32_t Idx = 0; Idx < uxTasks; ++Idx, ++psTS) {
-		if (psTS->pxEndOfStack) {
-		}
-	}
-	return 1 ;
-}
 
 int32_t	vRtosStatsUpdate(bool fFree) {
 	// Step 1: Update number of active running tasks
@@ -558,6 +717,7 @@ NextTask:
 	free(sRI.pTSA) ;	    						// Free from vRtosStatsUpdate()
 	return iRV ;
 }
+#endif
 
 void	vRtosReportMemory(void) {
 #if		defined(ESP_PLATFORM)
