@@ -431,32 +431,29 @@ int32_t	vRtosStatsUpdate(bool fFree) {
 		}
 		sRI.u64TotalRunTime += sTI[i].u64RunTime ;
 	}
-	if (fFree)
-		free(sRI.pTSA) ;
+	if (fFree) free(sRI.pTSA) ;
 	return erSUCCESS ;
 }
 
 TaskStatus_t *	psRtosStatsFindEntry(UBaseType_t xNum) {
 	for (int i = 0; i < sRI.NumTask; ++i) {
-		if (sRI.pTSA[i].xTaskNumber == xNum)	return &sRI.pTSA[i] ;
+		if (sRI.pTSA[i].xTaskNumber == xNum) {
+			return &sRI.pTSA[i] ;
+		}
 	}
 	return NULL ;
 }
 
 uint64_t xRtosStatsGetRunTime(TaskHandle_t xHandle) {
 	for(int i = 0; sTI[i].xHandle != NULL && i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
-		if (sTI[i].xHandle == xHandle) {
-			return sTI[i].u64RunTime ;
-		}
+		if (sTI[i].xHandle == xHandle) return sTI[i].u64RunTime ;
 	}
 	return 0ULL ;
 }
 
 int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	int32_t	i, iRV = 0 ;
-	if (vRtosStatsUpdate(0) != erSUCCESS) {
-		return erFAILURE ;
-	}
+	if (vRtosStatsUpdate(0) != erSUCCESS) return erFAILURE ;
 
 	/* u64SystemRunTime is the running total number of ticks. If we have >1 MCU the "effective"
 	 * number of ticks available for task executions is a multiple of the number of MCU's */
@@ -470,9 +467,6 @@ int32_t	xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size
 #endif
 	}
 
-#if		(portNUM_PROCESSORS > 1)
-	sRI.u64CoresRunTime[portNUM_PROCESSORS] = 0ULL ;	// reset count MCU = portNUM_PROCESSORS
-#endif
 	sRI.u64TasksRunTime = 0ULL ;
 	TaskHandle_t	pCurTCB		= xTaskGetCurrentTaskHandle() ;
 	// build column organised header
@@ -551,14 +545,6 @@ NextTask:
 	Units = sRI.u64TasksRunTime / SystemRT ;
 	Fract = (sRI.u64TasksRunTime * 100 / SystemRT) % 100 ;
 	iRV += wsnprintfx(&pcBuf, &Size, "T=%u U=%u.%02u", sRI.NumTask, Units, Fract) ;
-
-#if		(rtosSHOW_RTOSTIME)
-	// Calculate & display total for ''other" (OS) utilization.
-	uint64_t u64IntRunTime = (sRI.u64SystemRunTime * portNUM_PROCESSORS) - sRI.u64TotalRunTime ;
-	Units = u64IntRunTime / SystemRT ;
-	Fract = (u64IntRunTime * 100 / SystemRT) % 100 ;
-	iRV += wsnprintfx(&pcBuf, &Size, " S=%u.%02u", Units, Fract) ;
-#endif
 
 #if		(portNUM_PROCESSORS > 1)
 	// calculate & display individual core's utilization
