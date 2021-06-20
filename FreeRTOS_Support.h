@@ -22,8 +22,6 @@ extern "C" {
 #define	MALLOC_MARK				int32_t m0, m1 ; m0 = xPortGetFreeHeapSize() ;
 #define	MALLOC_CHECK			m1 = xPortGetFreeHeapSize() ; if (m0 != m1) printfx("m0=%d m1=%d d=%d\n", m0, m1, m0-m1) ;
 
-//#define pdTICKS_TO_MS(xTicks)	(((TickType_t) (xTicks) * (TickType_t) 1000 ) / (TickType_t) configTICK_RATE_HZ )
-
 // ############################################ Enumerations #######################################
 
 
@@ -54,10 +52,10 @@ extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
 #define	bRtosCheckStatus(X)			(((xEventGroupGetBits(xEventStatus) & (X)) == (X)) ? 1 : 0)
 #define	xRtosGetStatus(X)			(xEventGroupGetBits(xEventStatus) & (X))
 
+// ##################################### global function prototypes ################################
+
 bool	bRtosToggleStatus(const EventBits_t uxBitsToToggle) ;
 bool	bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
-
-// ##################################### global function prototypes ################################
 
 void	myApplicationTickHook(void) ;
 void	vApplicationStackOverflowHook(TaskHandle_t *, char *) ;

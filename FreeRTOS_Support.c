@@ -35,7 +35,7 @@
 
 EventGroupHandle_t	xEventStatus = 0,
 					TaskRunState = 0,
-					TaskDeleteState = 0;
+					TaskDeleteState = 0 ;
 int32_t				xTaskIndex = 0 ;
 uint32_t			g_HeapBegin ;
 
@@ -334,9 +334,10 @@ bool	bRtosVerifyState(const EventBits_t uxBitsTasks) {
 #endif
 
 static const char TaskState[] = "RPBSD" ;
-static const char caMCU[3] = { 'P', 'A', 'X' } ;
+#if		(portNUM_PROCESSORS > 1)
+	static const char caMCU[3] = { '0', '1', 'X' } ;
+#endif
 
-#if 1
 typedef union {				// LSW then MSW sequence critical
 	struct { uint32_t LSW, MSW ; } ;
 	uint64_t U64 ;
@@ -350,9 +351,9 @@ typedef struct	RtosStatus_t {
 	u64rt_t			Active ;							// Sum non-IDLE tasks
 	u64rt_t			Tasks[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] ;
 	TaskHandle_t	Handle[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] ;
+	TaskHandle_t	IdleHandle[portNUM_PROCESSORS] ;
 #if		(portNUM_PROCESSORS > 1)
 	u64rt_t			Cores[portNUM_PROCESSORS+1] ;		// Sum of non-IDLE task runtime/core
-	TaskHandle_t	IdleHandle[portNUM_PROCESSORS] ;
 #endif
 } RtosStatus_t ;
 
@@ -366,9 +367,9 @@ bool	bRtosStatsUpdateHook(void) {
 		for (int i = 0; i < portNUM_PROCESSORS; ++i) {
 			sRS.IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i) ;
 		}
-		IF_SYSTIMER_INIT(debugTIMING, systimerRTOS, systimerCLOCKS, "STAT", myUS_TO_CLOCKS(1300), myUS_TO_CLOCKS(2200)) ;
+		IF_SYSTIMER_INIT(debugTIMING, stRTOS, stMICROS, "STAT", 1300, 2200) ;
 	}
-	IF_SYSTIMER_START(debugTIMING, systimerRTOS) ;
+	IF_SYSTIMER_START(debugTIMING, stRTOS) ;
 	uint32_t NowTotal ;
 	memset(sTS, 0, sizeof(sTS)) ;
 	uint32_t NowTasks = uxTaskGetSystemState(sTS, CONFIG_ESP_COREDUMP_MAX_TASKS_NUM, &NowTotal ) ;
@@ -381,7 +382,7 @@ bool	bRtosStatsUpdateHook(void) {
 		sRS.NumTask = NowTasks ;
 	}
 	sRS.Active.U64 = 0 ;
-	memset(&sRS.Cores, 0, SIZEOF_MEMBER(RtosStatus_t,Cores)) ;
+	memset(&sRS.Cores, 0, SO_MEM(RtosStatus_t,Cores)) ;
 	for (int a = 0; a < sRS.NumTask; ++a) {
 		TaskStatus_t * psTS = &sTS[a] ;
 		if (sRS.MaxNum < psTS->xTaskNumber)				// keep track of highest task#
@@ -416,7 +417,7 @@ bool	bRtosStatsUpdateHook(void) {
 			break ;
 		}
 	}
-	IF_SYSTIMER_STOP(debugTIMING, systimerRTOS) ;
+	IF_SYSTIMER_STOP(debugTIMING, stRTOS) ;
 	return true ;
 }
 
@@ -511,7 +512,47 @@ int		xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	return iRV ;
 }
 
-#else // ################################### original code  ########################################
+void	vRtosReportMemory(void) {
+#if		defined(ESP_PLATFORM)
+	halMCU_ReportMemory(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL | MALLOC_CAP_32BIT) ;
+	halMCU_ReportMemory(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) ;
+	halMCU_ReportMemory(MALLOC_CAP_DMA) ;
+	halMCU_ReportMemory(MALLOC_CAP_EXEC) ;
+	halMCU_ReportMemory(MALLOC_CAP_IRAM_8BIT) ;
+	halMCU_ReportMemory(MALLOC_CAP_SPIRAM) ;
+#endif
+    printfx("%CFreeRTOS%C\tMin=%'#u  Free=%'#u  Orig=%'#u\n\n", xpfSGR(colourFG_CYAN, 0, 0, 0), xpfSGR(attrRESET, 0, 0, 0), xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin) ;
+}
+
+/*
+ * 	FreeRTOS TCB structure as of 8.2.3
+ * 	00 - 03			pxTopOfStack
+ * 	?? - ??	04 - 08 MPU wrappers
+ * 	04 - 23			xGenericListItem
+ * 	24 - 43			xEventListItem
+ * 	44 - 47			uxPriority
+ * 	48 - 51			pxStack. If stack growing downwards, end of stack
+ * 	?? - ??			pxEndOfStack
+ * 	Example code:
+	uint32_t	OldStackMark, NewStackMark ;
+	OldStackMark = uxTaskGetStackHighWaterMark(NULL) ;
+   	NewStackMark = uxTaskGetStackHighWaterMark(NULL) ;
+   	if (NewStackMark != OldStackMark) {
+   		vFreeRTOSDumpStack(NULL, STACK_SIZE) ;
+   		OldStackMark = NewStackMark ;
+   	}
+ */
+void	vTaskDumpStack(void * pTCB, uint32_t StackSize) {
+	if (pTCB == NULL) {
+		pTCB = xTaskGetCurrentTaskHandle() ;
+	}
+	void * pxTOS	= (void *) * ((uint32_t *) pTCB)  ;
+	void * pxStack	= (void *) * ((uint32_t *) pTCB + 12) ;		// 48 bytes / 4 = 12
+	printfx("Cur SP : %08x - Stack HWM : %08x\r\n", pxTOS,
+			(uint8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
+}
+
+#if 0 // ################################### original code  ########################################
 
 typedef struct	rtosinfo_t {
 	TaskStatus_t *	pTSA ;								// pointer to malloc'd status info
@@ -718,42 +759,3 @@ NextTask:
 }
 #endif
 
-void	vRtosReportMemory(void) {
-#if		defined(ESP_PLATFORM)
-	halMCU_ReportMemory(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL | MALLOC_CAP_32BIT) ;
-	halMCU_ReportMemory(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) ;
-	halMCU_ReportMemory(MALLOC_CAP_DMA) ;
-	halMCU_ReportMemory(MALLOC_CAP_EXEC) ;
-	halMCU_ReportMemory(MALLOC_CAP_IRAM_8BIT) ;
-	halMCU_ReportMemory(MALLOC_CAP_SPIRAM) ;
-#endif
-    printfx("%CFreeRTOS%C\tMin=%'#u  Free=%'#u  Orig=%'#u\n\n", xpfSGR(colourFG_CYAN, 0, 0, 0), xpfSGR(attrRESET, 0, 0, 0), xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin) ;
-}
-
-/*
- * 	FreeRTOS TCB structure as of 8.2.3
- * 	00 - 03			pxTopOfStack
- * 	?? - ??	04 - 08 MPU wrappers
- * 	04 - 23			xGenericListItem
- * 	24 - 43			xEventListItem
- * 	44 - 47			uxPriority
- * 	48 - 51			pxStack. If stack growing downwards, end of stack
- * 	?? - ??			pxEndOfStack
- * 	Example code:
-	uint32_t	OldStackMark, NewStackMark ;
-	OldStackMark = uxTaskGetStackHighWaterMark(NULL) ;
-   	NewStackMark = uxTaskGetStackHighWaterMark(NULL) ;
-   	if (NewStackMark != OldStackMark) {
-   		vFreeRTOSDumpStack(NULL, STACK_SIZE) ;
-   		OldStackMark = NewStackMark ;
-   	}
- */
-void	vTaskDumpStack(void * pTCB, uint32_t StackSize) {
-	if (pTCB == NULL) {
-		pTCB = xTaskGetCurrentTaskHandle() ;
-	}
-	void * pxTOS	= (void *) * ((uint32_t *) pTCB)  ;
-	void * pxStack	= (void *) * ((uint32_t *) pTCB + 12) ;		// 48 bytes / 4 = 12
-	printfx("Cur SP : %08x - Stack HWM : %08x\r\n", pxTOS,
-			(uint8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
-}
