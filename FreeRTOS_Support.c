@@ -443,7 +443,6 @@ TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 	return 1 ;
 }
 
-int		xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	int	iRV = 0 ;
 	if (FlagMask.bColor) iRV += wsnprintfx(&pcBuf, &Size, "%C", xpfSGR(colourFG_CYAN, 0, 0, 0)) ;
@@ -465,11 +464,9 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
 	uint64_t TotalAdj = sRS.Total.U64 / (100ULL / portNUM_PROCESSORS) ;
 	uint32_t TaskMask = 0x00000001, Units, Fract ;
-	for (int a = 0; a < sRS.MaxNum; ++a) {
-		TaskStatus_t *	psTS = psRtosStatsFindEntry(sRS.Handle[a]) ;
-		if (psTS == NULL) 								// check if possible ?
-			continue ;
-		uint64_t u64RunTime = sRS.Tasks[a].U64 ;
+	for (int a = 1; a < sRS.MaxNum; ++a) {
+		TaskStatus_t * psTS = psRtosStatsFindWithNumber(a);
+		if (psTS == NULL) continue;
 
 	    // if task info display not enabled, skip....
 		if (FlagMask.uCount & TaskMask) {
@@ -483,6 +480,7 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 			#endif
 
 			// Calculate & display individual task utilisation.
+			uint64_t u64RunTime = xRtosStatsFindRuntime(psTS->xHandle);
 	    	Units = u64RunTime / TotalAdj;
 	    	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
 			iRV += wsnprintfx(&pcBuf, &Size, "%2u.%02u %#5llu", Units, Fract, u64RunTime);
