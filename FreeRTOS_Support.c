@@ -236,6 +236,12 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 	static	TaskHandle_t CurTask = 0 ;
 #endif
 
+SemaphoreHandle_t xRtosSemaphoreInit(void) {
+	SemaphoreHandle_t xHandle = xSemaphoreCreateMutex();
+	IF_myASSERT(debugRESULT, xHandle != 0);
+	return xHandle;
+}
+
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, uint32_t mSec) {
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING
 	|| halNVIC_CalledFromISR()) return pdTRUE;

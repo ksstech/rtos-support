@@ -69,6 +69,7 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 							TaskHandle_t * pxCreatedTask,
 							const BaseType_t xCoreID) ;
 
+SemaphoreHandle_t xRtosSemaphoreInit(void) ;
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, uint32_t mSec) ;
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) ;
 
