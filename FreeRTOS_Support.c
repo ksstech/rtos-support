@@ -344,10 +344,7 @@ typedef union {				// LSW then MSW sequence critical
 	uint64_t U64 ;
 } u64rt_t ;
 
-typedef struct	RtosStatus_t {
-	TickType_t		Counter ;
-	UBaseType_t 	NumTask ;							// Currently "active" tasks
-	UBaseType_t 	MaxNum ;							// Highest logical task number
+typedef struct {
 	u64rt_t			Total ;								// Sum all tasks (incl IDLE)
 	u64rt_t			Active ;							// Sum non-IDLE tasks
 	u64rt_t			Tasks[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] ;
@@ -356,6 +353,9 @@ typedef struct	RtosStatus_t {
 #if		(portNUM_PROCESSORS > 1)
 	u64rt_t			Cores[portNUM_PROCESSORS+1];		// Sum of non-IDLE task runtime/core
 #endif
+	uint16_t		Counter;
+	uint8_t 		NumTask;							// Currently "active" tasks
+	uint8_t 		MaxNum;								// Highest logical task number
 } RtosStatus_t ;
 
 static	RtosStatus_t	sRS = { 0 } ;
