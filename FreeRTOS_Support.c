@@ -361,19 +361,12 @@ typedef struct {
 static	RtosStatus_t	sRS = { 0 } ;
 static	TaskStatus_t	sTS[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] = { 0 } ;
 
-bool	bRtosStatsUpdateHook(void) {
-	if (++sRS.Counter % CONFIG_FREERTOS_HZ)	return true ;
 uint64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
 	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i)
 		if (sRS.Handle[i] == xHandle) return sRS.Tasks[i].U64;
 	return 0ULL;
 }
 
-	if (sRS.NumTask == 0) {
-		for (int i = 0; i < portNUM_PROCESSORS; ++i) {
-			sRS.IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i) ;
-		}
-		IF_SYSTIMER_INIT(debugTIMING, stRTOS, stMICROS, "STAT", 1300, 2200) ;
 TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
 	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i)
 		if (sTS[i].xHandle == xHandle) return &sTS[i];
@@ -386,48 +379,51 @@ TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 	return NULL;
 }
 
-	}
-	IF_SYSTIMER_START(debugTIMING, stRTOS) ;
-	uint32_t NowTotal ;
-	memset(sTS, 0, sizeof(sTS)) ;
-	uint32_t NowTasks = uxTaskGetSystemState(sTS, CONFIG_ESP_COREDUMP_MAX_TASKS_NUM, &NowTotal ) ;
-	if (sRS.Total.LSW > NowTotal)					 	// Handle wrapped System counter
-		++sRS.Total.MSW ;
-	sRS.Total.LSW	= NowTotal ;
+bool bRtosStatsUpdateHook(void) {
+	if (++sRS.Counter % CONFIG_FREERTOS_HZ)	return 1;
 
-	if (sRS.NumTask < NowTasks) {
-		IF_myASSERT(debugPARAM, NowTasks < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM) ;
-		sRS.NumTask = NowTasks ;
+	if (sRS.NumTask == 0) {								// Initial, once-off processing
+		for (int i = 0; i < portNUM_PROCESSORS; ++i) sRS.IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
+		IF_SYSTIMER_INIT(debugTIMING, stRTOS, stMICROS, "STAT", 1800, 2800);
 	}
-	sRS.Active.U64 = 0 ;
-	memset(&sRS.Cores, 0, SO_MEM(RtosStatus_t,Cores)) ;
-	for (int a = 0; a < sRS.NumTask; ++a) {
-		TaskStatus_t * psTS = &sTS[a] ;
-		if (sRS.MaxNum < psTS->xTaskNumber)				// keep track of highest task#
-			sRS.MaxNum = psTS->xTaskNumber ;
+	IF_SYSTIMER_START(debugTIMING, stRTOS);
+	uint32_t NowTotal;
+	memset(sTS, 0, sizeof(sTS));
+	uint32_t NowTasks = uxTaskGetSystemState(sTS, CONFIG_ESP_COREDUMP_MAX_TASKS_NUM, &NowTotal);
+	IF_myASSERT(debugPARAM, NowTasks < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM);
+
+	if (sRS.NumTask > NowTasks) {	// In case currently less tasks than previous max...
+		LLTRACK("Now (%d) vs Prev (d)", NowTasks, sRS.NumTask) ;
+		sRS.NumTask = NowTasks ;
+	} else if (sRS.NumTask < NowTasks) sRS.NumTask = NowTasks;	// Update new maximum
+
+
+	if (sRS.Total.LSW > NowTotal) ++sRS.Total.MSW;		// Handle wrapped System counter
+	sRS.Total.LSW = NowTotal;
+
+	sRS.Active.U64 = 0;
+	memset(&sRS.Cores, 0, SO_MEM(RtosStatus_t, Cores));
+	for (int a = 0; a < NowTasks; ++a) {
+		TaskStatus_t * psTS = &sTS[a];
+		if (sRS.MaxNum < psTS->xTaskNumber) sRS.MaxNum = psTS->xTaskNumber;
 
 		for (int b = 0; b < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++b) {
-			if (sRS.Handle[b] == psTS->xHandle) {		// already there, update
-				if (sRS.Tasks[b].LSW > psTS->ulRunTimeCounter)
-					++sRS.Tasks[b].MSW ;
-				sRS.Tasks[b].LSW	= psTS->ulRunTimeCounter ;
-
-			} else if (sRS.Handle[b] == NULL) {			// Not in table, add ...
-				sRS.Handle[b] = psTS->xHandle ;
-				sRS.Tasks[b].LSW = psTS->ulRunTimeCounter ;
-
+			if (sRS.Handle[b] == psTS->xHandle) {		// known task, update RT
+				if (sRS.Tasks[b].LSW > psTS->ulRunTimeCounter) ++sRS.Tasks[b].MSW;
+				sRS.Tasks[b].LSW = psTS->ulRunTimeCounter;
+			} else if (sRS.Handle[b] == NULL) {			// empty entry so EOT, add ...
+				sRS.Handle[b] = psTS->xHandle;
+				sRS.Tasks[b].LSW = psTS->ulRunTimeCounter;
 			} else {
 				continue;								// not empty or match entry, try next
 			}
 
 			// For idle task(s) we do not want to add RunTime %'s to the task's RunTime or CoresRunTime
 			int c ;
-			for (c = 0; c < portNUM_PROCESSORS; ++c) {	// current handle = IDLE task ?
-				if (sRS.Handle[b] == sRS.IdleHandle[c])
-					break ;
-			}
-			if (c == portNUM_PROCESSORS) {				// NOT an IDLE task
-				sRS.Active.U64	+= sRS.Tasks[b].U64 ;
+			for (c = 0; c < portNUM_PROCESSORS; ++c)
+				if (sRS.Handle[b] == sRS.IdleHandle[c]) break;
+			if (c == portNUM_PROCESSORS) {				// NOT an IDLE task?
+				sRS.Active.U64 += sRS.Tasks[b].U64 ;
 				#if	(portNUM_PROCESSORS > 1)
 				c = (psTS->xCoreID != tskNO_AFFINITY) ? psTS->xCoreID : 2;
 				sRS.Cores[c].U64 += sRS.Tasks[b].U64 ;
@@ -437,9 +433,6 @@ TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 		}
 	}
 	IF_SYSTIMER_STOP(debugTIMING, stRTOS) ;
-	return true ;
-}
-
 	return 1 ;
 }
 
