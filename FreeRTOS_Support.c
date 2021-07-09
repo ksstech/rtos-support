@@ -363,6 +363,11 @@ static	TaskStatus_t	sTS[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] = { 0 } ;
 
 bool	bRtosStatsUpdateHook(void) {
 	if (++sRS.Counter % CONFIG_FREERTOS_HZ)	return true ;
+uint64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
+	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i)
+		if (sRS.Handle[i] == xHandle) return sRS.Tasks[i].U64;
+	return 0ULL;
+}
 
 	if (sRS.NumTask == 0) {
 		for (int i = 0; i < portNUM_PROCESSORS; ++i) {
