@@ -374,6 +374,18 @@ uint64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
 			sRS.IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i) ;
 		}
 		IF_SYSTIMER_INIT(debugTIMING, stRTOS, stMICROS, "STAT", 1300, 2200) ;
+TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
+	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i)
+		if (sTS[i].xHandle == xHandle) return &sTS[i];
+	return NULL;
+}
+
+TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
+	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i)
+		if (sTS[i].xTaskNumber == xTaskNumber) return &sTS[i];
+	return NULL;
+}
+
 	}
 	IF_SYSTIMER_START(debugTIMING, stRTOS) ;
 	uint32_t NowTotal ;
@@ -428,11 +440,7 @@ uint64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
 	return true ;
 }
 
-TaskStatus_t *	psRtosStatsFindEntry(TaskHandle_t xHandle) {
-	for (int i = 0; i < sRS.NumTask; ++i) {
-		if (sTS[i].xHandle == xHandle) return &sTS[i] ;
-	}
-	return NULL ;
+	return 1 ;
 }
 
 int		xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
