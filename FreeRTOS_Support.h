@@ -19,8 +19,8 @@ extern "C" {
 
 // ##################################### MACRO definitions #########################################
 
-#define	MALLOC_MARK				int32_t m0, m1 ; m0 = xPortGetFreeHeapSize() ;
-#define	MALLOC_CHECK			m1 = xPortGetFreeHeapSize() ; if (m0 != m1) printfx("m0=%d m1=%d d=%d\n", m0, m1, m0-m1) ;
+#define	MALLOC_MARK()	uint32_t y,x=xPortGetFreeHeapSize();
+#define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)\n",x,y,y-x);
 
 // ############################################ Enumerations #######################################
 
@@ -54,14 +54,14 @@ extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
 
 // ##################################### global function prototypes ################################
 
-bool	bRtosToggleStatus(const EventBits_t uxBitsToToggle) ;
-bool	bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
+bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) ;
+bool bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
 
-void	myApplicationTickHook(void) ;
-void	vApplicationStackOverflowHook(TaskHandle_t *, char *) ;
-void	vApplicationMallocFailedHook(void) ;
+void myApplicationTickHook(void) ;
+void vApplicationStackOverflowHook(TaskHandle_t *, char *) ;
+void vApplicationMallocFailedHook(void) ;
 
-int32_t	xRtosTaskCreate(TaskFunction_t pxTaskCode,
+int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 							const char * const pcName,
 							const uint32_t usStackDepth,
 				            void * pvParameters,
@@ -69,8 +69,8 @@ int32_t	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 							TaskHandle_t * pxCreatedTask,
 							const BaseType_t xCoreID) ;
 
-BaseType_t	xRtosSemaphoreTake(SemaphoreHandle_t * pSema, uint32_t mSec) ;
-BaseType_t	xRtosSemaphoreGive(SemaphoreHandle_t * pSema) ;
+BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, uint32_t mSec) ;
+BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) ;
 
 void	vRtosHeapSetup(void) ;
 void	vRtosHeapFreeSafely(void * *) ;
@@ -78,9 +78,9 @@ void	vRtosHeapFreeSafely(void * *) ;
 void	vRtosReportMemory(void) ;
 
 bool	bRtosStatsUpdateHook(void) ;
-int		xRtosReportTasksNew(const flagmask_t, char *, size_t) ;
+int		xRtosReportTasks(const flagmask_t, char *, size_t) ;
 
-void	vTaskDumpStack(void *, uint32_t ) ;
+void	vTaskDumpStack(void *);
 
 #ifdef __cplusplus
 }

@@ -36,8 +36,8 @@
 EventGroupHandle_t	xEventStatus = 0,
 					TaskRunState = 0,
 					TaskDeleteState = 0 ;
-int32_t				xTaskIndex = 0 ;
-uint32_t			g_HeapBegin ;
+int	xTaskIndex = 0 ;
+uint32_t g_HeapBegin ;
 
 #if		defined(cc3200)
 	volatile uint64_t	PreSleepSCC ;
@@ -210,14 +210,14 @@ void	vApplicationMallocFailedHook(void) {
 
 // #################################### General support routines ###################################
 
-int32_t	xRtosTaskCreate(TaskFunction_t pxTaskCode,
+int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 						const char * const pcName,
 						const uint32_t usStackDepth,
 			            void * pvParameters,
 						UBaseType_t uxPriority,
 						TaskHandle_t * pxCreatedTask,
 						const BaseType_t xCoreID) {
-	int32_t iRV = pdFAIL ;
+	int iRV = pdFAIL ;
 #if		defined(ESP_PLATFORM)
 	#if	defined(CONFIG_FREERTOS_UNICORE)
 	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask) ;
@@ -236,14 +236,12 @@ int32_t	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 	static	TaskHandle_t CurTask = 0 ;
 #endif
 
-BaseType_t	xRtosSemaphoreTake(SemaphoreHandle_t * pSema, uint32_t mSec) {
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || halNVIC_CalledFromISR()) {
-		return pdTRUE ;
-	}
-	if (*pSema == NULL) {
-		*pSema = xSemaphoreCreateMutex() ;				// no, create now...
-		IF_myASSERT(debugRESULT, *pSema != 0) ;
-	}
+BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, uint32_t mSec) {
+	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING
+	|| halNVIC_CalledFromISR()) return pdTRUE;
+
+	if (*pSema == NULL) *pSema = xRtosSemaphoreInit();
+
 #if		(rtosCHECK_CURTASK == 1)
 	/* If the mutex is being held by the current task AND we are trying to take it AGAIN
 	 * then we just fake the xSemaphoreTake() and return success.
@@ -259,10 +257,10 @@ BaseType_t	xRtosSemaphoreTake(SemaphoreHandle_t * pSema, uint32_t mSec) {
 	return xSemaphoreTake(*pSema, pdMS_TO_TICKS(mSec)) ;
 }
 
-BaseType_t	xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || halNVIC_CalledFromISR() || *pSema == 0) {
-		return pdTRUE ;
-	}
+BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
+	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING
+	|| halNVIC_CalledFromISR() || *pSema == 0) return pdTRUE;
+
 #if		(rtosCHECK_CURTASK == 1)
 	if (xSemaphoreGetMutexHolder(*pSema) == xTaskGetCurrentTaskHandle() && CurTask != 0) {
 		CurTask = 0 ;
@@ -274,7 +272,7 @@ BaseType_t	xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
 
 // ################################### Event status manipulation ###################################
 
-bool	bRtosToggleStatus(const EventBits_t uxBitsToToggle) {
+bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) {
 	if (bRtosCheckStatus(uxBitsToToggle) == 1) {
 		xRtosClearStatus(uxBitsToToggle) ;
 		return 0 ;
@@ -288,14 +286,11 @@ bool	bRtosToggleStatus(const EventBits_t uxBitsToToggle) {
  * @param uxTaskToVerify
  * @return	0 if task should delete, 1 if it should run...
  */
-bool	bRtosVerifyState(const EventBits_t uxBitsTasks) {
+bool bRtosVerifyState(const EventBits_t uxBitsTasks) {
 	// step 1: if task is meant to delete/terminate, inform it as such
-	if ((xEventGroupGetBits(TaskDeleteState) & uxBitsTasks) == uxBitsTasks)
-		return 0 ;
-
+	if ((xEventGroupGetBits(TaskDeleteState) & uxBitsTasks) == uxBitsTasks) return 0 ;
 	// step 2: if not meant to terminate, check if/wait until enabled to run again
 	xEventGroupWaitBits(TaskRunState, uxBitsTasks, pdFALSE, pdTRUE, portMAX_DELAY) ;
-
 	// step 3: since now definitely enabled to run, check for delete state again
 	return ((xEventGroupGetBits(TaskDeleteState) & uxBitsTasks) == uxBitsTasks) ? 0 : 1 ;
 }
@@ -353,7 +348,7 @@ typedef struct	RtosStatus_t {
 	TaskHandle_t	Handle[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] ;
 	TaskHandle_t	IdleHandle[portNUM_PROCESSORS] ;
 #if		(portNUM_PROCESSORS > 1)
-	u64rt_t			Cores[portNUM_PROCESSORS+1] ;		// Sum of non-IDLE task runtime/core
+	u64rt_t			Cores[portNUM_PROCESSORS+1];		// Sum of non-IDLE task runtime/core
 #endif
 } RtosStatus_t ;
 
@@ -399,9 +394,10 @@ bool	bRtosStatsUpdateHook(void) {
 				sRS.Tasks[b].LSW = psTS->ulRunTimeCounter ;
 
 			} else {
-				continue ;
+				continue;								// not empty or match entry, try next
 			}
-			// For IDLe task(s) we do not want to add RunTime %'s to the TasksRunTime or CoresRunTime
+
+			// For idle task(s) we do not want to add RunTime %'s to the task's RunTime or CoresRunTime
 			int c ;
 			for (c = 0; c < portNUM_PROCESSORS; ++c) {	// current handle = IDLE task ?
 				if (sRS.Handle[b] == sRS.IdleHandle[c])
@@ -429,29 +425,22 @@ TaskStatus_t *	psRtosStatsFindEntry(TaskHandle_t xHandle) {
 }
 
 int		xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
-	int32_t	iRV = 0 ;
-	if (FlagMask.bColor)
-		iRV += wsnprintfx(&pcBuf, &Size, "%C", xpfSGR(colourFG_CYAN, 0, 0, 0)) ;
-	if (FlagMask.bCount)
-		iRV += wsnprintfx(&pcBuf, &Size, "T# ") ;
-	if (FlagMask.bPrioX)
-		iRV += wsnprintfx(&pcBuf, &Size, "Pc/Pb ") ;
+int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
+	int	iRV = 0 ;
+	if (FlagMask.bColor) iRV += wsnprintfx(&pcBuf, &Size, "%C", xpfSGR(colourFG_CYAN, 0, 0, 0)) ;
+	if (FlagMask.bCount) iRV += wsnprintfx(&pcBuf, &Size, "T# ") ;
+	if (FlagMask.bPrioX) iRV += wsnprintfx(&pcBuf, &Size, "Pc/Pb ") ;
 	iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_HDR_DETAIL) ;
-	if (FlagMask.bState)
-		iRV += wsnprintfx(&pcBuf, &Size, "S ") ;
-	if (FlagMask.bStack)
-		iRV += wsnprintfx(&pcBuf, &Size, "LowS ") ;
-	#if		(portNUM_PROCESSORS > 1)
-	if (FlagMask.bCore)
-		iRV += wsnprintfx(&pcBuf, &Size, "X ") ;
+	if (FlagMask.bState) iRV += wsnprintfx(&pcBuf, &Size, "S ") ;
+	if (FlagMask.bStack) iRV += wsnprintfx(&pcBuf, &Size, "LowS ") ;
+	#if	(portNUM_PROCESSORS > 1)
+	if (FlagMask.bCore) iRV += wsnprintfx(&pcBuf, &Size, "X ") ;
 	#endif
 	iRV += wsnprintfx(&pcBuf, &Size, "%%Util Ticks") ;
-	#if		(!defined(NDEBUG) || defined(DEBUG)) && (SL_LEVEL > SL_SEV_NOTICE)
-	if (FlagMask.bXtras)
-		iRV += wsnprintfx(&pcBuf, &Size, " Stack Base -Task TCB-") ;
+	#if	(!defined(NDEBUG) || defined(DEBUG)) && (SL_LEVEL > SL_SEV_NOTICE)
+	if (FlagMask.bXtras) iRV += wsnprintfx(&pcBuf, &Size, " Stack Base -Task TCB-") ;
 	#endif
-	if (FlagMask.bColor)
-		iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET) ;
+	if (FlagMask.bColor) iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET) ;
 	iRV += wsnprintfx(&pcBuf, &Size, "\n") ;
 
 	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
@@ -465,54 +454,47 @@ int		xRtosReportTasksNew(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 
 	    // if task info display not enabled, skip....
 		if (FlagMask.uCount & TaskMask) {
-			// Now start displaying the actual task info....
-			if (FlagMask.bCount)
-				iRV += wsnprintfx(&pcBuf, &Size, "%2u ",psTS->xTaskNumber) ;
-			if (FlagMask.bPrioX)
-				iRV += wsnprintfx(&pcBuf, &Size, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority) ;
-			iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName) ;
-			if (FlagMask.bState)
-				iRV += wsnprintfx(&pcBuf, &Size, "%c ", TaskState[psTS->eCurrentState]) ;
-			if (FlagMask.bStack)
-				iRV += wsnprintfx(&pcBuf, &Size, "%'4u ", psTS->usStackHighWaterMark) ;
+			if (FlagMask.bCount) iRV += wsnprintfx(&pcBuf, &Size, "%2u ",psTS->xTaskNumber);
+			if (FlagMask.bPrioX) iRV += wsnprintfx(&pcBuf, &Size, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
+			iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
+			if (FlagMask.bState) iRV += wsnprintfx(&pcBuf, &Size, "%c ", TaskState[psTS->eCurrentState]);
+			if (FlagMask.bStack) iRV += wsnprintfx(&pcBuf, &Size, "%4u ", psTS->usStackHighWaterMark);
 			#if	(portNUM_PROCESSORS > 1)
-			if (FlagMask.bCore)
-				iRV += wsnprintfx(&pcBuf, &Size, "%c ", caMCU[(psTS->xCoreID > 1) ? 2 : psTS->xCoreID]) ;
+			if (FlagMask.bCore) iRV += wsnprintfx(&pcBuf, &Size, "%c ", caMCU[(psTS->xCoreID > 1) ? 2 : psTS->xCoreID]);
 			#endif
 
-			// Calculate & display individual task utilization.
-	    	Units = u64RunTime / TotalAdj ;
-	    	Fract = (u64RunTime * 100 / TotalAdj) % 100 ;
-			iRV += wsnprintfx(&pcBuf, &Size, "%2u.%02u %#'5llu", Units, Fract, u64RunTime) ;
+			// Calculate & display individual task utilisation.
+	    	Units = u64RunTime / TotalAdj;
+	    	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
+			iRV += wsnprintfx(&pcBuf, &Size, "%2u.%02u %#5llu", Units, Fract, u64RunTime);
 
 			#if	(!defined(NDEBUG) || defined(DEBUG)) && (SL_LEVEL > SL_SEV_NOTICE)
-			if (FlagMask.bXtras)
-				iRV += wsnprintfx(&pcBuf, &Size, " %p %p\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle) ;
+			if (FlagMask.bXtras) iRV += wsnprintfx(&pcBuf, &Size, " %p %p\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
 			#else
-			iRV += wsnprintfx(&pcBuf, &Size, "\n") ;
+			iRV += wsnprintfx(&pcBuf, &Size, "\n");
 			#endif
 		}
 		TaskMask <<= 1 ;
 	}
 
 	// Calculate & display total for "real" tasks utilization.
-	Units = sRS.Active.U64 / TotalAdj ;
-	Fract = (sRS.Active.U64 * 100 / TotalAdj) % 100 ;
-	iRV += wsnprintfx(&pcBuf, &Size, "T=%u  U=%u.%02u", sRS.NumTask, Units, Fract) ;
+	Units = sRS.Active.U64 / TotalAdj;
+	Fract = ((sRS.Active.U64 * 100) / TotalAdj) % 100 ;
+	iRV += wsnprintfx(&pcBuf, &Size, "T=%u U=%u.%02u", sRS.NumTask, Units, Fract);
 
 #if		(portNUM_PROCESSORS > 1)
 	// calculate & display individual core's utilization
     for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
-    	Units = sRS.Cores[i].U64 / TotalAdj ;
-    	Fract = (sRS.Cores[i].U64 * 100 / TotalAdj) % 100 ;
-    	iRV += wsnprintfx(&pcBuf, &Size, "  %c=%u.%02u", caMCU[i], Units, Fract) ;
+    	Units = sRS.Cores[i].U64 / TotalAdj;
+    	Fract = ((sRS.Cores[i].U64 * 100) / TotalAdj) % 100;
+    	iRV += wsnprintfx(&pcBuf, &Size, "  %c=%u.%02u", caMCU[i], Units, Fract);
     }
 #endif
-    iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\n\n" : "\n") ;
-	return iRV ;
+    iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\n\n" : "\n");
+	return iRV;
 }
 
-void	vRtosReportMemory(void) {
+void vRtosReportMemory(void) {
 #if		defined(ESP_PLATFORM)
 	halMCU_ReportMemory(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL | MALLOC_CAP_32BIT) ;
 	halMCU_ReportMemory(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) ;
@@ -542,10 +524,8 @@ void	vRtosReportMemory(void) {
    		OldStackMark = NewStackMark ;
    	}
  */
-void	vTaskDumpStack(void * pTCB, uint32_t StackSize) {
-	if (pTCB == NULL) {
-		pTCB = xTaskGetCurrentTaskHandle() ;
-	}
+void vTaskDumpStack(void * pTCB) {
+	if (pTCB == NULL) pTCB = xTaskGetCurrentTaskHandle() ;
 	void * pxTOS	= (void *) * ((uint32_t *) pTCB)  ;
 	void * pxStack	= (void *) * ((uint32_t *) pTCB + 12) ;		// 48 bytes / 4 = 12
 	printfx("Cur SP : %08x - Stack HWM : %08x\r\n", pxTOS,
