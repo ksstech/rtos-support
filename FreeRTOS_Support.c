@@ -496,12 +496,14 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 
 void vRtosReportMemory(void) {
 #if		defined(ESP_PLATFORM)
-	halMCU_ReportMemory(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL | MALLOC_CAP_32BIT) ;
-	halMCU_ReportMemory(MALLOC_CAP_DEFAULT | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT) ;
+	halMCU_ReportMemory(MALLOC_CAP_32BIT) ;
+	halMCU_ReportMemory(MALLOC_CAP_8BIT) ;
 	halMCU_ReportMemory(MALLOC_CAP_DMA) ;
 	halMCU_ReportMemory(MALLOC_CAP_EXEC) ;
 	halMCU_ReportMemory(MALLOC_CAP_IRAM_8BIT) ;
+	#if	(CONFIG_ESP32_SPIRAM_SUPPORT == 1)
 	halMCU_ReportMemory(MALLOC_CAP_SPIRAM) ;
+	#endif
 #endif
     printfx("%CFreeRTOS%C\tMin=%'#u  Free=%'#u  Orig=%'#u\n\n", xpfSGR(colourFG_CYAN, 0, 0, 0), xpfSGR(attrRESET, 0, 0, 0), xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin) ;
 }
