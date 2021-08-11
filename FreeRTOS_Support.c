@@ -392,12 +392,14 @@ bool bRtosStatsUpdateHook(void) {
 	uint32_t NowTasks = uxTaskGetSystemState(sTS, CONFIG_ESP_COREDUMP_MAX_TASKS_NUM, &NowTotal);
 	IF_myASSERT(debugPARAM, NowTasks < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM);
 
-	if (sRS.NumTask > NowTasks) {	// In case currently less tasks than previous max...
-		LLTRACK("Now (%d) vs Prev (d)", NowTasks, sRS.NumTask) ;
-		sRS.NumTask = NowTasks ;
-	} else if (sRS.NumTask < NowTasks) sRS.NumTask = NowTasks;	// Update new maximum
-
-
+	// In case currently less tasks than previous max...
+#if 1
+	if (sRS.NumTask != NowTasks) PRINT("Tasks %d -> %d\n", sRS.NumTask, NowTasks);
+	sRS.NumTask = NowTasks;
+#else
+	if (sRS.NumTask > NowTasks) sRS.NumTask = NowTasks ;
+	else if (sRS.NumTask < NowTasks) sRS.NumTask = NowTasks;// Update new maximum
+#endif
 	if (sRS.Total.LSW > NowTotal) ++sRS.Total.MSW;		// Handle wrapped System counter
 	sRS.Total.LSW = NowTotal;
 

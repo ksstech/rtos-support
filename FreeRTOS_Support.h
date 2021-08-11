@@ -11,7 +11,7 @@
 #include	"freertos/semphr.h"
 #include	"freertos/event_groups.h"
 
-#include	"x_struct_union.h"							// x_time x_definitions stdint time
+#include	"struct_union.h"		// x_time definitions stdint time
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,15 +22,8 @@ extern "C" {
 #define	MALLOC_MARK()	uint32_t y,x=xPortGetFreeHeapSize();
 #define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)\n",x,y,y-x);
 
-// ############################################ Enumerations #######################################
-
-
 // ###################################### BUILD : CONFIG definitions ##############################
 
-
-// #################################### FreeRTOS global variables ##################################
-
-extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
 
 // ################################### Event status manipulation ###################################
 
@@ -52,6 +45,13 @@ extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
 #define	bRtosCheckStatus(X)			(((xEventGroupGetBits(xEventStatus) & (X)) == (X)) ? 1 : 0)
 #define	xRtosGetStatus(X)			(xEventGroupGetBits(xEventStatus) & (X))
 
+// ############################################ Enumerations #######################################
+
+
+// #################################### FreeRTOS global variables ##################################
+
+extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
+
 // ##################################### global function prototypes ################################
 
 bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) ;
@@ -61,27 +61,21 @@ void myApplicationTickHook(void) ;
 void vApplicationStackOverflowHook(TaskHandle_t *, char *) ;
 void vApplicationMallocFailedHook(void) ;
 
-int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
-							const char * const pcName,
-							const uint32_t usStackDepth,
-				            void * pvParameters,
-							UBaseType_t uxPriority,
-							TaskHandle_t * pxCreatedTask,
-							const BaseType_t xCoreID) ;
+int	xRtosTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName,
+					const uint32_t usStackDepth, void * pvParameters,
+					UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask,
+					const BaseType_t xCoreID) ;
 
 SemaphoreHandle_t xRtosSemaphoreInit(void) ;
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, uint32_t mSec) ;
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) ;
 
-void	vRtosHeapSetup(void) ;
-void	vRtosHeapFreeSafely(void * *) ;
-
-void	vRtosReportMemory(void) ;
-
-bool	bRtosStatsUpdateHook(void) ;
-int		xRtosReportTasks(const flagmask_t, char *, size_t) ;
-
-void	vTaskDumpStack(void *);
+void vRtosHeapSetup(void) ;
+void vRtosHeapFreeSafely(void * *) ;
+void vRtosReportMemory(void) ;
+bool bRtosStatsUpdateHook(void) ;
+int	xRtosReportTasks(const flagmask_t, char *, size_t) ;
+void vTaskDumpStack(void *);
 
 #ifdef __cplusplus
 }

@@ -1,1 +1,1 @@
-# "./z-components/rtos-support" pseudo-component makefile.
+# pseudo-component makefile.

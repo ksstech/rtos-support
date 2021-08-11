@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "../rtos-support/FreeRTOS_TraceMacros.h"
-#include	"x_definitions.h"
+#include	"FreeRTOS_TraceMacros.h"
+#include	"definitions.h"
 
 #ifdef __cplusplus
 extern "C" {
