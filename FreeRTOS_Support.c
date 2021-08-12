@@ -416,8 +416,7 @@ bool bRtosStatsUpdateHook(void) {
 
 			// For idle task(s) we do not want to add RunTime %'s to the task's RunTime or CoresRunTime
 			int c ;
-			for (c = 0; c < portNUM_PROCESSORS; ++c)
-				if (sRS.Handle[b] == sRS.IdleHandle[c]) break;
+			for (c = 0; c < portNUM_PROCESSORS; ++c) if (sRS.Handle[b] == sRS.IdleHandle[c]) break;
 			if (c == portNUM_PROCESSORS) {				// NOT an IDLE task?
 				sRS.Active.U64 += sRS.Tasks[b].U64 ;
 				#if	(portNUM_PROCESSORS > 1)
