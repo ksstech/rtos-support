@@ -392,14 +392,8 @@ bool bRtosStatsUpdateHook(void) {
 	uint32_t NowTasks = uxTaskGetSystemState(sTS, CONFIG_ESP_COREDUMP_MAX_TASKS_NUM, &NowTotal);
 	IF_myASSERT(debugPARAM, NowTasks < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM);
 
-	// In case currently less tasks than previous max...
-#if 1
-	if (sRS.NumTask != NowTasks) PRINT("Tasks %d -> %d\n", sRS.NumTask, NowTasks);
+//	if (sRS.NumTask != NowTasks) CPRINT("Tasks %d -> %d\n", sRS.NumTask, NowTasks);
 	sRS.NumTask = NowTasks;
-#else
-	if (sRS.NumTask > NowTasks) sRS.NumTask = NowTasks ;
-	else if (sRS.NumTask < NowTasks) sRS.NumTask = NowTasks;// Update new maximum
-#endif
 	if (sRS.Total.LSW > NowTotal) ++sRS.Total.MSW;		// Handle wrapped System counter
 	sRS.Total.LSW = NowTotal;
 
@@ -459,7 +453,7 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
 	uint64_t TotalAdj = sRS.Total.U64 / (100ULL / portNUM_PROCESSORS) ;
 	uint32_t TaskMask = 0x00000001, Units, Fract ;
-	for (int a = 1; a < sRS.MaxNum; ++a) {
+	for (int a = 1; a <= sRS.MaxNum; ++a) {
 		TaskStatus_t * psTS = psRtosStatsFindWithNumber(a);
 		if (psTS == NULL) continue;
 
