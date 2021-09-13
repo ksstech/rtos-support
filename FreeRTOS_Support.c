@@ -276,6 +276,17 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
 	return xSemaphoreGive(*pSema) ;
 }
 
+void * pvRtosMalloc(size_t S) {
+	void * pV = malloc(S);
+	IF_PRINT(debugTRACK && ioB1GET(ioMemory), "malloc %u @ %p\n", S, pV);
+	return pV;
+}
+
+void vRtosFree(void * pV) {
+	IF_PRINT(debugTRACK && ioB1GET(ioMemory), "free %p\n", pV) ;
+	free(pV);
+}
+
 // ################################### Event status manipulation ###################################
 
 bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) {

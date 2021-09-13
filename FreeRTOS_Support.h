@@ -70,6 +70,9 @@ SemaphoreHandle_t xRtosSemaphoreInit(void) ;
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, uint32_t mSec) ;
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) ;
 
+void * pvRtosMalloc(size_t S);
+void vRtosFree(void * pV);
+
 void vRtosHeapSetup(void) ;
 void vRtosHeapFreeSafely(void * *) ;
 void vRtosReportMemory(void) ;
