@@ -37,8 +37,8 @@ extern "C" {
 
 #define	xRtosSetStatus(X)			xEventGroupSetBits(xEventStatus, X)
 #define	xRtosClearStatus(X)			xEventGroupClearBits(xEventStatus, X)
-#define	xRtosWaitStatus(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y)
 
+#define	xRtosWaitStatus(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y)
 #define	bRtosWaitStatusALL(X,Y)		(((xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y) & X) == X) ? 1 : 0)
 #define	xRtosWaitStatusANY(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdFALSE, Y)
 
@@ -58,7 +58,7 @@ bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) ;
 bool bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
 
 void myApplicationTickHook(void) ;
-void vApplicationStackOverflowHook(TaskHandle_t *, char *) ;
+void vApplicationStackOverflowHook(TaskHandle_t, char *) ;
 void vApplicationMallocFailedHook(void) ;
 
 int	xRtosTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName,
@@ -74,7 +74,6 @@ void * pvRtosMalloc(size_t S);
 void vRtosFree(void * pV);
 
 void vRtosHeapSetup(void) ;
-void vRtosHeapFreeSafely(void * *) ;
 void vRtosReportMemory(void) ;
 bool bRtosStatsUpdateHook(void) ;
 int	xRtosReportTasks(const flagmask_t, char *, size_t) ;

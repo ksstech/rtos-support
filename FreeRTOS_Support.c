@@ -6,7 +6,7 @@
  *	20150708	1.00	Separated from the main application module
  */
 
-#include	"hal_config.h"
+#include	"hal_variables.h"
 #include	"FreeRTOS_Support.h"						// Must be before hal_nvic.h"
 
 #include	"printfx.h"									// +x_definitions +stdarg +stdint +stdio
@@ -20,7 +20,7 @@
 
 #include	<string.h>
 
-#define	debugFLAG					0xD000
+#define	debugFLAG					0xF000
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
@@ -46,50 +46,37 @@ uint32_t g_HeapBegin ;
  * memory regions defined in the array ***must*** appear in address order from
  * low address to high address.
  */
-#if		defined(cc3200) && defined( __TI_ARM__ )
-
+#if	 defined(cc3200) && defined( __TI_ARM__ )
 	extern	uint32_t	__TI_static_base__, __HEAP_SIZE ;
 	HeapRegion_t xHeapRegions[] = {
 		{ ( uint8_t * ) SRAM_BASE,				SRAM1_SIZE 				},	// portion of memory used by bootloader
 		{ ( uint8_t * )	&__TI_static_base__, 	(size_t) &__HEAP_SIZE	},
 		{ ( uint8_t * ) NULL, 					0						},
 	} ;
-
-#elif	defined(HW_P_PHOTON) && defined( __CC_ARM )
-
+#elif defined(HW_P_PHOTON) && defined( __CC_ARM )
 	extern	uint8_t		Image$$RW_IRAM1$$ZI$$Limit[] ;
 	extern	uint8_t		Image$$ARM_LIB_STACK$$ZI$$Base[] ;
 	HeapRegion_t xHeapRegions[] = {
 		{ Image$$RW_IRAM1$$ZI$$Limit,	(size_t) Image$$ARM_LIB_STACK$$ZI$$Base } ,
 		{ NULL,							0 }
 	} ;
-
-#elif	defined(HW_P_PHOTON) && defined( __GNUC__ )
-
+#elif defined(HW_P_PHOTON) && defined( __GNUC__ )
 	extern	uint8_t		__HEAP_BASE[], __HEAP_SIZE[] ;
 	HeapRegion_t xHeapRegions[] = {
 		{ __HEAP_BASE,	(size_t) __HEAP_SIZE } ,
 		{ NULL,					0 }
 	} ;
-
-#elif	defined(ESP_PLATFORM)
-//	#warning "Anything specific for ESP32 here..."
 #endif
 
 /**
  * vRtosHeapSetup()
  */
-void	vRtosHeapSetup(void ) {
-#if		defined( HW_P_PHOTON ) && defined( __CC_ARM )
+void vRtosHeapSetup(void ) {
+#if defined( HW_P_PHOTON ) && defined( __CC_ARM )
 	xHeapRegions[0].xSizeInBytes	-= (size_t) Image$$RW_IRAM1$$ZI$$Limit ;
 	vPortDefineHeapRegions(xHeapRegions) ;
-
-#elif	defined( cc3200 ) && defined( __TI_ARM__ )
+#elif defined( cc3200 ) && defined( __TI_ARM__ )
 	vPortDefineHeapRegions(xHeapRegions) ;
-
-#elif	defined(ESP_PLATFORM)
-	vPortCPUInitializeMutex(&HeapFreeSafelyMutex) ;
-
 #endif
 	g_HeapBegin = xPortGetFreeHeapSize() ;
 }
@@ -124,47 +111,27 @@ SemaphoreHandle_t xRtosSemaphoreInit(void) {
 }
 
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, uint32_t mSec) {
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING
-	|| halNVIC_CalledFromISR()) return pdTRUE;
-
+	if (unlikely(xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) ||
+		(halNVIC_CalledFromISR())) return pdTRUE;
 	if (*pSema == NULL) *pSema = xRtosSemaphoreInit();
-
-#if		(rtosCHECK_CURTASK == 1)
-	/* If the mutex is being held by the current task AND we are trying to take it AGAIN
-	 * then we just fake the xSemaphoreTake() and return success.
-	 * In order to ensure we do not unlock it prematurely when the matching UnLock call
-	 * occurs, we need to mark it in some way....
-	 */
-	if (xSemaphoreGetMutexHolder(*pSema) == xTaskGetCurrentTaskHandle() && CurTask == 0) {
-		CurTask = xTaskGetCurrentTaskHandle() ;
-		return pdTRUE ;
-	}
-#endif
-
 	return xSemaphoreTake(*pSema, pdMS_TO_TICKS(mSec)) ;
 }
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING
-	|| halNVIC_CalledFromISR() || *pSema == 0) return pdTRUE;
-
-#if		(rtosCHECK_CURTASK == 1)
-	if (xSemaphoreGetMutexHolder(*pSema) == xTaskGetCurrentTaskHandle() && CurTask != 0) {
-		CurTask = 0 ;
-		return pdTRUE ;
-	}
-#endif
+	if (unlikely(xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) ||
+		(halNVIC_CalledFromISR() || *pSema == 0)) return pdTRUE;
 	return xSemaphoreGive(*pSema) ;
 }
 
 void * pvRtosMalloc(size_t S) {
 	void * pV = malloc(S);
-	IF_PRINT(debugTRACK && ioB1GET(ioMemory), "malloc %u @ %p\n", S, pV);
+	IF_myASSERT(debugRESULT, pV);
+	IF_PRINT(debugTRACK && ioB1GET(ioMemory), "malloc %p:%u\n", pV, S);
 	return pV;
 }
 
 void vRtosFree(void * pV) {
-	IF_PRINT(debugTRACK && ioB1GET(ioMemory), "free %p\n", pV) ;
+	IF_PRINT(debugTRACK && ioB1GET(ioMemory), " free  %p\n", pV) ;
 	free(pV);
 }
 
@@ -180,17 +147,20 @@ bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) {
 }
 
 /**
- * bRtosVerifyState() - check a) if task should self delete else b) if task should run
- * @param uxTaskToVerify
+ * check if a task should a) terminate or b) run
+ * @brief	if, at entry, set to terminate immediately return result
+ * 			if not, wait (possibly 0 ticks) for run status
+ *			Before returning, again check if set to terminate.
+ * @param	uxTaskMask - specific task bitmap
  * @return	0 if task should delete, 1 if it should run...
  */
-bool bRtosVerifyState(const EventBits_t uxBitsTasks) {
+bool bRtosVerifyState(const EventBits_t uxTaskMask) {
 	// step 1: if task is meant to delete/terminate, inform it as such
-	if ((xEventGroupGetBits(TaskDeleteState) & uxBitsTasks) == uxBitsTasks) return 0 ;
+	if ((xEventGroupGetBits(TaskDeleteState) & uxTaskMask) == uxTaskMask) return 0 ;
 	// step 2: if not meant to terminate, check if/wait until enabled to run again
-	xEventGroupWaitBits(TaskRunState, uxBitsTasks, pdFALSE, pdTRUE, portMAX_DELAY) ;
+	xEventGroupWaitBits(TaskRunState, uxTaskMask, pdFALSE, pdTRUE, portMAX_DELAY) ;
 	// step 3: since now definitely enabled to run, check for delete state again
-	return ((xEventGroupGetBits(TaskDeleteState) & uxBitsTasks) == uxBitsTasks) ? 0 : 1 ;
+	return ((xEventGroupGetBits(TaskDeleteState) & uxTaskMask) == uxTaskMask) ? 0 : 1 ;
 }
 
 // ################################# FreeRTOS Task statistics reporting ############################
@@ -250,8 +220,8 @@ typedef struct {
 	uint8_t 		MaxNum;								// Highest logical task number
 } RtosStatus_t ;
 
-static	RtosStatus_t	sRS = { 0 } ;
-static	TaskStatus_t	sTS[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] = { 0 } ;
+static RtosStatus_t	sRS = { 0 } ;
+static TaskStatus_t	sTS[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] = { 0 } ;
 
 uint64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
 	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i)
