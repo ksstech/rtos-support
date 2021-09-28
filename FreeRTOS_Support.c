@@ -29,7 +29,6 @@
 
 // #######################################  Build macros ###########################################
 
-#define rtosPROFILING_ENABLE			0
 
 // #################################### FreeRTOS global variables ##################################
 
@@ -38,17 +37,6 @@ EventGroupHandle_t	xEventStatus = 0,
 					TaskDeleteState = 0 ;
 int	xTaskIndex = 0 ;
 uint32_t g_HeapBegin ;
-
-#if		defined(cc3200)
-	volatile uint64_t	PreSleepSCC ;
-	#if	(rtosPROFILING_ENABLE == 1)
-	x32mma_t	SleepIntvl ;
-	#endif
-#endif
-
-#if		defined(ESP_PLATFORM)
-	static	portMUX_TYPE	HeapFreeSafelyMutex ;
-#endif
 
 // ################################# FreeRTOS heap & stack  ########################################
 
@@ -106,108 +94,6 @@ void	vRtosHeapSetup(void ) {
 	g_HeapBegin = xPortGetFreeHeapSize() ;
 }
 
-/**
- * vRtosHeapFreeSafely()
- */
-void	vRtosHeapFreeSafely(void ** MemBuf) {
-#if		defined(ESP_PLATFORM)
-	portENTER_CRITICAL(&HeapFreeSafelyMutex) ;
-#else
-	taskENTER_CRITICAL() ;
-#endif
-	free(*MemBuf) ;
-	*MemBuf = 0 ;
-#if		defined(ESP_PLATFORM)
-	portEXIT_CRITICAL(&HeapFreeSafelyMutex) ;
-#else
-	taskEXIT_CRITICAL() ;
-#endif
-}
-
-// ############################## Power save / sleep mode support ##################################
-
-void	vRtosInitSleep(TickType_t xExpectedIdleTime) {
-#if	(rtosPROFILING_ENABLE == 1)
-	x32MMAinit(&SleepIntvl) ;
-#endif
-}
-
-void	vRtosPreSleep(TickType_t xExpectedIdleTime) {
-#if		defined( cc3200 ) && defined( __TI_ARM__ )
-	PreSleepSCC = PRCMSlowClkCtrFastGet() ;		// using PRCMSlowClkCtrGet() causes errors UtilsDelay() under debug
-#else
-	myASSERT(0) ;
-#endif
-}
-
-void	vRtosPostSleep(void) {
-#if		defined( cc3200 )
-/* The slow clock counter (SCC) is a 48 bit register and is clocked at 32,768Hz or 32.768KHz
- * This means that the SCC will count from 0 -> 2^32 - 1 in 99,420.54 days or 272.3 years.
- * If only the bottom 32 bits are considered a range of 0->131,072sec or 36.41hr is possible
- * Since Systick is a 24bit timer clocked @ 80MHz maximum sleep time is 209mSec
- */
-uint64_t	ElapsedSCC, Correction ;
-// first read the 48bit SCC and store bottom 32 bits
-	ElapsedSCC	= PRCMSlowClkCtrFastGet() ;			// use PRCMSlowClkCtrGet() cause UtilsDelay() errors debugging
-	ElapsedSCC -= PreSleepSCC ;						// calc actual elapsed SCC counts
-
-/* 32768 SCC ticks represent 1 second in time. Now convert the SCC ticks to fractions of a second */
-	Correction		= ElapsedSCC * (0x0000000100000000 / 32768ULL) ;
-	Correction		/= FRACTIONS_PER_MICROSEC ;			// now a number of uSecs
-	CurSecs.usec	+= Correction ;
-	if (CurSecs.usec > MICROS_IN_SECOND) {
-		CurSecs.usec %= MICROS_IN_SECOND ;
-		CurSecs.unit++ ;
-	}
-	RunSecs.usec	+= Correction ;
-	if (RunSecs.usec > MICROS_IN_SECOND) {
-		RunSecs.usec %= MICROS_IN_SECOND ;
-		RunSecs.unit++ ;
-	}
-#else
-	myASSERT(0) ;
-#endif
-
-#if		(rtosPROFILING_ENABLE == 1)
-	i32MMAupdate(&SleepIntvl, (x32_t) xTimeFractionToMillis((uint32_t) (Correction & 0x00000000FFFFFFFF))) ;
-#endif
-}
-
-// ####################################### FREERTOS HOOKS ##########################################
-
-/**
- * vApplicationTickHook()
- */
-
-#ifndef	ESP_PLATFORM
-void	vApplicationTickHook(void) { halGPIO_TickHook() ; }	// button debounce functionality
-#endif
-
-/**
- * vApplicationStackOverflowHook()
- */
-void	vApplicationStackOverflowHook(TaskHandle_t *pxTask, char * pcTaskName) {
-	SL_EMER("Stack overflow task %s %p", pcTaskName, pxTask) ;
-#if		defined(ESP_PLATFORM)
-	esp_restart() ;
-#else
-	__error_report__(100, __func__, pcTaskName, (int32_t) pxTask) ;
-#endif
-}
-
-/**
- * vApplicationMallocFailedHook()
- */
-void	vApplicationMallocFailedHook(void) {
-	SL_EMER("Malloc() failure") ;
-#if		defined(ESP_PLATFORM)
-	esp_restart() ;
-#else
-	__error_report__(100, __func__, "FAILED" , 0) ;
-#endif
-}
-
 // #################################### General support routines ###################################
 
 int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
@@ -230,11 +116,6 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 	IF_myASSERT(debugRESULT, iRV == pdPASS) ;
 	return (iRV == pdPASS) ? erSUCCESS : erFAILURE ;
 }
-
-#define	rtosCHECK_CURTASK			0
-#if		(rtosCHECK_CURTASK == 1)
-	static	TaskHandle_t CurTask = 0 ;
-#endif
 
 SemaphoreHandle_t xRtosSemaphoreInit(void) {
 	SemaphoreHandle_t xHandle = xSemaphoreCreateMutex();
