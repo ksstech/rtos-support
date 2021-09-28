@@ -365,7 +365,7 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	    	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
 			iRV += wsnprintfx(&pcBuf, &Size, "%2u.%02u %#5llu", Units, Fract, u64RunTime);
 
-			#if	(!defined(NDEBUG) || defined(DEBUG)) && (SL_LEVEL > SL_SEV_NOTICE)
+			#if	(debugTRACK && (SL_LEVEL > SL_SEV_NOTICE))
 			if (FlagMask.bXtras) iRV += wsnprintfx(&pcBuf, &Size, " %p %p\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
 			#else
 			iRV += wsnprintfx(&pcBuf, &Size, "\n");
