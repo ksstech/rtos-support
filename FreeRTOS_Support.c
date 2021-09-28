@@ -276,7 +276,7 @@ bool bRtosStatsUpdateHook(void) {
 
 	if (sRS.NumTask == 0) {								// Initial, once-off processing
 		for (int i = 0; i < portNUM_PROCESSORS; ++i) sRS.IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
-		IF_SYSTIMER_INIT(debugTIMING, stRTOS, stMICROS, "STAT", 1800, 2800);
+		IF_SYSTIMER_INIT(debugTIMING, stRTOS, stMICROS, "FreeRTOS", 1200, 5000);
 	}
 	IF_SYSTIMER_START(debugTIMING, stRTOS);
 	uint32_t NowTotal;
