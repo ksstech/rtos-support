@@ -296,7 +296,8 @@ bool bRtosStatsUpdateHook(void) {
 
 int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	int	iRV = 0 ;
-	if (FlagMask.bColor) iRV += wsnprintfx(&pcBuf, &Size, "%C", xpfSGR(colourFG_CYAN, 0, 0, 0)) ;
+	if (FlagMask.bColor)
+		iRV += wsnprintfx(&pcBuf, &Size, "%C", colourFG_CYAN);
 	if (FlagMask.bCount)
 		iRV += wsnprintfx(&pcBuf, &Size, "T# ") ;
 	if (FlagMask.bPrioX)
@@ -386,7 +387,7 @@ void vRtosReportMemory(void) {
 	halMCU_ReportMemory(MALLOC_CAP_SPIRAM) ;
 	#endif
 #endif
-    printfx("%CFreeRTOS%C\tMin=%'#u  Free=%'#u  Orig=%'#u\n\n", xpfSGR(colourFG_CYAN, 0, 0, 0), xpfSGR(attrRESET, 0, 0, 0), xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin) ;
+    printfx("%CFreeRTOS%C\tMin=%'#u  Free=%'#u  Orig=%'#u\n\n", colourFG_CYAN, attrRESET, xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin) ;
 }
 
 /*
