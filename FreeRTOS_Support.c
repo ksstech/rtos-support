@@ -119,9 +119,12 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t Ticks) {
 }
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
-	return xSemaphoreGive(*pSema) ;
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || halNVIC_CalledFromISR() || *pSema == 0)
 		return pdTRUE;
+	BaseType_t btRV = xSemaphoreGive(*pSema);
+	if (btRV != pdTRUE)
+		SL_ERR("%p btRV=%d", *pSema, btRV);
+	return btRV;
 }
 
 void * pvRtosMalloc(size_t S) {
