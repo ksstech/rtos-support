@@ -38,11 +38,8 @@ extern "C" {
 #define	xRtosSetStatus(X)			xEventGroupSetBits(xEventStatus, X)
 #define	xRtosClearStatus(X)			xEventGroupClearBits(xEventStatus, X)
 
-#define	xRtosWaitStatus(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y)
-#define	bRtosWaitStatusALL(X,Y)		(((xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y) & X) == X) ? 1 : 0)
 #define	xRtosWaitStatusANY(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdFALSE, Y)
 
-#define	bRtosCheckStatus(X)			(((xEventGroupGetBits(xEventStatus) & (X)) == (X)) ? 1 : 0)
 #define	xRtosGetStatus(X)			(xEventGroupGetBits(xEventStatus) & (X))
 
 // ############################################ Enumerations #######################################
@@ -53,6 +50,14 @@ extern "C" {
 extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
 
 // ##################################### global function prototypes ################################
+
+inline bool bRtosWaitStatusALL(EventBits_t X, TickType_t Y) {
+	return ((xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y) & X) == X) ? 1 : 0;
+}
+
+inline bool bRtosCheckStatus(EventBits_t X) {
+	return ((xEventGroupGetBits(xEventStatus) & X) == X) ? 1 : 0;
+}
 
 bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) ;
 bool bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
