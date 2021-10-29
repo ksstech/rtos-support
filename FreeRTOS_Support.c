@@ -296,6 +296,8 @@ bool bRtosStatsUpdateHook(void) {
 
 int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	int	iRV = 0 ;
+	if (pcBuf == NULL || Size == 0)
+		printfx_lock();
 	if (FlagMask.bColor)
 		iRV += wsnprintfx(&pcBuf, &Size, "%C", colourFG_CYAN);
 	if (FlagMask.bCount)
@@ -373,6 +375,8 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
     }
 #endif
     iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\n\n" : "\n");
+	if (pcBuf == NULL || Size == 0)
+		printfx_unlock();
 	return iRV;
 }
 
