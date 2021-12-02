@@ -6,19 +6,17 @@
  *	20150708	1.00	Separated from the main application module
  */
 
-#include	"hal_variables.h"
+#include	<string.h>
+
 #include	"FreeRTOS_Support.h"						// Must be before hal_nvic.h"
+#include	"hal_variables.h"
+#include	"hal_nvic.h"
+#include	"hal_mcu.h"									// halMCU_ReportMemory
 
 #include	"printfx.h"									// +x_definitions +stdarg +stdint +stdio
 #include	"syslog.h"
 #include	"systiming.h"
 #include	"x_errors_events.h"
-#include	"x_stdio.h"
-
-#include	"hal_nvic.h"
-#include	"hal_mcu.h"									// halMCU_ReportMemory
-
-#include	<string.h>
 
 #define	debugFLAG					0xF000
 

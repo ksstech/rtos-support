@@ -9,7 +9,6 @@
 #include	"FreeRTOS_Trace.h"
 
 #include	"x_terminal.h"										// Colour definitions & functions
-#include	"x_stdio.h"
 #include	"x_utilities.h"
 
 #include	<string.h>
