@@ -195,6 +195,7 @@ bool bRtosVerifyState(const EventBits_t uxTaskMask) {
 	#error "CONFIG_FREERTOS_MAX_TASK_NAME_LEN is out of range !!!"
 #endif
 
+static SemaphoreHandle_t RtosStatsMux;
 static const char TaskState[] = "RPBSD" ;
 #if		(portNUM_PROCESSORS > 1)
 	static const char caMCU[3] = { '0', '1', 'X' } ;
@@ -249,8 +250,10 @@ bool bRtosStatsUpdateHook(void) {
 		IF_SYSTIMER_INIT(debugTIMING, stRTOS, stMICROS, "FreeRTOS", 1200, 5000);
 	}
 	IF_SYSTIMER_START(debugTIMING, stRTOS);
+	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
 	uint32_t NowTotal;
 	memset(sTS, 0, sizeof(sTS));
+
 	uint32_t NowTasks = uxTaskGetSystemState(sTS, CONFIG_ESP_COREDUMP_MAX_TASKS_NUM, &NowTotal);
 	IF_myASSERT(debugPARAM, NowTasks < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM);
 
@@ -294,6 +297,7 @@ bool bRtosStatsUpdateHook(void) {
 			break ;
 		}
 	}
+	xRtosSemaphoreGive(&RtosStatsMux);
 	IF_SYSTIMER_STOP(debugTIMING, stRTOS) ;
 	return 1 ;
 }
