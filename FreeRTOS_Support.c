@@ -30,7 +30,6 @@
 
 // #################################### FreeRTOS global variables ##################################
 
-int	xTaskIndex = 0 ;
 EventGroupHandle_t	xEventStatus = 0,TaskRunState = 0, TaskDeleteState = 0;
 uint32_t g_HeapBegin ;
 
