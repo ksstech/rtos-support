@@ -209,8 +209,10 @@ uint64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
 }
 
 TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
-	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i)
-		if (sTS[i].xHandle == xHandle) return &sTS[i];
+	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
+		if (sTS[i].xHandle == xHandle)
+			return &sTS[i];
+	}
 	return NULL;
 }
 
