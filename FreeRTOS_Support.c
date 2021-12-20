@@ -215,8 +215,10 @@ TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
 }
 
 TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
-	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i)
-		if (sTS[i].xTaskNumber == xTaskNumber) return &sTS[i];
+	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
+		if (sTS[i].xTaskNumber == xTaskNumber)
+			return &sTS[i];
+	}
 	return NULL;
 }
 
