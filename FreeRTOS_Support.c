@@ -76,27 +76,6 @@ void vRtosHeapSetup(void ) {
 
 // #################################### General support routines ###################################
 
-int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
-						const char * const pcName,
-						const uint32_t usStackDepth,
-			            void * pvParameters,
-						UBaseType_t uxPriority,
-						TaskHandle_t * pxCreatedTask,
-						const BaseType_t xCoreID) {
-	int iRV = pdFAIL ;
-#if		defined(ESP_PLATFORM)
-	#if	defined(CONFIG_FREERTOS_UNICORE)
-	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask) ;
-	#else
-	iRV = xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID ) ;
-	#endif
-#else
-	#error "No/invalid platform defined"
-#endif
-	IF_myASSERT(debugRESULT, iRV == pdPASS) ;
-	return (iRV == pdPASS) ? erSUCCESS : erFAILURE ;
-}
-
 SemaphoreHandle_t xRtosSemaphoreInit(void) {
 	SemaphoreHandle_t xHandle = xSemaphoreCreateMutex();
 	IF_myASSERT(debugRESULT, xHandle != 0);
@@ -425,6 +404,23 @@ void vTaskDumpStack(void * pTCB) {
 	printfx("Cur SP : %08x - Stack HWM : %08x\r\n", pxTOS,
 			(uint8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
 }
+
+int	xRtosTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const uint32_t usStackDepth,
+	void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
+	IF_PRINT(debugTRACK && ioB1GET(ioStart), "Starting '%s\n", pcName);
+	int iRV = pdFAIL ;
+#if defined(ESP_PLATFORM)
+	#if	defined(CONFIG_FREERTOS_UNICORE)
+	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
+	#else
+	iRV = xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
+	#endif
+#else
+	#error "No/invalid platform defined"
+#endif
+	return (iRV == pdPASS) ? erSUCCESS : erFAILURE ;
+}
+
 void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
 	xRtosSetStateDELETE(uxTaskMask);
 	xRtosSetStateRUN(uxTaskMask);						// must enable run to trigger delete
