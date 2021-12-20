@@ -220,9 +220,10 @@ TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 	return NULL;
 }
 
-bool bRtosStatsUpdateHook(void) {
-	if (++sRS.Counter % CONFIG_FREERTOS_HZ)	return 1;
 
+bool bRtosStatsUpdateHook(void) {
+	if (++sRS.Counter % CONFIG_FREERTOS_HZ)
+		return 1;
 	if (sRS.NumTask == 0) {								// Initial, once-off processing
 		for (int i = 0; i < portNUM_PROCESSORS; ++i)
 			sRS.IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
