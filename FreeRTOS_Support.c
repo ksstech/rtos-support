@@ -418,3 +418,8 @@ void vTaskDumpStack(void * pTCB) {
 	printfx("Cur SP : %08x - Stack HWM : %08x\r\n", pxTOS,
 			(uint8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
 }
+void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
+	xRtosSetStateDELETE(uxTaskMask);
+	xRtosSetStateRUN(uxTaskMask);						// must enable run to trigger delete
+}
+

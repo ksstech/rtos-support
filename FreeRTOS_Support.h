@@ -61,6 +61,7 @@ inline bool bRtosCheckStatus(EventBits_t X) {
 
 bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) ;
 bool bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
+void vRtosTaskTerminate(const EventBits_t uxTaskMask);
 
 void myApplicationTickHook(void) ;
 void vApplicationStackOverflowHook(TaskHandle_t, char *) ;
