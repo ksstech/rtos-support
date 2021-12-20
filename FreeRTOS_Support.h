@@ -71,6 +71,7 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName,
 					const uint32_t usStackDepth, void * pvParameters,
 					UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask,
 					const BaseType_t xCoreID) ;
+void vRtosTaskDelete(TaskHandle_t TH);
 
 SemaphoreHandle_t xRtosSemaphoreInit(void) ;
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t Ticks) ;

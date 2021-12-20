@@ -423,3 +423,22 @@ void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
 	xRtosSetStateRUN(uxTaskMask);						// must enable run to trigger delete
 }
 
+void vRtosTaskDelete(TaskHandle_t xHandle) {
+	if (xHandle == NULL)
+		xHandle = xTaskGetCurrentTaskHandle();
+	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
+	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
+		if (sRS.Handle[i] == xHandle) {
+			sRS.Tasks[i].U64 = 0ULL;
+			sRS.Handle[i] = NULL;
+			break;
+		}
+	}
+	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
+	IF_PRINT(debugTRACK && ioB1GET(ioRstrt), "Deleting '%s'\n", psTS->pcTaskName) ;
+	if (psTS)
+		memset(psTS, 0, sizeof(TaskStatus_t));
+	xRtosSemaphoreGive(&RtosStatsMux);
+	vTaskDelete(xHandle);
+	CTRACK("Got HERE!!!\n");
+}
