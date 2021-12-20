@@ -30,10 +30,8 @@
 
 // #################################### FreeRTOS global variables ##################################
 
-EventGroupHandle_t	xEventStatus = 0,
-					TaskRunState = 0,
-					TaskDeleteState = 0 ;
 int	xTaskIndex = 0 ;
+EventGroupHandle_t	xEventStatus = 0,TaskRunState = 0, TaskDeleteState = 0;
 uint32_t g_HeapBegin ;
 
 // ################################# FreeRTOS heap & stack  ########################################
@@ -66,11 +64,8 @@ uint32_t g_HeapBegin ;
 	} ;
 #endif
 
-/**
- * vRtosHeapSetup()
- */
 void vRtosHeapSetup(void ) {
-#if defined( HW_P_PHOTON ) && defined( __CC_ARM )
+#if defined(HW_P_PHOTON ) && defined( __CC_ARM )
 	xHeapRegions[0].xSizeInBytes	-= (size_t) Image$$RW_IRAM1$$ZI$$Limit ;
 	vPortDefineHeapRegions(xHeapRegions) ;
 #elif defined( cc3200 ) && defined( __TI_ARM__ )
@@ -158,7 +153,9 @@ bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) {
  */
 bool bRtosVerifyState(const EventBits_t uxTaskMask) {
 	// step 1: if task is meant to delete/terminate, inform it as such
-	if ((xEventGroupGetBits(TaskDeleteState) & uxTaskMask) == uxTaskMask) return 0 ;
+	if ((xEventGroupGetBits(TaskDeleteState) & uxTaskMask) == uxTaskMask) {
+		return 0;
+	}
 	// step 2: if not meant to terminate, check if/wait until enabled to run again
 	xEventGroupWaitBits(TaskRunState, uxTaskMask, pdFALSE, pdTRUE, portMAX_DELAY) ;
 	// step 3: since now definitely enabled to run, check for delete state again
@@ -247,7 +244,8 @@ bool bRtosStatsUpdateHook(void) {
 	if (++sRS.Counter % CONFIG_FREERTOS_HZ)	return 1;
 
 	if (sRS.NumTask == 0) {								// Initial, once-off processing
-		for (int i = 0; i < portNUM_PROCESSORS; ++i) sRS.IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
+		for (int i = 0; i < portNUM_PROCESSORS; ++i)
+			sRS.IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
 		IF_SYSTIMER_INIT(debugTIMING, stRTOS, stMICROS, "FreeRTOS", 1200, 5000);
 	}
 	IF_SYSTIMER_START(debugTIMING, stRTOS);
@@ -258,20 +256,22 @@ bool bRtosStatsUpdateHook(void) {
 
 //	if (sRS.NumTask != NowTasks) CPRINT("Tasks %d -> %d\n", sRS.NumTask, NowTasks);
 	sRS.NumTask = NowTasks;
-	if (sRS.Total.LSW > NowTotal) ++sRS.Total.MSW;		// Handle wrapped System counter
+	if (sRS.Total.LSW > NowTotal)
+		++sRS.Total.MSW;		// Handle wrapped System counter
 	sRS.Total.LSW = NowTotal;
 
 	sRS.Active.U64 = 0;
 	memset(&sRS.Cores, 0, SO_MEM(RtosStatus_t, Cores));
 	for (int a = 0; a < NowTasks; ++a) {
 		TaskStatus_t * psTS = &sTS[a];
-		if (sRS.MaxNum < psTS->xTaskNumber) sRS.MaxNum = psTS->xTaskNumber;
-
+		if (sRS.MaxNum < psTS->xTaskNumber)
+			sRS.MaxNum = psTS->xTaskNumber;
 		for (int b = 0; b < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++b) {
 			if (sRS.Handle[b] == psTS->xHandle) {		// known task, update RT
-				if (sRS.Tasks[b].LSW > psTS->ulRunTimeCounter) ++sRS.Tasks[b].MSW;
+				if (sRS.Tasks[b].LSW > psTS->ulRunTimeCounter)
+					++sRS.Tasks[b].MSW;
 				sRS.Tasks[b].LSW = psTS->ulRunTimeCounter;
-			} else if (sRS.Handle[b] == NULL) {			// empty entry so EOT, add ...
+			} else if (sRS.Handle[b] == NULL) {			// empty entry so add ...
 				sRS.Handle[b] = psTS->xHandle;
 				sRS.Tasks[b].LSW = psTS->ulRunTimeCounter;
 			} else {
@@ -280,7 +280,10 @@ bool bRtosStatsUpdateHook(void) {
 
 			// For idle task(s) we do not want to add RunTime %'s to the task's RunTime or CoresRunTime
 			int c ;
-			for (c = 0; c < portNUM_PROCESSORS; ++c) if (sRS.Handle[b] == sRS.IdleHandle[c]) break;
+			for (c = 0; c < portNUM_PROCESSORS; ++c) {
+				if (sRS.Handle[b] == sRS.IdleHandle[c])
+					break;
+			}
 			if (c == portNUM_PROCESSORS) {				// NOT an IDLE task?
 				sRS.Active.U64 += sRS.Tasks[b].U64 ;
 				#if	(portNUM_PROCESSORS > 1)
@@ -328,8 +331,8 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	uint32_t TaskMask = 0x00000001, Units, Fract ;
 	for (int a = 1; a <= sRS.MaxNum; ++a) {
 		TaskStatus_t * psTS = psRtosStatsFindWithNumber(a);
-		if (psTS == NULL) continue;
-
+		if (psTS == NULL)
+			continue;
 	    // if task info display not enabled, skip....
 		if (FlagMask.uCount & TaskMask) {
 			if (FlagMask.bCount)
@@ -380,7 +383,7 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 }
 
 void vRtosReportMemory(void) {
-#if		defined(ESP_PLATFORM)
+#if defined(ESP_PLATFORM)
 	halMCU_ReportMemory(MALLOC_CAP_32BIT) ;
 	halMCU_ReportMemory(MALLOC_CAP_8BIT) ;
 	halMCU_ReportMemory(MALLOC_CAP_DMA) ;
