@@ -202,12 +202,6 @@ typedef struct {
 static RtosStatus_t	sRS = { 0 } ;
 static TaskStatus_t	sTS[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] = { 0 } ;
 
-uint64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
-	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i)
-		if (sRS.Handle[i] == xHandle) return sRS.Tasks[i].U64;
-	return 0ULL;
-}
-
 TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
 	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
 		if (sTS[i].xHandle == xHandle)
@@ -224,6 +218,13 @@ TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 	return NULL;
 }
 
+uint64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
+	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
+		if (sRS.Handle[i] == xHandle)
+			return sRS.Tasks[i].U64;
+	}
+	return 0ULL;
+}
 
 bool bRtosStatsUpdateHook(void) {
 	if (++sRS.Counter % CONFIG_FREERTOS_HZ)
