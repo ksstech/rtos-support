@@ -412,7 +412,7 @@ void vTaskDumpStack(void * pTCB) {
 
 int	xRtosTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const uint32_t usStackDepth,
 	void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
-	IF_PRINT(debugTRACK && ioB1GET(ioStart), "Starting '%s\n", pcName);
+	IF_PRINT(debugTRACK && ioB1GET(ioStart), "[%s] creating\n", pcName);
 	int iRV = pdFAIL ;
 #if defined(ESP_PLATFORM)
 	#if	defined(CONFIG_FREERTOS_UNICORE)
@@ -426,15 +426,25 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const 
 	return (iRV == pdPASS) ? erSUCCESS : erFAILURE ;
 }
 
+/**
+ * @brief	Set/clear all flags to force task[s] to initiate an organised shutdown
+ * @param	mask indicating the task[s] to terminate
+ */
 void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
 	xRtosSetStateDELETE(uxTaskMask);
 	xRtosSetStateRUN(uxTaskMask);						// must enable run to trigger delete
 }
 
+/**
+ * @brief	Clear task runtime and static statistics data then delete the task
+ * @param	Handle of task to be terminated (NULL = calling task)
+ */
 void vRtosTaskDelete(TaskHandle_t xHandle) {
-	if (xHandle == NULL)
+	if (xHandle == NULL) {
 		xHandle = xTaskGetCurrentTaskHandle();
+	}
 	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
+	// Clear dynamic runtime info
 	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
 		if (sRS.Handle[i] == xHandle) {
 			sRS.Tasks[i].U64 = 0ULL;
@@ -442,11 +452,11 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 			break;
 		}
 	}
+	// Clear "static" task info
 	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
-	IF_PRINT(debugTRACK && ioB1GET(ioRstrt), "Deleting '%s'\n", psTS->pcTaskName) ;
-	if (psTS)
+	if (psTS) {
 		memset(psTS, 0, sizeof(TaskStatus_t));
+	}
 	xRtosSemaphoreGive(&RtosStatsMux);
 	vTaskDelete(xHandle);
-	CTRACK("Got HERE!!!\n");
 }
