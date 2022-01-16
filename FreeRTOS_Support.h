@@ -38,6 +38,10 @@ extern "C" {
 #define	xRtosSetStatus(X)			xEventGroupSetBits(xEventStatus, X)
 #define	xRtosClearStatus(X)			xEventGroupClearBits(xEventStatus, X)
 
+/**
+ * @brief	Wait (Y) ticks for ANY of bit[s] (X) to be set
+ * @return
+ */
 #define	xRtosWaitStatusANY(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdFALSE, Y)
 
 #define	xRtosGetStatus(X)			(xEventGroupGetBits(xEventStatus) & (X))
