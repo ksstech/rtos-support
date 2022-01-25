@@ -30,7 +30,7 @@
 
 // #################################### FreeRTOS global variables ##################################
 
-EventGroupHandle_t	xEventStatus = 0,TaskRunState = 0, TaskDeleteState = 0;
+EventGroupHandle_t	xEventStatus = 0,TaskRunState = 0, TaskDeleteState, HttpRequests = 0;
 uint32_t g_HeapBegin ;
 
 // ################################# FreeRTOS heap & stack  ########################################
@@ -93,8 +93,7 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || halNVIC_CalledFromISR() || *pSema == 0)
 		return pdTRUE;
 	BaseType_t btRV = xSemaphoreGive(*pSema);
-	if (btRV != pdTRUE)
-		SL_ERR("%p btRV=%d", *pSema, btRV);
+	IF_myASSERT(debugRESULT, btRV == pdTRUE);
 	return btRV;
 }
 
