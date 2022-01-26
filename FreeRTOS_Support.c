@@ -300,15 +300,11 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 		iRV += wsnprintfx(&pcBuf, &Size, "S ") ;
 	if (FlagMask.bStack)
 		iRV += wsnprintfx(&pcBuf, &Size, "LowS ") ;
-	#if	(portNUM_PROCESSORS > 1)
-	if (FlagMask.bCore)
+	if (portNUM_PROCESSORS > 1 && FlagMask.bCore)
 		iRV += wsnprintfx(&pcBuf, &Size, "X ") ;
-	#endif
 	iRV += wsnprintfx(&pcBuf, &Size, "%%Util Ticks") ;
-	#if	(debugTRACK && (SL_LEVEL > SL_SEV_NOTICE))
-	if (FlagMask.bXtras)
+	if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE) && FlagMask.bXtras)
 		iRV += wsnprintfx(&pcBuf, &Size, " Stack Base -Task TCB-") ;
-	#endif
 	if (FlagMask.bColor)
 		iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET) ;
 	iRV += wsnprintfx(&pcBuf, &Size, "\n") ;
@@ -331,10 +327,8 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 				iRV += wsnprintfx(&pcBuf, &Size, "%c ", TaskState[psTS->eCurrentState]);
 			if (FlagMask.bStack)
 				iRV += wsnprintfx(&pcBuf, &Size, "%4u ", psTS->usStackHighWaterMark);
-			#if	(portNUM_PROCESSORS > 1)
-			if (FlagMask.bCore)
+			if (portNUM_PROCESSORS > 1 && FlagMask.bCore)
 				iRV += wsnprintfx(&pcBuf, &Size, "%c ", caMCU[(psTS->xCoreID > 1) ? 2 : psTS->xCoreID]);
-			#endif
 
 			// Calculate & display individual task utilisation.
 			uint64_t u64RunTime = xRtosStatsFindRuntime(psTS->xHandle);
@@ -342,7 +336,7 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	    	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
 			iRV += wsnprintfx(&pcBuf, &Size, "%2u.%02u %#5llu", Units, Fract, u64RunTime);
 
-			if (debugTRACK && (SL_LEVEL > SL_SEV_INFO) && FlagMask.bXtras)
+			if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && FlagMask.bXtras)
 				iRV += wsnprintfx(&pcBuf, &Size, " %p %p\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
 			else
 				iRV += wsnprintfx(&pcBuf, &Size, "\n");
