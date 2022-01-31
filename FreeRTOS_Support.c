@@ -405,7 +405,7 @@ void vTaskDumpStack(void * pTCB) {
 
 int	xRtosTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const uint32_t usStackDepth,
 	void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
-	IF_PRINT(debugTRACK && ioB1GET(ioStart), "[%s] creating\n", pcName);
+	IF_PRINT(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\n", pcName);
 	int iRV = pdFAIL ;
 #if defined(ESP_PLATFORM)
 	#if	defined(CONFIG_FREERTOS_UNICORE)
