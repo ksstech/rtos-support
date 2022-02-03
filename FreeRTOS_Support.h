@@ -84,10 +84,10 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) ;
 void * pvRtosMalloc(size_t S);
 void vRtosFree(void * pV);
 
-void vRtosHeapSetup(void) ;
-void vRtosReportMemory(void) ;
-bool bRtosStatsUpdateHook(void) ;
-int	xRtosReportTasks(const flagmask_t, char *, size_t) ;
+void vRtosHeapSetup(void);
+bool bRtosStatsUpdateHook(void);
+int	xRtosReportTasks(flagmask_t, char *, size_t);
+int vRtosReportMemory(flagmask_t, char *, size_t);
 void vTaskDumpStack(void *);
 
 #ifdef __cplusplus

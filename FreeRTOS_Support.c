@@ -31,7 +31,7 @@
 // #################################### FreeRTOS global variables ##################################
 
 EventGroupHandle_t	xEventStatus = 0,TaskRunState = 0, TaskDeleteState, HttpRequests = 0;
-uint32_t g_HeapBegin ;
+static uint32_t g_HeapBegin;
 
 // ################################# FreeRTOS heap & stack  ########################################
 
@@ -174,7 +174,7 @@ bool bRtosVerifyState(const EventBits_t uxTaskMask) {
 
 static SemaphoreHandle_t RtosStatsMux;
 static const char TaskState[] = "RPBSD" ;
-#if		(portNUM_PROCESSORS > 1)
+#if	(portNUM_PROCESSORS > 1)
 	static const char caMCU[3] = { '0', '1', 'X' } ;
 #endif
 
@@ -189,7 +189,7 @@ typedef struct {
 	u64rt_t			Tasks[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] ;
 	TaskHandle_t	Handle[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] ;
 	TaskHandle_t	IdleHandle[portNUM_PROCESSORS] ;
-#if		(portNUM_PROCESSORS > 1)
+#if	(portNUM_PROCESSORS > 1)
 	u64rt_t			Cores[portNUM_PROCESSORS+1];		// Sum of non-IDLE task runtime/core
 #endif
 	uint16_t		Counter;
@@ -363,18 +363,38 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	return iRV;
 }
 
-void vRtosReportMemory(void) {
+int vRtosReportMemory(flagmask_t sFM, char * pcBuf, size_t Size) {
+	int iRV = 0;
+	if (pcBuf == NULL || Size == 0)
+		printfx_lock();
 #if defined(ESP_PLATFORM)
-	halMCU_ReportMemory(MALLOC_CAP_32BIT) ;
-	halMCU_ReportMemory(MALLOC_CAP_8BIT) ;
-	halMCU_ReportMemory(MALLOC_CAP_DMA) ;
-	halMCU_ReportMemory(MALLOC_CAP_EXEC) ;
-	halMCU_ReportMemory(MALLOC_CAP_IRAM_8BIT) ;
+	if (sFM.rm32b)
+		iRV += halMCU_ReportMemory(MALLOC_CAP_32BIT, sFM, &pcBuf, &Size);
+	if (sFM.rm8b)
+		iRV += halMCU_ReportMemory(MALLOC_CAP_8BIT, sFM, &pcBuf, &Size);
+	if (sFM.rmDma)
+		iRV += halMCU_ReportMemory(MALLOC_CAP_DMA, sFM, &pcBuf, &Size);
+	if (sFM.rmExec)
+		iRV += halMCU_ReportMemory(MALLOC_CAP_EXEC, sFM, &pcBuf, &Size);
+	if (sFM.rmIram)
+		iRV += halMCU_ReportMemory(MALLOC_CAP_IRAM_8BIT, sFM, &pcBuf, &Size);
 	#if	(CONFIG_ESP32_SPIRAM_SUPPORT == 1)
-	halMCU_ReportMemory(MALLOC_CAP_SPIRAM) ;
+	if (sFM.rmPSram)
+		iRV += halMCU_ReportMemory(MALLOC_CAP_SPIRAM, sFM, &pcBuf, &Size);
 	#endif
 #endif
-    printfx("%CFreeRTOS%C\tMin=%'#u  Free=%'#u  Orig=%'#u\n\n", colourFG_CYAN, attrRESET, xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin) ;
+    if (sFM.rmColor)
+    	iRV += wsnprintfx(&pcBuf, &Size, "%C", colourFG_CYAN);
+    iRV += wsnprintfx(&pcBuf, &Size, "FreeRTOS");
+    if (sFM.rmColor) {
+    	iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET);
+    }
+	iRV += wsnprintfx(&pcBuf, &Size, "    Min=%'#u  Free=%'#u  Orig=%'#u\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
+	if (sFM.rmSmall)
+		iRV += wsnprintfx(&pcBuf, &Size, "\n");
+	if (pcBuf == NULL || Size == 0)
+		printfx_unlock();
+	return iRV;
 }
 
 /*
