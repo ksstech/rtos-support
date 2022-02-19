@@ -334,7 +334,9 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	#endif
 
 	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
-	uint64_t TotalAdj = Total.U64 / (100ULL / portNUM_PROCESSORS) ;
+	uint64_t TotalAdj = Total.U64 / (100ULL / portNUM_PROCESSORS);
+	if (TotalAdj == 0ULL)
+		goto exit;
 	uint32_t TaskMask = 0x00000001, Units, Fract ;
 	for (int a = 1; a <= MaxNum; ++a) {
 		TaskStatus_t * psTS = psRtosStatsFindWithNumber(a);
@@ -386,6 +388,7 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
     }
 	#endif
     iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\n\n" : "\n");
+exit:
 	if (pcBuf == NULL || Size == 0)
 		printfx_unlock();
 	return iRV;
