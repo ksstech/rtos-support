@@ -377,14 +377,14 @@ int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
 	Fract = ((Active.U64 * 100) / TotalAdj) % 100 ;
 	iRV += wsnprintfx(&pcBuf, &Size, "T=%u U=%u.%02u", NumTasks, Units, Fract);
 
-#if		(portNUM_PROCESSORS > 1)
+	#if	(portNUM_PROCESSORS > 1)
 	// calculate & display individual core's utilization
     for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
     	Units = Cores[i].U64 / TotalAdj;
     	Fract = ((Cores[i].U64 * 100) / TotalAdj) % 100;
     	iRV += wsnprintfx(&pcBuf, &Size, "  %c=%u.%02u", caMCU[i], Units, Fract);
     }
-#endif
+	#endif
     iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\n\n" : "\n");
 	if (pcBuf == NULL || Size == 0)
 		printfx_unlock();
