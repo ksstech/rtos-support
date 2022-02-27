@@ -90,8 +90,11 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t Ticks) {
 }
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || halNVIC_CalledFromISR() || *pSema == 0)
+	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING ||
+		halNVIC_CalledFromISR() ||
+		*pSema == 0) {
 		return pdTRUE;
+	}
 	BaseType_t btRV = xSemaphoreGive(*pSema);
 	IF_myASSERT(debugRESULT, btRV == pdTRUE);
 	return btRV;
@@ -100,12 +103,12 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
 void * pvRtosMalloc(size_t S) {
 	void * pV = malloc(S);
 	IF_myASSERT(debugRESULT, pV);
-	IF_PRINT(debugTRACK && ioB1GET(ioMemory), "malloc %p:%u\n", pV, S);
+	IF_RP(debugTRACK && ioB1GET(ioMemory), "malloc %p:%u\n", pV, S);
 	return pV;
 }
 
 void vRtosFree(void * pV) {
-	IF_PRINT(debugTRACK && ioB1GET(ioMemory), " free  %p\n", pV) ;
+	IF_RP(debugTRACK && ioB1GET(ioMemory), " free  %p\n", pV) ;
 	free(pV);
 }
 
@@ -455,9 +458,13 @@ void vTaskDumpStack(void * pTCB) {
 			(uint8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
 }
 
-int	xRtosTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const uint32_t usStackDepth,
-	void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
-	IF_PRINT(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\n", pcName);
+int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
+	const char * const pcName, const uint32_t usStackDepth,
+	void * pvParameters,
+	UBaseType_t uxPriority,
+	TaskHandle_t * pxCreatedTask,
+	const BaseType_t xCoreID) {
+	IF_RP(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\n", pcName);
 	int iRV = pdFAIL ;
 #if defined(ESP_PLATFORM)
 	#if	defined(CONFIG_FREERTOS_UNICORE)
@@ -505,5 +512,6 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 	}
 	xRtosSemaphoreGive(&RtosStatsMux);
 	#endif
+	IF_RP(debugTRACK && ioB1GET(ioUpDown), "[%s] deleting\n", pcTaskGetName(xHandle));
 	vTaskDelete(xHandle);
 }
