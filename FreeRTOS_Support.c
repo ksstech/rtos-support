@@ -81,12 +81,20 @@ SemaphoreHandle_t xRtosSemaphoreInit(void) {
 	return xHandle;
 }
 
-BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t Ticks) {
+BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t xTicks) {
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || halNVIC_CalledFromISR())
 		return pdTRUE;
 	if (*pSema == NULL)
 		*pSema = xRtosSemaphoreInit();
-	return xSemaphoreTake(*pSema, Ticks) ;
+	xTicks = (xTicks < 100) ? 100 : (xTicks == portMAX_DELAY) ? portMAX_DELAY : (xTicks + 5) % 10;
+	do {
+		if (xSemaphoreTake(*pSema, 10) == pdTRUE)
+			return pdTRUE;
+		static int X = 0; if ((++X  % 10) == 0) esp_rom_printf("pSema=%p Count=%d", pSema, X);
+		if (xTicks != portMAX_DELAY)
+			xTicks -= 10;
+	} while (xTicks);
+	return pdFALSE;
 }
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
