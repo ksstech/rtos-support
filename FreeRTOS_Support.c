@@ -87,12 +87,17 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t xTicks) {
 	if (*pSema == NULL)
 		*pSema = xRtosSemaphoreInit();
 	xTicks = (xTicks < 100) ? 100 : (xTicks == portMAX_DELAY) ? portMAX_DELAY : (xTicks + 5) % 10;
+	int X = 0;
 	do {
-		if (xSemaphoreTake(*pSema, 10) == pdTRUE)
+		if ((++X % 100) == 0)
+			RP("T=%s P=%d S=%p C=%d\n", pcTaskGetName(NULL), uxTaskPriorityGet(NULL), pSema, X);
+		myASSERT(X < 500);
+		if (xSemaphoreTake(*pSema, 10) == pdTRUE) {
 			return pdTRUE;
-		static int X = 0; if ((++X  % 10) == 0) esp_rom_printf("pSema=%p Count=%d", pSema, X);
+		}
 		if (xTicks != portMAX_DELAY)
 			xTicks -= 10;
+		vTaskDelay(10);
 	} while (xTicks);
 	return pdFALSE;
 }
@@ -106,6 +111,13 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
 	BaseType_t btRV = xSemaphoreGive(*pSema);
 	IF_myASSERT(debugRESULT, btRV == pdTRUE);
 	return btRV;
+}
+
+void vRtosSemaphoreDelete(SemaphoreHandle_t * pSema) {
+	if (*pSema == NULL)
+		return;
+	vSemaphoreDelete(*pSema);
+	*pSema = 0;
 }
 
 void * pvRtosMalloc(size_t S) {

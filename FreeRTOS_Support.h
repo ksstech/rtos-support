@@ -27,23 +27,30 @@ extern "C" {
 
 // ################################### Event status manipulation ###################################
 
-#define	xRtosSetStateRUN(X)			xEventGroupSetBits(TaskRunState, X)
-#define	xRtosClearStateRUN(X)		xEventGroupClearBits(TaskRunState, X)
-#define	xRtosWaitStateRUN(X,Y)		xEventGroupWaitBits(TaskRunState, X, pdFALSE, pdTRUE, Y)
+#define	xRtosSetStateRUN(X)			xEventGroupSetBits(TaskRunState, (X))
+#define	xRtosClearStateRUN(X)		xEventGroupClearBits(TaskRunState, (X))
+#define	xRtosWaitStateRUN(X,Y)		xEventGroupWaitBits(TaskRunState, (X), pdFALSE, pdTRUE, (Y))
 
-#define	xRtosSetStateDELETE(X)		xEventGroupSetBits(TaskDeleteState, X)
-#define	xRtosClearStateDELETE(X)	xEventGroupClearBits(TaskDeleteState, X)
-#define	xRtosWaitStateDELETE(X,Y)	xEventGroupWaitBits(TaskDeleteState, X, pdFALSE, pdTRUE, Y)
+#define	xRtosSetStateDELETE(X)		xEventGroupSetBits(TaskDeleteState, (X))
+#define	xRtosClearStateDELETE(X)	xEventGroupClearBits(TaskDeleteState, (X))
+#define	xRtosWaitStateDELETE(X,Y)	xEventGroupWaitBits(TaskDeleteState, (X), pdFALSE, pdTRUE, (Y))
 
-#define	xRtosSetStatus(X)			xEventGroupSetBits(xEventStatus, X)
-#define	xRtosClearStatus(X)			xEventGroupClearBits(xEventStatus, X)
+#define	xRtosSetStatus(X)			xEventGroupSetBits(xEventStatus, (X))
+#define	xRtosClearStatus(X)			xEventGroupClearBits(xEventStatus, (X))
 
 /**
- * @brief	Wait (Y) ticks for ANY of bit[s] (X) to be set
- * @return
+ * @brief	Wait until ALL of bit[s] (X) are set
  */
-#define	xRtosWaitStatusANY(X,Y)		xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdFALSE, Y)
-
+#define	vRtosWaitStatus(X)			xEventGroupWaitBits(xEventStatus, (X), pdFALSE, pdTRUE, portMAX_DELAY)
+/**
+ * @brief	Wait (Y) ticks for ANY of bit[s] (X) to be set
+ * @return	bits of X that are set
+ */
+#define	xRtosWaitStatusANY(X,Y)		(xEventGroupWaitBits(xEventStatus, (X), pdFALSE, pdFALSE, (Y)) & (X))
+/**
+ * @brief	read mask X of event status bits
+ * @return	bits of X that are set
+ */
 #define	xRtosGetStatus(X)			(xEventGroupGetBits(xEventStatus) & (X))
 
 // ############################################ Enumerations #######################################
@@ -54,10 +61,6 @@ extern "C" {
 extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
 
 // ##################################### global function prototypes ################################
-
-inline bool bRtosWaitStatusALL(EventBits_t X, TickType_t Y) {
-	return ((xEventGroupWaitBits(xEventStatus, X, pdFALSE, pdTRUE, Y) & X) == X) ? 1 : 0;
-}
 
 inline bool bRtosCheckStatus(EventBits_t X) {
 	return ((xEventGroupGetBits(xEventStatus) & X) == X) ? 1 : 0;
@@ -77,10 +80,13 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName,
 					const BaseType_t xCoreID) ;
 void vRtosTaskDelete(TaskHandle_t TH);
 
-SemaphoreHandle_t xRtosSemaphoreInit(void) ;
-BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t Ticks) ;
-BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) ;
+// RTOS semaphore support
+SemaphoreHandle_t xRtosSemaphoreInit(void);
+BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t Ticks);
+BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema);
+void vRtosSemaphoreDelete(SemaphoreHandle_t * pSema);
 
+// RTOS malloc/free support
 void * pvRtosMalloc(size_t S);
 void vRtosFree(void * pV);
 
