@@ -92,8 +92,8 @@ void vRtosFree(void * pV);
 
 void vRtosHeapSetup(void);
 bool bRtosStatsUpdateHook(void);
-int	xRtosReportTasks(flagmask_t, char *, size_t);
-int vRtosReportMemory(flagmask_t, char *, size_t);
+int	xRtosReportTasks(char *, size_t, flagmask_t);
+int vRtosReportMemory(char *, size_t, flagmask_t);
 void vTaskDumpStack(void *);
 
 #ifdef __cplusplus

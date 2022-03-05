@@ -308,7 +308,7 @@ TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 	return NULL;
 }
 
-int	xRtosReportTasks(const flagmask_t FlagMask, char * pcBuf, size_t Size) {
+int	xRtosReportTasks(char * pcBuf, size_t Size, const flagmask_t FlagMask) {
 	int	iRV = 0 ;
 	if (pcBuf == NULL || Size == 0)
 		printfx_lock();
@@ -417,24 +417,24 @@ exit:
 	return iRV;
 }
 
-int vRtosReportMemory(flagmask_t sFM, char * pcBuf, size_t Size) {
+int vRtosReportMemory(char * pcBuf, size_t Size, flagmask_t sFM) {
 	int iRV = 0;
 	if (pcBuf == NULL || Size == 0)
 		printfx_lock();
 #if defined(ESP_PLATFORM)
 	if (sFM.rm32b)
-		iRV += halMCU_ReportMemory(MALLOC_CAP_32BIT, sFM, &pcBuf, &Size);
+		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_32BIT);
 	if (sFM.rm8b)
-		iRV += halMCU_ReportMemory(MALLOC_CAP_8BIT, sFM, &pcBuf, &Size);
+		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_8BIT);
 	if (sFM.rmDma)
-		iRV += halMCU_ReportMemory(MALLOC_CAP_DMA, sFM, &pcBuf, &Size);
+		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_DMA);
 	if (sFM.rmExec)
-		iRV += halMCU_ReportMemory(MALLOC_CAP_EXEC, sFM, &pcBuf, &Size);
+		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_EXEC);
 	if (sFM.rmIram)
-		iRV += halMCU_ReportMemory(MALLOC_CAP_IRAM_8BIT, sFM, &pcBuf, &Size);
+		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_IRAM_8BIT);
 	#if	(CONFIG_ESP32_SPIRAM_SUPPORT == 1)
 	if (sFM.rmPSram)
-		iRV += halMCU_ReportMemory(MALLOC_CAP_SPIRAM, sFM, &pcBuf, &Size);
+		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_SPIRAM);
 	#endif
 #endif
     if (sFM.rmColor) {
