@@ -62,9 +62,13 @@ extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
 
 // ##################################### global function prototypes ################################
 
+#if 1
+#define bRtosCheckStatus(X)	(((xEventGroupGetBits(xEventStatus) & X) == X) ? 1 : 0)
+#else
 inline bool bRtosCheckStatus(EventBits_t X) {
 	return ((xEventGroupGetBits(xEventStatus) & X) == X) ? 1 : 0;
 }
+#endif
 
 bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) ;
 bool bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
