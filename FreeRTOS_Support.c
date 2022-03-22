@@ -89,15 +89,17 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t xTicks) {
 	xTicks = (xTicks < 100) ? 100 : (xTicks == portMAX_DELAY) ? portMAX_DELAY : (xTicks + 5) % 10;
 	int X = 0;
 	do {
-		if ((++X % 100) == 0)
-			RP("T=%s P=%d S=%p C=%d\n", pcTaskGetName(NULL), uxTaskPriorityGet(NULL), pSema, X);
-		myASSERT(X < 500);
-		if (xSemaphoreTake(*pSema, 10) == pdTRUE) {
+		if (xSemaphoreTake(*pSema, 10) == pdTRUE)
 			return pdTRUE;
-		}
 		if (xTicks != portMAX_DELAY)
 			xTicks -= 10;
 		vTaskDelay(10);
+		if ((++X % 100) == 0) {
+			if (pSema == &printfxMux)
+				RP(" %p", __builtin_return_address(2));
+			RP("#%d T=%s P=%d C=%d S %p\n", cpu_hal_get_core_id(), pcTaskGetName(NULL), uxTaskPriorityGet(NULL), X, pSema);
+		}
+		myASSERT(X < 500);
 	} while (xTicks);
 	return pdFALSE;
 }
