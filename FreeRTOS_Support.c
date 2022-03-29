@@ -94,11 +94,10 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t xTicks) {
 		if (xTicks != portMAX_DELAY)
 			xTicks -= 10;
 		vTaskDelay(10);
-		if ((++X % 100) == 0) {
-			if (pSema == &printfxMux)
-				RP(" %p", __builtin_return_address(2));
-			RP("#%d T=%s P=%d C=%d S %p\n", cpu_hal_get_core_id(), pcTaskGetName(NULL), uxTaskPriorityGet(NULL), X, pSema);
-		}
+		++X;
+		IF_RP(debugTRACK && ((X % 100) == 0), "#%d T=%s P=%d C=%d S=%p 1=%p 2=%p\n",
+			cpu_hal_get_core_id(), pcTaskGetName(NULL), uxTaskPriorityGet(NULL),
+			X, pSema, __builtin_return_address(1), __builtin_return_address(2));
 		myASSERT(X < 500);
 	} while (xTicks);
 	return pdFALSE;
