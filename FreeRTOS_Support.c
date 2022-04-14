@@ -487,15 +487,11 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 	const BaseType_t xCoreID) {
 	IF_RP(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\n", pcName);
 	int iRV = pdFAIL ;
-#if defined(ESP_PLATFORM)
-	#if	defined(CONFIG_FREERTOS_UNICORE)
+	#ifdef CONFIG_FREERTOS_UNICORE
 	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
 	#else
 	iRV = xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
 	#endif
-#else
-	#error "No/invalid platform defined"
-#endif
 	return (iRV == pdPASS) ? erSUCCESS : erFAILURE ;
 }
 
