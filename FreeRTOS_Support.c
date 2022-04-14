@@ -388,7 +388,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const flagmask_t FlagMask) {
 			#endif
 	    	Units = u64RunTime / TotalAdj;
 	    	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
-			iRV += wsnprintfx(&pcBuf, &Size, "%2u.%02u %#5llu", Units, Fract, u64RunTime);
+			iRV += wsnprintfx(&pcBuf, &Size, "%2u.%02u %#`5llu", Units, Fract, u64RunTime);
 
 			if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && FlagMask.bXtras)
 				iRV += wsnprintfx(&pcBuf, &Size, " %p %p\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
@@ -445,7 +445,7 @@ int vRtosReportMemory(char * pcBuf, size_t Size, flagmask_t sFM) {
     if (sFM.rmColor) {
     	iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET);
     }
-	iRV += wsnprintfx(&pcBuf, &Size, "    Min=%'#u  Free=%'#u  Orig=%'#u\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
+	iRV += wsnprintfx(&pcBuf, &Size, "    Min=%#`u  Free=%#`u  Orig=%#`u\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
 	if (sFM.rmSmall)
 		iRV += wsnprintfx(&pcBuf, &Size, "\n");
 	if (pcBuf == NULL || Size == 0)
