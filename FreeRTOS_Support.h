@@ -52,6 +52,10 @@ extern "C" {
  * @return	bits of X that are set
  */
 #define	xRtosGetStatus(X)			(xEventGroupGetBits(xEventStatus) & (X))
+/***
+ * @brief	check for an EXACT match of ALL event status bits specified
+ */
+#define bRtosCheckStatus(X)			((xRtosGetStatus(X) == (X)) ? 1 : 0)
 
 // ############################################ Enumerations #######################################
 
@@ -61,14 +65,6 @@ extern "C" {
 extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
 
 // ##################################### global function prototypes ################################
-
-#if 1
-#define bRtosCheckStatus(X)	(((xEventGroupGetBits(xEventStatus) & (X)) == (X)) ? 1 : 0)
-#else
-inline bool bRtosCheckStatus(EventBits_t X) {
-	return ((xEventGroupGetBits(xEventStatus) & X) == X) ? 1 : 0;
-}
-#endif
 
 bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) ;
 bool bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
