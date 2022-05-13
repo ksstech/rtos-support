@@ -24,6 +24,8 @@ extern "C" {
 
 // ###################################### BUILD : CONFIG definitions ##############################
 
+#define rtosDEBUG_SEMA	1			// 0=disable, 1=no return Address, >1=add return addresses
+
 
 // ################################### Event status manipulation ###################################
 
@@ -63,6 +65,9 @@ extern "C" {
 // #################################### FreeRTOS global variables ##################################
 
 extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
+#if (rtosDEBUG_SEMA > 0)
+	extern SemaphoreHandle_t * pSemaMatch;
+#endif
 
 // ##################################### global function prototypes ################################
 

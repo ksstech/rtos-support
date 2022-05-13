@@ -1,4 +1,6 @@
 /*
+
+
 1 *	FreeRTOS_Support.c
  *	Copyright (c) KSS Technologies (Pty) Ltd , All rights reserved.
  *	Author		Andre M. Maree
@@ -81,36 +83,75 @@ SemaphoreHandle_t xRtosSemaphoreInit(void) {
 	return xHandle;
 }
 
+#if (rtosDEBUG_SEMA > 0)
+
+#define rtosSTEP		10
+#define rtosROUND		(rtosSTEP / 2)
+#define rtosBLOCK		100
+#define rtosWARN		500
+#define rtosBASE 		1
+SemaphoreHandle_t * pSemaMatch = NULL;
+
+static void vRtosSemaphoreStatePrint(int X, void * pSema) {
+	RPT("#%d %s/%d S=%p %s/%d",
+		cpu_hal_get_core_id(), pcTaskGetName(NULL), uxTaskPriorityGet(NULL),
+		pSema, (X < 0) ? "GIVE" : (X > 0) ? "WAIT" : "TAKE", X);
+	#if (rtosDEBUG_SEMA > 1)
+	RP(" A=%p B=%p C=%p D=%p E=%p\n", __builtin_return_address(rtosBASE),
+		__builtin_return_address(rtosBASE+1), __builtin_return_address(rtosBASE+2),
+		__builtin_return_address(rtosBASE+3), __builtin_return_address(rtosBASE+4));
+	#else
+	RP("\n");
+	#endif
+}
+#endif
+
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t xTicks) {
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || halNVIC_CalledFromISR())
+	IF_myASSERT(debugTRACK, halNVIC_CalledFromISR() == 0);
+	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING)
 		return pdTRUE;
-	if (*pSema == NULL)
+	if (*pSema == NULL)				// ensure initialized
 		*pSema = xRtosSemaphoreInit();
-	xTicks = (xTicks < 100) ? 100 : (xTicks == portMAX_DELAY) ? portMAX_DELAY : (xTicks + 5) % 10;
+
+	#if (rtosDEBUG_SEMA > 0)
+	if (xTicks < rtosSTEP)			// ensure xTicks an exact multiple of rtosSTEP
+		xTicks = rtosSTEP;
+	else if (xTicks < portMAX_DELAY)
+		xTicks = (xTicks + rtosROUND) - (xTicks % rtosSTEP);
+
 	int X = 0;
+	BaseType_t xRV;
 	do {
-		if (xSemaphoreTake(*pSema, 10) == pdTRUE)
-			return pdTRUE;
+		xRV = xSemaphoreTake(*pSema, rtosSTEP);
+		if (xRV == pdTRUE) {
+			if (debugTRACK && anySYSFLAGS(sfTRACKER) && (pSemaMatch == NULL || pSema == pSemaMatch))
+				vRtosSemaphoreStatePrint(X, pSema);
+			break;
+		}
 		if (xTicks != portMAX_DELAY)
-			xTicks -= 10;
-		vTaskDelay(10);
-		++X;
-		IF_RP(debugTRACK && ((X % 100) == 0), "#%d T=%s P=%d C=%d S=%p 1=%p 2=%p\n",
-			cpu_hal_get_core_id(), pcTaskGetName(NULL), uxTaskPriorityGet(NULL),
-			X, pSema, __builtin_return_address(1), __builtin_return_address(2));
-		myASSERT(X < 500);
+			xTicks -= rtosSTEP;
+		X += rtosSTEP;
+		myASSERT(X < rtosWARN);
+		if (debugTRACK && ((X % rtosBLOCK) == 0) && (pSemaMatch == NULL || pSema == pSemaMatch))
+			vRtosSemaphoreStatePrint(X, pSema);
+		vTaskDelay(rtosSTEP);
 	} while (xTicks);
-	return pdFALSE;
+	return xRV;
+	#else
+	return xSemaphoreTake(*pSema, xTicks);
+	#endif
 }
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING ||
-		halNVIC_CalledFromISR() ||
-		*pSema == 0) {
+	IF_myASSERT(debugTRACK, halNVIC_CalledFromISR() == 0);
+	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSema == 0)
 		return pdTRUE;
-	}
 	BaseType_t btRV = xSemaphoreGive(*pSema);
 	IF_myASSERT(debugRESULT, btRV == pdTRUE);
+	#if (rtosDEBUG_SEMA > 0)
+	if (debugTRACK && anySYSFLAGS(sfTRACKER) && (pSemaMatch == NULL || pSema == pSemaMatch))
+		vRtosSemaphoreStatePrint(-1, pSema);
+	#endif
 	return btRV;
 }
 
