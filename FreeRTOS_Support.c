@@ -114,11 +114,8 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t xTicks) {
 		*pSema = xRtosSemaphoreInit();
 
 	#if (rtosDEBUG_SEMA > 0)
-	if (xTicks < rtosSTEP)			// ensure xTicks an exact multiple of rtosSTEP
-		xTicks = rtosSTEP;
-	else if (xTicks < portMAX_DELAY)
-		xTicks = (xTicks + rtosROUND) - (xTicks % rtosSTEP);
-
+	// ensure xTicks an exact multiple of rtosSTEP
+	xTicks = xTicks<rtosSTEP ? rtosSTEP : xTicks<portMAX_DELAY ? xTicks+rtosROUND-(xTicks%rtosSTEP) : xTicks;
 	int X = 0;
 	BaseType_t xRV;
 	do {
