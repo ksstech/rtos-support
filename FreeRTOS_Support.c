@@ -121,16 +121,22 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t xTicks) {
 	do {
 		xRV = xSemaphoreTake(*pSema, rtosSTEP);
 		if (xRV == pdTRUE) {
-			if (debugTRACK && anySYSFLAGS(sfTRACKER) && (pSemaMatch == NULL || pSema == pSemaMatch))
+			if (debugTRACK &&
+				(anySYSFLAGS(sfTRACKER) || ioB1GET(dbgTRACKER)) &&
+				(pSemaMatch == NULL || pSemaMatch == pSema)) {
 				vRtosSemaphoreStatePrint(X, pSema);
+			}
 			break;
 		}
 		if (xTicks != portMAX_DELAY)
 			xTicks -= rtosSTEP;
 		X += rtosSTEP;
 		myASSERT(X < rtosWARN);
-		if (debugTRACK && ((X % rtosBLOCK) == 0) && (pSemaMatch == NULL || pSema == pSemaMatch))
+		if (debugTRACK &&
+			((X % rtosBLOCK) == 0) &&
+			(pSemaMatch == NULL || pSemaMatch == pSema)) {
 			vRtosSemaphoreStatePrint(X, pSema);
+		}
 		vTaskDelay(rtosSTEP);
 	} while (xTicks);
 	return xRV;
@@ -146,7 +152,9 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
 	BaseType_t btRV = xSemaphoreGive(*pSema);
 	IF_myASSERT(debugRESULT, btRV == pdTRUE);
 	#if (rtosDEBUG_SEMA > 0)
-	if (debugTRACK && anySYSFLAGS(sfTRACKER) && (pSemaMatch == NULL || pSema == pSemaMatch))
+	if (debugTRACK &&
+		(anySYSFLAGS(sfTRACKER) || ioB1GET(dbgTRACKER)) &&
+		(pSemaMatch == NULL || pSemaMatch == pSema))
 		vRtosSemaphoreStatePrint(-1, pSema);
 	#endif
 	return btRV;
