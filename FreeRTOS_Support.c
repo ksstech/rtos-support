@@ -97,11 +97,11 @@ static void vRtosSemaphoreStatePrint(int X, void * pSema) {
 		cpu_hal_get_core_id(), pcTaskGetName(NULL), uxTaskPriorityGet(NULL),
 		pSema, (X < 0) ? "GIVE" : (X > 0) ? "WAIT" : "TAKE", X);
 	#if (rtosDEBUG_SEMA > 1)
-	RP(" A=%p B=%p C=%p D=%p E=%p\n", __builtin_return_address(rtosBASE),
+	RP(" A=%p B=%p C=%p D=%p E=%p\r\n", __builtin_return_address(rtosBASE),
 		__builtin_return_address(rtosBASE+1), __builtin_return_address(rtosBASE+2),
 		__builtin_return_address(rtosBASE+3), __builtin_return_address(rtosBASE+4));
 	#else
-	RP("\n");
+	RP("\r\n");
 	#endif
 }
 #endif
@@ -170,12 +170,12 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSema) {
 void * pvRtosMalloc(size_t S) {
 	void * pV = malloc(S);
 	IF_myASSERT(debugRESULT, pV);
-	IF_RP(debugTRACK && ioB1GET(ioMemory), "malloc %p:%u\n", pV, S);
+	IF_RP(debugTRACK && ioB1GET(ioMemory), "malloc %p:%u\r\n", pV, S);
 	return pV;
 }
 
 void vRtosFree(void * pV) {
-	IF_RP(debugTRACK && ioB1GET(ioMemory), " free  %p\n", pV) ;
+	IF_RP(debugTRACK && ioB1GET(ioMemory), " free  %p\r\n", pV) ;
 	free(pV);
 }
 
@@ -377,7 +377,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const flagmask_t FlagMask) {
 		iRV += wsnprintfx(&pcBuf, &Size, " Stack Base -Task TCB-") ;
 	if (FlagMask.bColor)
 		iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET) ;
-	iRV += wsnprintfx(&pcBuf, &Size, "\n") ;
+	iRV += wsnprintfx(&pcBuf, &Size, "\r\n") ;
 
 	#if (configRUN_TIME_COUNTER_SIZE == 8)
 	if (IdleHandle[0] == NULL || IdleHandle[1] == NULL) {		// first time once only
@@ -437,9 +437,9 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const flagmask_t FlagMask) {
 			iRV += wsnprintfx(&pcBuf, &Size, "%2u.%02u %#`5llu", Units, Fract, u64RunTime);
 
 			if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && FlagMask.bXtras)
-				iRV += wsnprintfx(&pcBuf, &Size, " %p %p\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
+				iRV += wsnprintfx(&pcBuf, &Size, " %p %p\r\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
 			else
-				iRV += wsnprintfx(&pcBuf, &Size, "\n");
+				iRV += wsnprintfx(&pcBuf, &Size, "\r\n");
 		}
 		TaskMask <<= 1 ;
 	}
@@ -457,7 +457,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const flagmask_t FlagMask) {
     	iRV += wsnprintfx(&pcBuf, &Size, "  %c=%u.%02u", caMCU[i], Units, Fract);
     }
 	#endif
-    iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\n\n" : "\n");
+    iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\r\n\n" : "\r\n");
 exit:
 	if (pcBuf == NULL || Size == 0)
 		printfx_unlock();
@@ -491,9 +491,9 @@ int vRtosReportMemory(char * pcBuf, size_t Size, flagmask_t sFM) {
     if (sFM.rmColor) {
     	iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET);
     }
-	iRV += wsnprintfx(&pcBuf, &Size, "    Min=%#`u  Free=%#`u  Orig=%#`u\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
+	iRV += wsnprintfx(&pcBuf, &Size, "    Min=%#`u  Free=%#`u  Orig=%#`u\r\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
 	if (sFM.rmSmall)
-		iRV += wsnprintfx(&pcBuf, &Size, "\n");
+		iRV += wsnprintfx(&pcBuf, &Size, "\r\n");
 	if (pcBuf == NULL || Size == 0)
 		printfx_unlock();
 	return iRV;
@@ -521,7 +521,7 @@ void vTaskDumpStack(void * pTCB) {
 	if (pTCB == NULL) pTCB = xTaskGetCurrentTaskHandle() ;
 	void * pxTOS	= (void *) * ((uint32_t *) pTCB)  ;
 	void * pxStack	= (void *) * ((uint32_t *) pTCB + 12) ;		// 48 bytes / 4 = 12
-	printfx("Cur SP : %08x - Stack HWM : %08x\r\n", pxTOS,
+	printfx("Cur SP : %08x - Stack HWM : %08x\r\r\n", pxTOS,
 			(uint8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
 }
 
@@ -531,7 +531,7 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 	UBaseType_t uxPriority,
 	TaskHandle_t * pxCreatedTask,
 	const BaseType_t xCoreID) {
-	IF_RP(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\n", pcName);
+	IF_RP(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
 	int iRV = pdFAIL ;
 	#ifdef CONFIG_FREERTOS_UNICORE
 	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
@@ -575,6 +575,6 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 	}
 	xRtosSemaphoreGive(&RtosStatsMux);
 	#endif
-	IF_RP(debugTRACK && ioB1GET(ioUpDown), "[%s] deleting\n", pcTaskGetName(xHandle));
+	IF_RP(debugTRACK && ioB1GET(ioUpDown), "[%s] deleting\r\n", pcTaskGetName(xHandle));
 	vTaskDelete(xHandle);
 }

@@ -20,7 +20,7 @@ extern "C" {
 // ##################################### MACRO definitions #########################################
 
 #define	MALLOC_MARK()	uint32_t y,x=xPortGetFreeHeapSize();
-#define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)\n",x,y,y-x);
+#define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)\r\n",x,y,y-x);
 
 // ###################################### BUILD : CONFIG definitions ##############################
 
