@@ -87,9 +87,10 @@ SemaphoreHandle_t xRtosSemaphoreInit(void) {
 
 #define rtosSTEP		10
 #define rtosROUND		(rtosSTEP / 2)
-#define rtosBLOCK		100
-#define rtosWARN		500
+#define rtosBLOCK		1000
+#define rtosWARN		(rtosBLOCK * 5)
 #define rtosBASE 		1
+
 SemaphoreHandle_t * pSemaMatch = NULL;
 
 static void vRtosSemaphoreStatePrint(int X, void * pSema) {
@@ -115,7 +116,9 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t xTicks) {
 
 	#if (rtosDEBUG_SEMA > 0)
 	// ensure xTicks an exact multiple of rtosSTEP
-	xTicks = xTicks<rtosSTEP ? rtosSTEP : xTicks<portMAX_DELAY ? xTicks+rtosROUND-(xTicks%rtosSTEP) : xTicks;
+	xTicks = (xTicks < rtosSTEP) ? rtosSTEP :
+			(xTicks < portMAX_DELAY) ? (xTicks + rtosROUND - (xTicks % rtosSTEP)) :
+			xTicks;
 	int X = 0;
 	BaseType_t xRV;
 	do {
