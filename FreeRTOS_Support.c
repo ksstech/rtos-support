@@ -8,8 +8,6 @@
  *	20150708	1.00	Separated from the main application module
  */
 
-#include	<string.h>
-
 #include	"FreeRTOS_Support.h"						// Must be before hal_nvic.h"
 #include	"hal_variables.h"
 #include	"hal_nvic.h"
