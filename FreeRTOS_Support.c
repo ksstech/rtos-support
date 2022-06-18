@@ -482,7 +482,7 @@ int vRtosReportMemory(char * pcBuf, size_t Size, flagmask_t sFM) {
 		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_EXEC);
 	if (sFM.rmIram)
 		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_IRAM_8BIT);
-	#if	(CONFIG_ESP32_SPIRAM_SUPPORT == 1)
+	#ifdef CONFIG_SPIRAM
 	if (sFM.rmPSram)
 		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_SPIRAM);
 	#endif
