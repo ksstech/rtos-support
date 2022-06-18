@@ -308,7 +308,7 @@ bool bRtosStatsUpdateHook(void) {
 		TaskStatus_t * psTS = &sTS[a];
 		if (MaxNum < psTS->xTaskNumber)
 			MaxNum = psTS->xTaskNumber;
-		for (int b = 0; b < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++b) {
+		for (int b = 0; b <= CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++b) {
 			if (Handle[b] == psTS->xHandle) {		// known task, update RT
 				if (Tasks[b].LSW > psTS->ulRunTimeCounter)
 					++Tasks[b].MSW;
@@ -343,7 +343,7 @@ bool bRtosStatsUpdateHook(void) {
 #endif
 
 TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
-	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
+	for (int i = 0; i <= CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
 		if (sTS[i].xHandle == xHandle)
 			return &sTS[i];
 	}
@@ -351,7 +351,7 @@ TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
 }
 
 TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
-	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
+	for (int i = 0; i <= CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
 		if (sTS[i].xTaskNumber == xTaskNumber)
 			return &sTS[i];
 	}
@@ -389,8 +389,8 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const flagmask_t FlagMask) {
 	}
 	// Get up-to-date task status
 	memset(sTS, 0, sizeof(sTS));
-	IF_myASSERT(debugPARAM, NowTasks < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM);
 	u32_t NowTasks = uxTaskGetSystemState(sTS, CONFIG_ESP_COREDUMP_MAX_TASKS_NUM, &Total.U64);
+	IF_myASSERT(debugPARAM, NowTasks <= CONFIG_ESP_COREDUMP_MAX_TASKS_NUM);
 	Active.U64 = 0;
 	for (int a = 0; a < NowTasks; ++a) {
 		TaskStatus_t * psTS = &sTS[a];
@@ -564,7 +564,7 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 	#if (configRUN_TIME_COUNTER_SIZE == 4)
 	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
 	// Clear dynamic runtime info
-	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
+	for (int i = 0; i <= CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
 		if (Handle[i] == xHandle) {
 			Tasks[i].U64 = 0ULL;
 			Handle[i] = NULL;
