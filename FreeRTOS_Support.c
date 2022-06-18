@@ -96,7 +96,7 @@ SemaphoreHandle_t xRtosSemaphoreInit(void) {
 SemaphoreHandle_t * pSemaMatch = NULL;
 
 static void vRtosSemaphoreStatePrint(int X, void * pSema) {
-	RPT("#%d %s/%d S=%p %s/%d",
+	RP("#%d %s/%d S=%p %s/%d",
 		cpu_hal_get_core_id(), pcTaskGetName(NULL), uxTaskPriorityGet(NULL),
 		pSema, (X < 0) ? "GIVE" : (X > 0) ? "WAIT" : "TAKE", X);
 	#if (rtosDEBUG_SEMA > 1)
@@ -535,7 +535,7 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 	UBaseType_t uxPriority,
 	TaskHandle_t * pxCreatedTask,
 	const BaseType_t xCoreID) {
-	IF_RP(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
+	IF_P(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
 	int iRV = pdFAIL ;
 	#ifdef CONFIG_FREERTOS_UNICORE
 	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
@@ -577,6 +577,6 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 		memset(psTS, 0, sizeof(TaskStatus_t));
 	xRtosSemaphoreGive(&RtosStatsMux);
 	#endif
-	IF_RP(debugTRACK && ioB1GET(ioUpDown), "[%s] deleting\r\n", pcTaskGetName(xHandle));
+	IF_P(debugTRACK && ioB1GET(ioUpDown), "[%s] deleting\r\n", pcTaskGetName(xHandle));
 	vTaskDelete(xHandle);
 }
