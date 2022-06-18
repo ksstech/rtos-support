@@ -26,7 +26,6 @@ extern "C" {
 
 #define rtosDEBUG_SEMA	1			// 0=disable, 1=no return Address, >1=add return addresses
 
-
 // ################################### Event status manipulation ###################################
 
 #define	xRtosSetStateRUN(X)			xEventGroupSetBits(TaskRunState, (X))

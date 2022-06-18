@@ -33,7 +33,7 @@
 // #################################### FreeRTOS global variables ##################################
 
 EventGroupHandle_t	xEventStatus = 0,TaskRunState = 0, TaskDeleteState, HttpRequests = 0;
-static uint32_t g_HeapBegin;
+static u32_t g_HeapBegin;
 
 // ################################# FreeRTOS heap & stack  ########################################
 
@@ -44,21 +44,23 @@ static uint32_t g_HeapBegin;
  * low address to high address.
  */
 #if	 defined(cc3200) && defined( __TI_ARM__ )
-	extern	uint32_t	__TI_static_base__, __HEAP_SIZE ;
+	extern	u32_t	__TI_static_base__, __HEAP_SIZE ;
 	HeapRegion_t xHeapRegions[] = {
-		{ ( uint8_t * ) SRAM_BASE,				SRAM1_SIZE 				},	// portion of memory used by bootloader
-		{ ( uint8_t * )	&__TI_static_base__, 	(size_t) &__HEAP_SIZE	},
-		{ ( uint8_t * ) NULL, 					0						},
+		{ ( u8_t * ) SRAM_BASE,				SRAM1_SIZE 				},	// portion of memory used by bootloader
+		{ ( u8_t * )	&__TI_static_base__, 	(size_t) &__HEAP_SIZE	},
+		{ ( u8_t * ) NULL, 					0						},
 	} ;
+
 #elif defined(HW_P_PHOTON) && defined( __CC_ARM )
-	extern	uint8_t		Image$$RW_IRAM1$$ZI$$Limit[] ;
-	extern	uint8_t		Image$$ARM_LIB_STACK$$ZI$$Base[] ;
+	extern	u8_t		Image$$RW_IRAM1$$ZI$$Limit[] ;
+	extern	u8_t		Image$$ARM_LIB_STACK$$ZI$$Base[] ;
 	HeapRegion_t xHeapRegions[] = {
 		{ Image$$RW_IRAM1$$ZI$$Limit,	(size_t) Image$$ARM_LIB_STACK$$ZI$$Base } ,
 		{ NULL,							0 }
 	} ;
+
 #elif defined(HW_P_PHOTON) && defined( __GNUC__ )
-	extern	uint8_t		__HEAP_BASE[], __HEAP_SIZE[] ;
+	extern	u8_t		__HEAP_BASE[], __HEAP_SIZE[] ;
 	HeapRegion_t xHeapRegions[] = {
 		{ __HEAP_BASE,	(size_t) __HEAP_SIZE } ,
 		{ NULL,					0 }
@@ -66,12 +68,12 @@ static uint32_t g_HeapBegin;
 #endif
 
 void vRtosHeapSetup(void ) {
-#if defined(HW_P_PHOTON ) && defined( __CC_ARM )
+	#if defined(HW_P_PHOTON ) && defined( __CC_ARM )
 	xHeapRegions[0].xSizeInBytes	-= (size_t) Image$$RW_IRAM1$$ZI$$Limit ;
 	vPortDefineHeapRegions(xHeapRegions) ;
-#elif defined( cc3200 ) && defined( __TI_ARM__ )
+	#elif defined( cc3200 ) && defined( __TI_ARM__ )
 	vPortDefineHeapRegions(xHeapRegions) ;
-#endif
+	#endif
 	g_HeapBegin = xPortGetFreeHeapSize() ;
 }
 
@@ -246,19 +248,19 @@ bool bRtosVerifyState(const EventBits_t uxTaskMask) {
 #endif
 
 typedef union {				// LSW then MSW sequence critical
-	struct { uint32_t LSW, MSW ; } ;
-	uint64_t U64 ;
-} u64rt_t ;
+	struct { u32_t LSW, MSW; };
+	u64_t U64;
+} u64rt_t;
 
-static const char TaskState[] = "RPBSD" ;
+static const char TaskState[] = "RPBSD";
 #if	(portNUM_PROCESSORS > 1)
-	static const char caMCU[3] = { '0', '1', 'X' } ;
+	static const char caMCU[3] = { '0', '1', 'X' };
 #endif
 
 static u64rt_t Total;									// Sum all tasks (incl IDLE)
 static u64rt_t Active;									// Sum non-IDLE tasks
-static uint8_t NumTasks;								// Currently "active" tasks
-static uint8_t MaxNum;									// Highest logical task number
+static u8_t NumTasks;								// Currently "active" tasks
+static u8_t MaxNum;									// Highest logical task number
 
 static TaskHandle_t IdleHandle[portNUM_PROCESSORS] = { 0 };
 static TaskStatus_t	sTS[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] = { 0 };
@@ -267,13 +269,12 @@ static TaskStatus_t	sTS[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] = { 0 };
 #endif
 
 #if (configRUN_TIME_COUNTER_SIZE == 4)
-
 static SemaphoreHandle_t RtosStatsMux;
-static uint16_t	Counter;
+static u16_t Counter;
 static u64rt_t Tasks[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM];
 static TaskHandle_t Handle[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM];
 
-uint64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
+u64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
 	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
 		if (Handle[i] == xHandle)
 			return Tasks[i].U64;
@@ -291,7 +292,7 @@ bool bRtosStatsUpdateHook(void) {
 	}
 	IF_SYSTIMER_START(debugTIMING, stRTOS);
 	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
-	uint32_t NowTotal;
+	u32_t NowTotal;
 	memset(sTS, 0, sizeof(sTS));
 
 	NumTasks = uxTaskGetSystemState(sTS, CONFIG_ESP_COREDUMP_MAX_TASKS_NUM, &NowTotal);
@@ -339,7 +340,6 @@ bool bRtosStatsUpdateHook(void) {
 	IF_SYSTIMER_STOP(debugTIMING, stRTOS) ;
 	return 1 ;
 }
-
 #endif
 
 TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
@@ -389,8 +389,8 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const flagmask_t FlagMask) {
 	}
 	// Get up-to-date task status
 	memset(sTS, 0, sizeof(sTS));
-	uint32_t NowTasks = uxTaskGetSystemState(sTS, CONFIG_ESP_COREDUMP_MAX_TASKS_NUM, &Total.U64);
 	IF_myASSERT(debugPARAM, NowTasks < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM);
+	u32_t NowTasks = uxTaskGetSystemState(sTS, CONFIG_ESP_COREDUMP_MAX_TASKS_NUM, &Total.U64);
 	Active.U64 = 0;
 	for (int a = 0; a < NowTasks; ++a) {
 		TaskStatus_t * psTS = &sTS[a];
@@ -407,10 +407,10 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const flagmask_t FlagMask) {
 	#endif
 
 	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
-	uint64_t TotalAdj = Total.U64 / (100ULL / portNUM_PROCESSORS);
+	u64_t TotalAdj = Total.U64 / (100ULL / portNUM_PROCESSORS);
 	IF_EXIT(TotalAdj == 0ULL);
 
-	uint32_t TaskMask = 0x00000001, Units, Fract ;
+	u32_t TaskMask = 0x00000001, Units, Fract ;
 	for (int a = 1; a <= MaxNum; ++a) {
 		TaskStatus_t * psTS = psRtosStatsFindWithNumber(a);
 		if (psTS == NULL)
@@ -431,9 +431,9 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const flagmask_t FlagMask) {
 
 			// Calculate & display individual task utilisation.
 			#if (configRUN_TIME_COUNTER_SIZE == 8)
-			uint64_t u64RunTime = psTS->ulRunTimeCounter;
+			u64_t u64RunTime = psTS->ulRunTimeCounter;
 			#else
-			uint64_t u64RunTime = xRtosStatsFindRuntime(psTS->xHandle);
+			u64_t u64RunTime = xRtosStatsFindRuntime(psTS->xHandle);
 			#endif
 	    	Units = u64RunTime / TotalAdj;
 	    	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
@@ -471,7 +471,7 @@ int vRtosReportMemory(char * pcBuf, size_t Size, flagmask_t sFM) {
 	int iRV = 0;
 	if (pcBuf == NULL || Size == 0)
 		printfx_lock();
-#if defined(ESP_PLATFORM)
+	#if defined(ESP_PLATFORM)
 	if (sFM.rm32b)
 		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_32BIT);
 	if (sFM.rm8b)
@@ -486,7 +486,7 @@ int vRtosReportMemory(char * pcBuf, size_t Size, flagmask_t sFM) {
 	if (sFM.rmPSram)
 		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_SPIRAM);
 	#endif
-#endif
+	#endif
     if (sFM.rmColor) {
     	iRV += wsnprintfx(&pcBuf, &Size, "%C", colourFG_CYAN);
     }
@@ -512,7 +512,7 @@ int vRtosReportMemory(char * pcBuf, size_t Size, flagmask_t sFM) {
  * 	48 - 51			pxStack. If stack growing downwards, end of stack
  * 	?? - ??			pxEndOfStack
  * 	Example code:
-	uint32_t	OldStackMark, NewStackMark ;
+	u32_t	OldStackMark, NewStackMark ;
 	OldStackMark = uxTaskGetStackHighWaterMark(NULL) ;
    	NewStackMark = uxTaskGetStackHighWaterMark(NULL) ;
    	if (NewStackMark != OldStackMark) {
@@ -521,15 +521,16 @@ int vRtosReportMemory(char * pcBuf, size_t Size, flagmask_t sFM) {
    	}
  */
 void vTaskDumpStack(void * pTCB) {
-	if (pTCB == NULL) pTCB = xTaskGetCurrentTaskHandle() ;
-	void * pxTOS	= (void *) * ((uint32_t *) pTCB)  ;
-	void * pxStack	= (void *) * ((uint32_t *) pTCB + 12) ;		// 48 bytes / 4 = 12
+	if (pTCB == NULL)
+		pTCB = xTaskGetCurrentTaskHandle() ;
+	void * pxTOS	= (void *) * ((u32_t *) pTCB)  ;
+	void * pxStack	= (void *) * ((u32_t *) pTCB + 12) ;		// 48 bytes / 4 = 12
 	printfx("Cur SP : %08x - Stack HWM : %08x\r\r\n", pxTOS,
-			(uint8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
+			(u8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
 }
 
 int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
-	const char * const pcName, const uint32_t usStackDepth,
+	const char * const pcName, const u32_t usStackDepth,
 	void * pvParameters,
 	UBaseType_t uxPriority,
 	TaskHandle_t * pxCreatedTask,
@@ -558,9 +559,8 @@ void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
  * @param	Handle of task to be terminated (NULL = calling task)
  */
 void vRtosTaskDelete(TaskHandle_t xHandle) {
-	if (xHandle == NULL) {
+	if (xHandle == NULL)
 		xHandle = xTaskGetCurrentTaskHandle();
-	}
 	#if (configRUN_TIME_COUNTER_SIZE == 4)
 	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
 	// Clear dynamic runtime info
@@ -573,9 +573,8 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 	}
 	// Clear "static" task info
 	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
-	if (psTS) {
+	if (psTS)
 		memset(psTS, 0, sizeof(TaskStatus_t));
-	}
 	xRtosSemaphoreGive(&RtosStatsMux);
 	#endif
 	IF_RP(debugTRACK && ioB1GET(ioUpDown), "[%s] deleting\r\n", pcTaskGetName(xHandle));
