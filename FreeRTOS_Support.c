@@ -1,22 +1,17 @@
 /*
-
-
-1 *	FreeRTOS_Support.c
- *	Copyright (c) KSS Technologies (Pty) Ltd , All rights reserved.
- *	Author		Andre M. Maree
- *	Date		Ver		Comments/changes
- *	20150708	1.00	Separated from the main application module
+ *	FreeRTOS_Support.c
+ *	Copyright (c) 2015-22 Andre M. MAree / KSS Technologies (Pty) Ltd.
  */
 
-#include	"FreeRTOS_Support.h"						// Must be before hal_nvic.h"
-#include	"hal_variables.h"
-#include	"hal_nvic.h"
-#include	"hal_mcu.h"									// halMCU_ReportMemory
+#include "FreeRTOS_Support.h"						// Must be before hal_nvic.h"
+#include "hal_variables.h"
+#include "hal_nvic.h"
+#include "hal_mcu.h"									// halMCU_ReportMemory
 
-#include	"printfx.h"									// +x_definitions +stdarg +stdint +stdio
-#include	"syslog.h"
-#include	"systiming.h"
-#include	"x_errors_events.h"
+#include "printfx.h"									// +x_definitions +stdarg +stdint +stdio
+#include "syslog.h"
+#include "systiming.h"
+#include "x_errors_events.h"
 
 #define	debugFLAG					0xF000
 
