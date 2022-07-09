@@ -17,12 +17,16 @@
 extern "C" {
 #endif
 
+// #######################################  Build macros ###########################################
+
+#define configFR_MAX_TASKS	24
+
 // ##################################### MACRO definitions #########################################
 
 #if (tskKERNEL_VERSION_MAJOR > 9 && tskKERNEL_VERSION_MINOR > 3 && tskKERNEL_VERSION_BUILD > 4)
-	#define configRUN_TIME_COUNTER_SIZE	8
+	#define configRUNTIME_SIZE	8
 #else
-	#define configRUN_TIME_COUNTER_SIZE	4
+	#define configRUNTIME_SIZE	4
 #endif
 
 #define	MALLOC_MARK()	uint32_t y,x=xPortGetFreeHeapSize();

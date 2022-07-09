@@ -22,7 +22,6 @@
 
 // #######################################  Build macros ###########################################
 
-#define CONFIG_ESP_COREDUMP_MAX_TASKS_NUM	22
 
 // #################################### FreeRTOS global variables ##################################
 
@@ -257,19 +256,19 @@ static u8_t NumTasks;								// Currently "active" tasks
 static u8_t MaxNum;									// Highest logical task number
 
 static TaskHandle_t IdleHandle[portNUM_PROCESSORS] = { 0 };
-static TaskStatus_t	sTS[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM] = { 0 };
+static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 #if	(portNUM_PROCESSORS > 1)
 	static u64rt_t Cores[portNUM_PROCESSORS+1];			// Sum of non-IDLE task runtime/core
 #endif
 
-#if (configRUN_TIME_COUNTER_SIZE == 4)
+#if (configRUNTIME_SIZE == 4)
 static SemaphoreHandle_t RtosStatsMux;
 static u16_t Counter;
-static u64rt_t Tasks[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM];
-static TaskHandle_t Handle[CONFIG_ESP_COREDUMP_MAX_TASKS_NUM];
+static u64rt_t Tasks[configFR_MAX_TASKS];
+static TaskHandle_t Handle[configFR_MAX_TASKS];
 
 u64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
-	for (int i = 0; i < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
+	for (int i = 0; i < configFR_MAX_TASKS; ++i) {
 		if (Handle[i] == xHandle)
 			return Tasks[i].U64;
 	}
@@ -289,8 +288,8 @@ bool bRtosStatsUpdateHook(void) {
 	u32_t NowTotal;
 	memset(sTS, 0, sizeof(sTS));
 
-	NumTasks = uxTaskGetSystemState(sTS, CONFIG_ESP_COREDUMP_MAX_TASKS_NUM, &NowTotal);
-	IF_myASSERT(debugPARAM, NumTasks < CONFIG_ESP_COREDUMP_MAX_TASKS_NUM);
+	NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &NowTotal);
+	IF_myASSERT(debugPARAM, NumTasks < configFR_MAX_TASKS);
 
 	if (Total.U64 && Total.LSW > NowTotal)
 		++Total.MSW;		// Handle wrapped System counter
@@ -302,7 +301,7 @@ bool bRtosStatsUpdateHook(void) {
 		TaskStatus_t * psTS = &sTS[a];
 		if (MaxNum < psTS->xTaskNumber)
 			MaxNum = psTS->xTaskNumber;
-		for (int b = 0; b <= CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++b) {
+		for (int b = 0; b <= configFR_MAX_TASKS; ++b) {
 			if (Handle[b] == psTS->xHandle) {		// known task, update RT
 				if (Tasks[b].LSW > psTS->ulRunTimeCounter)
 					++Tasks[b].MSW;
@@ -337,7 +336,7 @@ bool bRtosStatsUpdateHook(void) {
 #endif
 
 TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
-	for (int i = 0; i <= CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
+	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
 		if (sTS[i].xHandle == xHandle)
 			return &sTS[i];
 	}
@@ -345,7 +344,7 @@ TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
 }
 
 TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
-	for (int i = 0; i <= CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
+	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
 		if (sTS[i].xTaskNumber == xTaskNumber)
 			return &sTS[i];
 	}
@@ -376,15 +375,15 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const flagmask_t FlagMask) {
 		iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET) ;
 	iRV += wsnprintfx(&pcBuf, &Size, "\r\n") ;
 
-	#if (configRUN_TIME_COUNTER_SIZE == 8)
+	#if (configRUNTIME_SIZE == 8)
 	if (IdleHandle[0] == NULL || IdleHandle[1] == NULL) {		// first time once only
 		for (int i = 0; i < portNUM_PROCESSORS; ++i)
 			IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
 	}
 	// Get up-to-date task status
 	memset(sTS, 0, sizeof(sTS));
-	u32_t NowTasks = uxTaskGetSystemState(sTS, CONFIG_ESP_COREDUMP_MAX_TASKS_NUM, &Total.U64);
-	IF_myASSERT(debugPARAM, NowTasks <= CONFIG_ESP_COREDUMP_MAX_TASKS_NUM);
+	u32_t NowTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &Total.U64);
+	IF_myASSERT(debugPARAM, NowTasks <= configFR_MAX_TASKS);
 	Active.U64 = 0;
 	for (int a = 0; a < NowTasks; ++a) {
 		TaskStatus_t * psTS = &sTS[a];
@@ -424,7 +423,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const flagmask_t FlagMask) {
 				iRV += wsnprintfx(&pcBuf, &Size, "%c ", caMCU[(psTS->xCoreID > 1) ? 2 : psTS->xCoreID]);
 
 			// Calculate & display individual task utilisation.
-			#if (configRUN_TIME_COUNTER_SIZE == 8)
+			#if (configRUNTIME_SIZE == 8)
 			u64_t u64RunTime = psTS->ulRunTimeCounter;
 			#else
 			u64_t u64RunTime = xRtosStatsFindRuntime(psTS->xHandle);
@@ -536,7 +535,9 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 	#else
 	iRV = xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
 	#endif
-	return (iRV == pdPASS) ? erSUCCESS : erFAILURE ;
+	IF_myASSERT(debugRESULT, iRV == pdPASS);
+//	return (iRV == pdPASS) ? erSUCCESS : erFAILURE ;
+	return iRV;
 }
 
 /**
@@ -555,10 +556,10 @@ void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
 void vRtosTaskDelete(TaskHandle_t xHandle) {
 	if (xHandle == NULL)
 		xHandle = xTaskGetCurrentTaskHandle();
-	#if (configRUN_TIME_COUNTER_SIZE == 4)
+	#if (configRUNTIME_SIZE == 4)
 	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
 	// Clear dynamic runtime info
-	for (int i = 0; i <= CONFIG_ESP_COREDUMP_MAX_TASKS_NUM; ++i) {
+	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
 		if (Handle[i] == xHandle) {
 			Tasks[i].U64 = 0ULL;
 			Handle[i] = NULL;
