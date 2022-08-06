@@ -90,7 +90,7 @@ SemaphoreHandle_t * pSemaMatch = NULL;
 
 static void vRtosSemaphoreStatePrint(int X, void * pSema) {
 	RP("#%d %s/%d S=%p %s/%d",
-		cpu_hal_get_core_id(), pcTaskGetName(NULL), uxTaskPriorityGet(NULL),
+		esp_cpu_get_core_id(), pcTaskGetName(NULL), uxTaskPriorityGet(NULL),
 		pSema, (X < 0) ? "GIVE" : (X > 0) ? "WAIT" : "TAKE", X);
 	#if (rtosDEBUG_SEMA > 1)
 	RP(" A=%p B=%p C=%p D=%p E=%p\r\n", __builtin_return_address(rtosBASE),
