@@ -351,7 +351,7 @@ TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 	return NULL;
 }
 
-int	xRtosReportTasks(char * pcBuf, size_t Size, const flagmask_t FlagMask) {
+int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 	int	iRV = 0 ;
 	if (pcBuf == NULL || Size == 0)
 		printfx_lock();
@@ -460,7 +460,7 @@ exit:
 	return iRV;
 }
 
-int vRtosReportMemory(char * pcBuf, size_t Size, flagmask_t sFM) {
+int vRtosReportMemory(char * pcBuf, size_t Size, fm_t sFM) {
 	int iRV = 0;
 	if (pcBuf == NULL || Size == 0)
 		printfx_lock();
