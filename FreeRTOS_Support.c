@@ -97,7 +97,7 @@ static void vRtosSemaphoreStatePrint(int X, void * pSema) {
 		__builtin_return_address(rtosBASE+1), __builtin_return_address(rtosBASE+2),
 		__builtin_return_address(rtosBASE+3), __builtin_return_address(rtosBASE+4));
 	#else
-	RP("\r\n");
+	RP(strCRLF);
 	#endif
 }
 #endif
@@ -373,7 +373,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 		iRV += wsnprintfx(&pcBuf, &Size, " Stack Base -Task TCB-") ;
 	if (FlagMask.bColor)
 		iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET) ;
-	iRV += wsnprintfx(&pcBuf, &Size, "\r\n") ;
+	iRV += wsnprintfx(&pcBuf, &Size, strCRLF) ;
 
 	#if (configRUNTIME_SIZE == 8)
 	if (IdleHandle[0] == NULL || IdleHandle[1] == NULL) {		// first time once only
@@ -435,7 +435,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 			if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && FlagMask.bXtras)
 				iRV += wsnprintfx(&pcBuf, &Size, " %p %p\r\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
 			else
-				iRV += wsnprintfx(&pcBuf, &Size, "\r\n");
+				iRV += wsnprintfx(&pcBuf, &Size, strCRLF);
 		}
 		TaskMask <<= 1 ;
 	}
@@ -453,7 +453,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
     	iRV += wsnprintfx(&pcBuf, &Size, "  %c=%u.%02u", caMCU[i], Units, Fract);
     }
 	#endif
-    iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\r\n\n" : "\r\n");
+    iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\r\n\n" : strCRLF);
 exit:
 	if (pcBuf == NULL || Size == 0)
 		printfx_unlock();
@@ -489,7 +489,7 @@ int vRtosReportMemory(char * pcBuf, size_t Size, fm_t sFM) {
     }
 	iRV += wsnprintfx(&pcBuf, &Size, "    Min=%#`u  Free=%#`u  Orig=%#`u\r\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
 	if (sFM.rmSmall)
-		iRV += wsnprintfx(&pcBuf, &Size, "\r\n");
+		iRV += wsnprintfx(&pcBuf, &Size, strCRLF);
 	if (pcBuf == NULL || Size == 0)
 		printfx_unlock();
 	return iRV;

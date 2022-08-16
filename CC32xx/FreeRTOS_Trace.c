@@ -234,10 +234,10 @@ uint32_t	TraceIdx ;
 			pBuf	= Buffer ;
 			pBuf	+= xU32ToDecStr(TraceTime, pBuf) ;
 			puts(Buffer) ;
-			puts("\r\n") ;
+			puts(strCRLF) ;
 			TraceWidth = 0 ;
 		} else if ((pTrcOut->code == trcCODE_TaSI) || (TraceWidth > configTRACE_MAX_WIDTH)) {	// new task running ?
-			puts("\r\n") ;
+			puts(strCRLF) ;
 			TraceWidth = 0 ;
 		}
 	// print the fractional time stamp
