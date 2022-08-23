@@ -430,7 +430,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 			#endif
 	    	Units = u64RunTime / TotalAdj;
 	    	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
-			iRV += wsnprintfx(&pcBuf, &Size, "%2u.%02u %#`5llu", Units, Fract, u64RunTime);
+			iRV += wsnprintfx(&pcBuf, &Size, "%2lu.%02lu %#`5llu", Units, Fract, u64RunTime);
 
 			if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && FlagMask.bXtras)
 				iRV += wsnprintfx(&pcBuf, &Size, " %p %p\r\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
@@ -443,14 +443,14 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 	// Calculate & display total for "real" tasks utilization.
 	Units = Active.U64 / TotalAdj;
 	Fract = ((Active.U64 * 100) / TotalAdj) % 100 ;
-	iRV += wsnprintfx(&pcBuf, &Size, "T=%u U=%u.%02u", NumTasks, Units, Fract);
+	iRV += wsnprintfx(&pcBuf, &Size, "T=%u U=%lu.%02lu", NumTasks, Units, Fract);
 
 	#if	(portNUM_PROCESSORS > 1)
 	// calculate & display individual core's utilization
     for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
     	Units = Cores[i].U64 / TotalAdj;
     	Fract = ((Cores[i].U64 * 100) / TotalAdj) % 100;
-    	iRV += wsnprintfx(&pcBuf, &Size, "  %c=%u.%02u", caMCU[i], Units, Fract);
+    	iRV += wsnprintfx(&pcBuf, &Size, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
     }
 	#endif
     iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\r\n\n" : strCRLF);
@@ -475,7 +475,7 @@ int vRtosReportMemory(char * pcBuf, size_t Size, fm_t sFM) {
 		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_EXEC);
 	if (sFM.rmIram)
 		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_IRAM_8BIT);
-	#ifdef CONFIG_SPIRAM
+	#ifdef CONFIG_SOC_SPIRAM_SUPPORTED
 	if (sFM.rmPSram)
 		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_SPIRAM);
 	#endif
