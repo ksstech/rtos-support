@@ -252,8 +252,8 @@ static const char TaskState[] = "RPBSD";
 
 static u64rt_t Total;									// Sum all tasks (incl IDLE)
 static u64rt_t Active;									// Sum non-IDLE tasks
-static u8_t NumTasks;								// Currently "active" tasks
-static u8_t MaxNum;									// Highest logical task number
+static u8_t NumTasks;									// Currently "active" tasks
+static u8_t MaxNum;										// Highest logical task number
 
 static TaskHandle_t IdleHandle[portNUM_PROCESSORS] = { 0 };
 static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
