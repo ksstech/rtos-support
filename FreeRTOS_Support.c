@@ -115,8 +115,8 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t xTicks) {
 			(xTicks < portMAX_DELAY) ? (xTicks + rtosROUND - (xTicks % rtosSTEP)) :
 			xTicks;
 	int X = 0;
-	BaseType_t xRV;
 	do {
+	BaseType_t xRV = pdTRUE;
 		xRV = xSemaphoreTake(*pSema, rtosSTEP);
 		if (xRV == pdTRUE) {
 			if (debugTRACK &&
@@ -147,15 +147,15 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
 	IF_myASSERT(debugTRACK, halNVIC_CalledFromISR() == 0);
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSema == 0)
 		return pdTRUE;
-	BaseType_t btRV = xSemaphoreGive(*pSema);
-	IF_myASSERT(debugRESULT, btRV == pdTRUE);
+	BaseType_t xRV = xSemaphoreGive(*pSema);
+//	IF_myASSERT(debugRESULT, xRV == pdTRUE);
 	#if (rtosDEBUG_SEMA > 0)
 	if (debugTRACK &&
 		(anySYSFLAGS(sfTRACKER) || ioB1GET(dbgTRACKER)) &&
 		(pSemaMatch == NULL || pSemaMatch == pSema))
 		vRtosSemaphoreStatePrint(-1, pSema);
 	#endif
-	return btRV;
+	return xRV;
 }
 
 void vRtosSemaphoreDelete(SemaphoreHandle_t * pSema) {
