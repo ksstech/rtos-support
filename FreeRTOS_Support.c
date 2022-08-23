@@ -115,8 +115,8 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t xTicks) {
 			(xTicks < portMAX_DELAY) ? (xTicks + rtosROUND - (xTicks % rtosSTEP)) :
 			xTicks;
 	int X = 0;
-	do {
 	BaseType_t xRV = pdTRUE;
+	if (anySYSFLAGS(sfAPPSTAGE)) do {
 		xRV = xSemaphoreTake(*pSema, rtosSTEP);
 		if (xRV == pdTRUE) {
 			if (debugTRACK &&
@@ -130,6 +130,7 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t xTicks) {
 			xTicks -= rtosSTEP;
 		X += rtosSTEP;
 		myASSERT(X < rtosWARN);
+		IF_RP(debugTRACK && X == rtosSTEP, "Mutex holder=%s\r\n", pcTaskGetName(xSemaphoreGetMutexHolder(*pSema)));
 		if (debugTRACK &&
 			((X % rtosBLOCK) == 0) &&
 			(pSemaMatch == NULL || pSemaMatch == pSema)) {
