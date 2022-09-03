@@ -29,7 +29,7 @@ extern "C" {
 	#define configRUNTIME_SIZE	4
 #endif
 
-#define	MALLOC_MARK()	uint32_t y,x=xPortGetFreeHeapSize();
+#define	MALLOC_MARK()	u32_t y,x=xPortGetFreeHeapSize();
 #define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)\r\n",x,y,y-x);
 
 // ###################################### BUILD : CONFIG definitions ##############################
@@ -89,9 +89,9 @@ void vApplicationStackOverflowHook(TaskHandle_t, char *) ;
 void vApplicationMallocFailedHook(void) ;
 
 int	xRtosTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName,
-					const uint32_t usStackDepth, void * pvParameters,
+					const u32_t usStackDepth, void * const pvParameters,
 					UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask,
-					const BaseType_t xCoreID) ;
+					const BaseType_t xCoreID);
 TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName,
 					const u32_t usStackDepth, void * const pvParameters,
 					UBaseType_t uxPriority, StackType_t * const pxStackBuffer,
