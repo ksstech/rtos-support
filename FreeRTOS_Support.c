@@ -88,10 +88,10 @@ SemaphoreHandle_t xRtosSemaphoreInit(void) {
 
 SemaphoreHandle_t * pSemaMatch = NULL;
 
-static void vRtosSemaphoreStatePrint(int X, void * pSema) {
-	RP("#%d %s/%d S=%p %s/%d",
-		esp_cpu_get_core_id(), pcTaskGetName(NULL), uxTaskPriorityGet(NULL),
-		pSema, (X < 0) ? "GIVE" : (X > 0) ? "WAIT" : "TAKE", X);
+static void vRtosSemaphoreStatePrint(SemaphoreHandle_t * pSema) {
+	TaskHandle_t xHandle = xSemaphoreGetMutexHolder(*pSema);
+	RP("Holder=%s/d  #%d  Req%s/%d  Sema=%p", pcTaskGetName(xHandle), uxTaskPriorityGet(xHandle),
+		esp_cpu_get_core_id(), pcTaskGetName(NULL), uxTaskPriorityGet(NULL), pSema);
 	#if (rtosDEBUG_SEMA > 1)
 	RP(" A=%p B=%p C=%p D=%p E=%p\r\n", __builtin_return_address(rtosBASE),
 		__builtin_return_address(rtosBASE+1), __builtin_return_address(rtosBASE+2),
@@ -116,28 +116,22 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t xTicks) {
 			xTicks;
 	int X = 0;
 	BaseType_t xRV = pdTRUE;
-	if (anySYSFLAGS(sfAPPSTAGE)) do {
-		xRV = xSemaphoreTake(*pSema, rtosSTEP);
-		if (xRV == pdTRUE) {
-			if (debugTRACK &&
-				(anySYSFLAGS(sfTRACKER) || ioB1GET(dbgTRACKER)) &&
-				(pSemaMatch == NULL || pSemaMatch == pSema)) {
-				vRtosSemaphoreStatePrint(X, pSema);
+	if (anySYSFLAGS(sfAPPSTAGE)) {
+		do {
+			xRV = xSemaphoreTake(*pSema, rtosSTEP);
+			if (xRV == pdTRUE)
+				break;
+			if (xTicks != portMAX_DELAY)
+				xTicks -= rtosSTEP;
+			X += rtosSTEP;
+			if (X >= rtosWARN) {
+				vRtosSemaphoreStatePrint(pSema);
+//				myASSERT(0);
+				return pdTRUE;
 			}
-			break;
-		}
-		if (xTicks != portMAX_DELAY)
-			xTicks -= rtosSTEP;
-		X += rtosSTEP;
-		myASSERT(X < rtosWARN);
-		IF_RP(debugTRACK && X == rtosSTEP, "Mutex holder=%s\r\n", pcTaskGetName(xSemaphoreGetMutexHolder(*pSema)));
-		if (debugTRACK &&
-			((X % rtosBLOCK) == 0) &&
-			(pSemaMatch == NULL || pSemaMatch == pSema)) {
-			vRtosSemaphoreStatePrint(X, pSema);
-		}
-		vTaskDelay(rtosSTEP);
-	} while (xTicks);
+			vTaskDelay(rtosSTEP);
+		} while (xTicks);
+	}
 	return xRV;
 	#else
 	return xSemaphoreTake(*pSema, xTicks);
@@ -148,22 +142,14 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
 	IF_myASSERT(debugTRACK, halNVIC_CalledFromISR() == 0);
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSema == 0)
 		return pdTRUE;
-	BaseType_t xRV = xSemaphoreGive(*pSema);
-//	IF_myASSERT(debugRESULT, xRV == pdTRUE);
-	#if (rtosDEBUG_SEMA > 0)
-	if (debugTRACK &&
-		(anySYSFLAGS(sfTRACKER) || ioB1GET(dbgTRACKER)) &&
-		(pSemaMatch == NULL || pSemaMatch == pSema))
-		vRtosSemaphoreStatePrint(-1, pSema);
-	#endif
-	return xRV;
+	return xSemaphoreGive(*pSema);
 }
 
 void vRtosSemaphoreDelete(SemaphoreHandle_t * pSema) {
-	if (*pSema == NULL)
-		return;
-	vSemaphoreDelete(*pSema);
-	*pSema = 0;
+	if (*pSema) {
+		vSemaphoreDelete(*pSema);
+		*pSema = 0;
+	}
 }
 
 void * pvRtosMalloc(size_t S) {
