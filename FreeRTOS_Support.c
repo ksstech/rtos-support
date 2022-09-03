@@ -185,13 +185,14 @@ bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) {
  */
 bool bRtosVerifyState(const EventBits_t uxTaskMask) {
 	// step 1: if task is meant to delete/terminate, inform it as such
-	if ((xEventGroupGetBits(TaskDeleteState) & uxTaskMask) == uxTaskMask) {
+	if ((xEventGroupGetBits(TaskDeleteState) & uxTaskMask) == uxTaskMask)
 		return 0;
-	}
+
 	// step 2: if not meant to terminate, check if/wait until enabled to run again
-	xEventGroupWaitBits(TaskRunState, uxTaskMask, pdFALSE, pdTRUE, portMAX_DELAY) ;
+	xEventGroupWaitBits(TaskRunState, uxTaskMask, pdFALSE, pdTRUE, portMAX_DELAY);
+
 	// step 3: since now definitely enabled to run, check for delete state again
-	return ((xEventGroupGetBits(TaskDeleteState) & uxTaskMask) == uxTaskMask) ? 0 : 1 ;
+	return ((xEventGroupGetBits(TaskDeleteState) & uxTaskMask) == uxTaskMask) ? 0 : 1;
 }
 
 // ################################# FreeRTOS Task statistics reporting ############################
