@@ -92,6 +92,10 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName,
 					const uint32_t usStackDepth, void * pvParameters,
 					UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask,
 					const BaseType_t xCoreID) ;
+TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName,
+					const u32_t usStackDepth, void * const pvParameters,
+					UBaseType_t uxPriority, StackType_t * const pxStackBuffer,
+					StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID);
 void vRtosTaskDelete(TaskHandle_t TH);
 
 // RTOS semaphore support
