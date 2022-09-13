@@ -70,7 +70,7 @@ void vRtosHeapSetup(void ) {
 	g_HeapBegin = xPortGetFreeHeapSize() ;
 }
 
-// #################################### General support routines ###################################
+// ##################################### Semaphore support #########################################
 
 SemaphoreHandle_t xRtosSemaphoreInit(void) {
 	SemaphoreHandle_t xHandle = xSemaphoreCreateMutex();
@@ -78,63 +78,49 @@ SemaphoreHandle_t xRtosSemaphoreInit(void) {
 	return xHandle;
 }
 
-#if (rtosDEBUG_SEMA > 0)
-
-#define rtosSTEP		10
-#define rtosROUND		(rtosSTEP / 2)
-#define rtosBLOCK		1000
-#define rtosWARN		(rtosBLOCK * 5)
-#define rtosBASE 		1
-
+#if	(configPRODUCTION == 0)
 SemaphoreHandle_t * pSemaMatch = NULL;
-
-static void vRtosSemaphoreStatePrint(SemaphoreHandle_t * pSema) {
-	TaskHandle_t xHandle = xSemaphoreGetMutexHolder(*pSema);
-	RP("Holder=%s/d  #%d  Req%s/%d  Sema=%p", pcTaskGetName(xHandle), uxTaskPriorityGet(xHandle),
-		esp_cpu_get_core_id(), pcTaskGetName(NULL), uxTaskPriorityGet(NULL), pSema);
-	#if (rtosDEBUG_SEMA > 1)
-	RP(" A=%p B=%p C=%p D=%p E=%p\r\n", __builtin_return_address(rtosBASE),
-		__builtin_return_address(rtosBASE+1), __builtin_return_address(rtosBASE+2),
-		__builtin_return_address(rtosBASE+3), __builtin_return_address(rtosBASE+4));
-	#else
-	RP(strCRLF);
-	#endif
-}
 #endif
 
-BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t xTicks) {
+BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t tWait) {
 	IF_myASSERT(debugTRACK, halNVIC_CalledFromISR() == 0);
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING)
 		return pdTRUE;
 	if (*pSema == NULL)				// ensure initialized
 		*pSema = xRtosSemaphoreInit();
 
-	#if (rtosDEBUG_SEMA > 0)
-	// ensure xTicks an exact multiple of rtosSTEP
-	xTicks = (xTicks < rtosSTEP) ? rtosSTEP :
-			(xTicks < portMAX_DELAY) ? (xTicks + rtosROUND - (xTicks % rtosSTEP)) :
-			xTicks;
-	int X = 0;
-	BaseType_t xRV = pdTRUE;
-	if (anySYSFLAGS(sfAPPSTAGE)) {
-		do {
-			xRV = xSemaphoreTake(*pSema, rtosSTEP);
-			if (xRV == pdTRUE)
-				break;
-			if (xTicks != portMAX_DELAY)
-				xTicks -= rtosSTEP;
-			X += rtosSTEP;
-			if (X >= rtosWARN) {
-				vRtosSemaphoreStatePrint(pSema);
-//				myASSERT(0);
-				return pdTRUE;
-			}
-			vTaskDelay(rtosSTEP);
-		} while (xTicks);
-	}
-	return xRV;
+	#if	(configPRODUCTION == 0)
+	TickType_t tStep = (tWait == portMAX_DELAY) ? pdMS_TO_TICKS(10000) : tWait / 10;
+	TickType_t tElap = 0;
+	BaseType_t btRV = pdTRUE;
+	do {
+		btRV = xSemaphoreTake(*pSema, tStep);
+		if (btRV == pdTRUE)
+			break;
+		if (tWait != portMAX_DELAY)
+			tWait -= tStep;
+		tElap += tStep;
+		if (tElap > tStep) {
+			TaskHandle_t xHandle = xSemaphoreGetMutexHolder(*pSema);
+			RP("%u: #%u S=%p  H=%s/%d  R=%s/%d", tElap, esp_cpu_get_core_id(), pSema,
+				pcTaskGetName(xHandle), uxTaskPriorityGet(xHandle),
+				pcTaskGetName(NULL), uxTaskPriorityGet(NULL));
+			#if (rtosDEBUG_SEMA > 1)
+			#define rtosBASE 1
+			RP(" A=%p B=%p C=%p D=%p E=%p\r\n", __builtin_return_address(rtosBASE),
+				__builtin_return_address(rtosBASE+1), __builtin_return_address(rtosBASE+2),
+				__builtin_return_address(rtosBASE+3), __builtin_return_address(rtosBASE+4));
+			#else
+			RP(strCRLF);
+			#endif
+		}
+	} while (tWait > tStep);
+	return btRV;
+
 	#else
-	return xSemaphoreTake(*pSema, xTicks);
+
+	return xSemaphoreTake(*pSema, tWait);
+
 	#endif
 }
 
@@ -151,6 +137,8 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSema) {
 		*pSema = 0;
 	}
 }
+
+// ##################################### Malloc/free support #######################################
 
 void * pvRtosMalloc(size_t S) {
 	void * pV = malloc(S);
@@ -195,7 +183,7 @@ bool bRtosVerifyState(const EventBits_t uxTaskMask) {
 	return ((xEventGroupGetBits(TaskDeleteState) & uxTaskMask) == uxTaskMask) ? 0 : 1;
 }
 
-// ################################# FreeRTOS Task statistics reporting ############################
+// ################################### Task status reporting #######################################
 
 #if		(CONFIG_FREERTOS_MAX_TASK_NAME_LEN == 16)
 	#define	configFREERTOS_TASKLIST_HDR_DETAIL		"---Task Name--- "
@@ -233,19 +221,16 @@ typedef union {				// LSW then MSW sequence critical
 	u64_t U64;
 } u64rt_t;
 
-static const char TaskState[] = "RPBSD";
-#if	(portNUM_PROCESSORS > 1)
-	static const char caMCU[3] = { '0', '1', 'X' };
-#endif
-
 static u64rt_t Total;									// Sum all tasks (incl IDLE)
 static u64rt_t Active;									// Sum non-IDLE tasks
 static u8_t NumTasks;									// Currently "active" tasks
 static u8_t MaxNum;										// Highest logical task number
 
+static const char TaskState[] = "RPBSD";
 static TaskHandle_t IdleHandle[portNUM_PROCESSORS] = { 0 };
 static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 #if	(portNUM_PROCESSORS > 1)
+	static const char caMCU[3] = { '0', '1', 'X' };
 	static u64rt_t Cores[portNUM_PROCESSORS+1];			// Sum of non-IDLE task runtime/core
 #endif
 
@@ -487,32 +472,7 @@ int vRtosReportMemory(char * pcBuf, size_t Size, fm_t sFM) {
 	return iRV;
 }
 
-/*
- * 	FreeRTOS TCB structure as of 8.2.3
- * 	00 - 03			pxTopOfStack
- * 	?? - ??	04 - 08 MPU wrappers
- * 	04 - 23			xGenericListItem
- * 	24 - 43			xEventListItem
- * 	44 - 47			uxPriority
- * 	48 - 51			pxStack. If stack growing downwards, end of stack
- * 	?? - ??			pxEndOfStack
- * 	Example code:
-	u32_t	OldStackMark, NewStackMark ;
-	OldStackMark = uxTaskGetStackHighWaterMark(NULL) ;
-   	NewStackMark = uxTaskGetStackHighWaterMark(NULL) ;
-   	if (NewStackMark != OldStackMark) {
-   		vFreeRTOSDumpStack(NULL, STACK_SIZE) ;
-   		OldStackMark = NewStackMark ;
-   	}
- */
-void vTaskDumpStack(void * pTCB) {
-	if (pTCB == NULL)
-		pTCB = xTaskGetCurrentTaskHandle() ;
-	void * pxTOS	= (void *) * ((u32_t *) pTCB)  ;
-	void * pxStack	= (void *) * ((u32_t *) pTCB + 12) ;		// 48 bytes / 4 = 12
-	printfx("Cur SP : %08x - Stack HWM : %08x\r\r\n", pxTOS,
-			(u8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
-}
+// ################################## Task creation/deletion #######################################
 
 int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 	const char * const pcName, const u32_t usStackDepth,
@@ -594,3 +554,40 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 	IF_P(debugTRACK && UpDown, "[%s] deleting\r\n", pcName);
 	vTaskDelete(xHandle);
 }
+
+// ####################################### Debug support ###########################################
+
+/*
+ * 	FreeRTOS TCB structure as of 8.2.3
+ * 	00 - 03			pxTopOfStack
+ * 	?? - ??	04 - 08 MPU wrappers
+ * 	04 - 23			xGenericListItem
+ * 	24 - 43			xEventListItem
+ * 	44 - 47			uxPriority
+ * 	48 - 51			pxStack. If stack growing downwards, end of stack
+ * 	?? - ??			pxEndOfStack
+ * 	Example code:
+	u32_t	OldStackMark, NewStackMark ;
+	OldStackMark = uxTaskGetStackHighWaterMark(NULL) ;
+   	NewStackMark = uxTaskGetStackHighWaterMark(NULL) ;
+   	if (NewStackMark != OldStackMark) {
+   		vFreeRTOSDumpStack(NULL, STACK_SIZE) ;
+   		OldStackMark = NewStackMark ;
+   	}
+ */
+void vTaskDumpStack(void * pTCB) {
+	if (pTCB == NULL)
+		pTCB = xTaskGetCurrentTaskHandle() ;
+	void * pxTOS	= (void *) * ((u32_t *) pTCB)  ;
+	void * pxStack	= (void *) * ((u32_t *) pTCB + 12) ;		// 48 bytes / 4 = 12
+	printfx("Cur SP : %08x - Stack HWM : %08x\r\r\n", pxTOS,
+			(u8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
+}
+/*
+void vRtosReportCallers(int Base, int Depth) {
+	for (int i=Base; i < (Base+Depth); ++i) {
+		void * pVoid = __builtin_return_address(i);
+		P("%d=%p  ", i, pVoid);
+	}
+}
+*/

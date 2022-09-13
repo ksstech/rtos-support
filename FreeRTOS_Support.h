@@ -80,13 +80,36 @@ extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
 
 // ##################################### global function prototypes ################################
 
-bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) ;
-bool bRtosVerifyState(const EventBits_t uxTaskToVerify) ;
-void vRtosTaskTerminate(const EventBits_t uxTaskMask);
+void myApplicationTickHook(void);
+void vApplicationStackOverflowHook(TaskHandle_t, char *);
+void vApplicationMallocFailedHook(void);
 
-void myApplicationTickHook(void) ;
-void vApplicationStackOverflowHook(TaskHandle_t, char *) ;
-void vApplicationMallocFailedHook(void) ;
+// ##################################### Semaphore support #########################################
+
+SemaphoreHandle_t xRtosSemaphoreInit(void);
+BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t Ticks);
+BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema);
+void vRtosSemaphoreDelete(SemaphoreHandle_t * pSema);
+
+// ##################################### Malloc/free support #######################################
+
+void * pvRtosMalloc(size_t S);
+void vRtosFree(void * pV);
+
+void vRtosHeapSetup(void);
+
+// ################################### Event status manipulation ###################################
+
+bool bRtosToggleStatus(const EventBits_t uxBitsToToggle);
+bool bRtosVerifyState(const EventBits_t uxTaskToVerify);
+
+// ################################### Task status reporting #######################################
+
+bool bRtosStatsUpdateHook(void);
+int	xRtosReportTasks(char *, size_t, fm_t);
+int vRtosReportMemory(char *, size_t, fm_t);
+
+// ################################## Task creation/deletion #######################################
 
 int	xRtosTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName,
 					const u32_t usStackDepth, void * const pvParameters,
@@ -96,23 +119,14 @@ TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const
 					const u32_t usStackDepth, void * const pvParameters,
 					UBaseType_t uxPriority, StackType_t * const pxStackBuffer,
 					StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID);
+void vRtosTaskTerminate(const EventBits_t uxTaskMask);
 void vRtosTaskDelete(TaskHandle_t TH);
 
-// RTOS semaphore support
-SemaphoreHandle_t xRtosSemaphoreInit(void);
-BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t Ticks);
-BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema);
-void vRtosSemaphoreDelete(SemaphoreHandle_t * pSema);
 
-// RTOS malloc/free support
-void * pvRtosMalloc(size_t S);
-void vRtosFree(void * pV);
+// ####################################### Debug support ###########################################
 
-void vRtosHeapSetup(void);
-bool bRtosStatsUpdateHook(void);
-int	xRtosReportTasks(char *, size_t, fm_t);
-int vRtosReportMemory(char *, size_t, fm_t);
 void vTaskDumpStack(void *);
+void vRtosReportCallers(int Base, int Depth);
 
 #ifdef __cplusplus
 }
