@@ -403,7 +403,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 			#endif
 	    	Units = u64RunTime / TotalAdj;
 	    	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
-			iRV += wsnprintfx(&pcBuf, &Size, "%2lu.%02lu %#`5llu", Units, Fract, u64RunTime);
+			iRV += wsnprintfx(&pcBuf, &Size, "%2lu.%02lu %#'5llu", Units, Fract, u64RunTime);
 
 			if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && FlagMask.bXtras)
 				iRV += wsnprintfx(&pcBuf, &Size, " %p %p\r\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
@@ -464,7 +464,7 @@ int vRtosReportMemory(char * pcBuf, size_t Size, fm_t sFM) {
     if (sFM.rmColor) {
     	iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET);
     }
-	iRV += wsnprintfx(&pcBuf, &Size, "    Min=%#`u  Free=%#`u  Orig=%#`u\r\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
+	iRV += wsnprintfx(&pcBuf, &Size, "    Min=%#'u  Free=%#'u  Orig=%#'u\r\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
 	if (sFM.rmSmall)
 		iRV += wsnprintfx(&pcBuf, &Size, strCRLF);
 	if (pcBuf == NULL || Size == 0)
@@ -580,7 +580,7 @@ void vTaskDumpStack(void * pTCB) {
 		pTCB = xTaskGetCurrentTaskHandle() ;
 	void * pxTOS	= (void *) * ((u32_t *) pTCB)  ;
 	void * pxStack	= (void *) * ((u32_t *) pTCB + 12) ;		// 48 bytes / 4 = 12
-	printfx("Cur SP : %08x - Stack HWM : %08x\r\r\n", pxTOS,
+	printfx("Cur SP : %p - Stack HWM : %p\r\r\n", pxTOS,
 			(u8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
 }
 /*
