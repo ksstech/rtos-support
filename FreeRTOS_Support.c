@@ -325,29 +325,6 @@ TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 }
 
 int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
-	int	iRV = 0 ;
-	if (pcBuf == NULL || Size == 0)
-		printfx_lock();
-	if (FlagMask.bColor)
-		iRV += wsnprintfx(&pcBuf, &Size, "%C", colourFG_CYAN);
-	if (FlagMask.bCount)
-		iRV += wsnprintfx(&pcBuf, &Size, "T# ") ;
-	if (FlagMask.bPrioX)
-		iRV += wsnprintfx(&pcBuf, &Size, "Pc/Pb ") ;
-	iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_HDR_DETAIL) ;
-	if (FlagMask.bState)
-		iRV += wsnprintfx(&pcBuf, &Size, "S ") ;
-	if (FlagMask.bStack)
-		iRV += wsnprintfx(&pcBuf, &Size, "LowS ") ;
-	if (portNUM_PROCESSORS > 1 && FlagMask.bCore)
-		iRV += wsnprintfx(&pcBuf, &Size, "X ") ;
-	iRV += wsnprintfx(&pcBuf, &Size, "%%Util Ticks") ;
-	if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE) && FlagMask.bXtras)
-		iRV += wsnprintfx(&pcBuf, &Size, " Stack Base -Task TCB-") ;
-	if (FlagMask.bColor)
-		iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET) ;
-	iRV += wsnprintfx(&pcBuf, &Size, strCRLF) ;
-
 	#if (configRUNTIME_SIZE == 8)
 	if (IdleHandle[0] == NULL || IdleHandle[1] == NULL) {		// first time once only
 		for (int i = 0; i < portNUM_PROCESSORS; ++i)
@@ -374,27 +351,42 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 
 	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
 	u64_t TotalAdj = Total.U64 / (100ULL / portNUM_PROCESSORS);
-	IF_EXIT(TotalAdj == 0ULL);
+	if (TotalAdj == 0ULL)
+		return 0;
+	int	iRV = 0 ;
+	if (pcBuf == NULL || Size == 0) printfx_lock();
+	if (FlagMask.bColor) iRV += wsnprintfx(&pcBuf, &Size, "%C", colourFG_CYAN);
+	if (FlagMask.bCount) iRV += wsnprintfx(&pcBuf, &Size, "T# ");
+	if (FlagMask.bPrioX) iRV += wsnprintfx(&pcBuf, &Size, "Pc/Pb ");
+	iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_HDR_DETAIL);
+	if (FlagMask.bState) iRV += wsnprintfx(&pcBuf, &Size, "S ");
+	if (FlagMask.bStack) iRV += wsnprintfx(&pcBuf, &Size, "LowS ");
+	#if (portNUM_PROCESSORS > 1)
+	if (FlagMask.bCore) iRV += wsnprintfx(&pcBuf, &Size, "X ");
+	#endif
+	iRV += wsnprintfx(&pcBuf, &Size, " Util Ticks");
+	#if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE))
+	if (FlagMask.bXtras) iRV += wsnprintfx(&pcBuf, &Size, " Stack Base -Task TCB-");
+	#endif
+	if (FlagMask.bColor) iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET);
+	iRV += wsnprintfx(&pcBuf, &Size, strCRLF);
 
-	u32_t TaskMask = 0x00000001, Units, Fract ;
+	u32_t TaskMask = 0x1, Units, Fract;
 	for (int a = 1; a <= MaxNum; ++a) {
 		TaskStatus_t * psTS = psRtosStatsFindWithNumber(a);
 		if (psTS == NULL)
 			continue;
 	    // if task info display not enabled, skip....
 		if (FlagMask.uCount & TaskMask) {
-			if (FlagMask.bCount)
-				iRV += wsnprintfx(&pcBuf, &Size, "%2u ",psTS->xTaskNumber);
-			if (FlagMask.bPrioX)
-				iRV += wsnprintfx(&pcBuf, &Size, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
+			if (FlagMask.bCount) iRV += wsnprintfx(&pcBuf, &Size, "%2u ",psTS->xTaskNumber);
+			if (FlagMask.bPrioX) iRV += wsnprintfx(&pcBuf, &Size, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
 			iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
-			if (FlagMask.bState)
-				iRV += wsnprintfx(&pcBuf, &Size, "%c ", TaskState[psTS->eCurrentState]);
-			if (FlagMask.bStack)
-				iRV += wsnprintfx(&pcBuf, &Size, "%4u ", psTS->usStackHighWaterMark);
-			if (portNUM_PROCESSORS > 1 && FlagMask.bCore)
-				iRV += wsnprintfx(&pcBuf, &Size, "%c ", caMCU[(psTS->xCoreID > 1) ? 2 : psTS->xCoreID]);
-
+			if (FlagMask.bState) iRV += wsnprintfx(&pcBuf, &Size, "%c ", TaskState[psTS->eCurrentState]);
+			if (FlagMask.bStack) iRV += wsnprintfx(&pcBuf, &Size, "%4u ", psTS->usStackHighWaterMark);
+			#if (portNUM_PROCESSORS > 1)
+			myASSERT(halCONFIG_inSRAM(psTS) && ((psTS->xCoreID == 0) || (psTS->xCoreID == 1) || (psTS->xCoreID == tskNO_AFFINITY)));
+			if (FlagMask.bCore) iRV += wsnprintfx(&pcBuf, &Size, "%c ", caMCU[(psTS->xCoreID > 1) ? 2 : psTS->xCoreID]);
+			#endif
 			// Calculate & display individual task utilisation.
 			#if (configRUNTIME_SIZE == 8)
 			u64_t u64RunTime = psTS->ulRunTimeCounter;
@@ -426,12 +418,11 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
     	iRV += wsnprintfx(&pcBuf, &Size, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
     }
 	#endif
+    iRV += wsnprintfx(&pcBuf, &Size, "\r\nEvt=0x%X  Run=0x%X  Del=0x%X",
+    		xEventGroupGetBits(xEventStatus),
+			xEventGroupGetBits(TaskRunState),
+			xEventGroupGetBits(TaskDeleteState));
     iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\r\n\n" : strCRLF);
-    iRV += wsnprintfx(&pcBuf, &Size, "Run=0x%06X  Del=0x%06X  Evt=0x%06X\r\n\n",
-    		xEventGroupGetBits(TaskRunState),
-			xEventGroupGetBits(TaskDeleteState),
-			xEventGroupGetBits(xEventStatus));
-exit:
 	if (pcBuf == NULL || Size == 0)
 		printfx_unlock();
 	return iRV;
