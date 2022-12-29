@@ -87,9 +87,10 @@ void vApplicationMallocFailedHook(void);
 // ##################################### Semaphore support #########################################
 
 SemaphoreHandle_t xRtosSemaphoreInit(void);
-BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t Ticks);
-BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema);
-void vRtosSemaphoreDelete(SemaphoreHandle_t * pSema);
+void vRtosSemaphoreInit(SemaphoreHandle_t *);
+BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t *, TickType_t);
+BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t *);
+void vRtosSemaphoreDelete(SemaphoreHandle_t *);
 
 // ##################################### Malloc/free support #######################################
 
