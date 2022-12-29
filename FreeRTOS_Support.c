@@ -72,69 +72,83 @@ void vRtosHeapSetup(void ) {
 
 // ##################################### Semaphore support #########################################
 
+#if	(configPRODUCTION == 0) && (rtosDEBUG_SEMA > 0)
+SemaphoreHandle_t * pSHmatch = NULL;
+#endif
+
 SemaphoreHandle_t xRtosSemaphoreInit(void) {
 	SemaphoreHandle_t xHandle = xSemaphoreCreateMutex();
 	IF_myASSERT(debugRESULT, xHandle != 0);
 	return xHandle;
 }
 
-#if	(configPRODUCTION == 0)
-SemaphoreHandle_t * pSemaMatch = NULL;
-#endif
+void vRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
+	*pSH = xSemaphoreCreateMutex();
+	#if	(configPRODUCTION == 0)  && (rtosDEBUG_SEMA > 0)
+	IF_P((pSHmatch != NULL) && (pSH == pSHmatch), "SH Init %p=%p\r\n", pSH, *pSH);
+	#endif
+	IF_myASSERT(debugRESULT, *pSH != 0);
+}
 
-BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSema, TickType_t tWait) {
+BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	IF_myASSERT(debugTRACK, halNVIC_CalledFromISR() == 0);
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING)
 		return pdTRUE;
-	if (*pSema == NULL)				// ensure initialized
-		*pSema = xRtosSemaphoreInit();
+	if (*pSH == NULL)				// ensure initialized
+		vRtosSemaphoreInit(pSH);
 
-	#if	(configPRODUCTION == 0)
+	#if	(configPRODUCTION == 0)  && (rtosDEBUG_SEMA > 0)
 	TickType_t tStep = (tWait == portMAX_DELAY) ? pdMS_TO_TICKS(10000) : tWait / 10;
 	TickType_t tElap = 0;
-	BaseType_t btRV = pdTRUE;
+	BaseType_t btRV;
 	do {
-		btRV = xSemaphoreTake(*pSema, tStep);
+		btRV = xSemaphoreTake(*pSH, tStep);
+		if ((pSHmatch != NULL) && (pSHmatch == pSH)) {
+			TaskHandle_t xHandle = xSemaphoreGetMutexHolder(*pSH);
+			P("SH Take %p  %lu: #%u  H=%s/%d  R=%s/%d", pSH, tElap, esp_cpu_get_core_id(),
+				pcTaskGetName(xHandle), uxTaskPriorityGet(xHandle),
+				pcTaskGetName(NULL), uxTaskPriorityGet(NULL));
+			#if (rtosDEBUG_SEMA > 1)
+			#define rtosBASE 1
+			P(" A=%p B=%p C=%p D=%p E=%p\r\n", __builtin_return_address(rtosBASE),
+				__builtin_return_address(rtosBASE+1), __builtin_return_address(rtosBASE+2),
+				__builtin_return_address(rtosBASE+3), __builtin_return_address(rtosBASE+4));
+			#else
+			P(strCRLF);
+			#endif
+		}
 		if (btRV == pdTRUE)
 			break;
 		if (tWait != portMAX_DELAY)
 			tWait -= tStep;
 		tElap += tStep;
-		if (tElap > tStep) {
-			TaskHandle_t xHandle = xSemaphoreGetMutexHolder(*pSema);
-			RP("%u: #%u S=%p  H=%s/%d  R=%s/%d", tElap, esp_cpu_get_core_id(), pSema,
-				pcTaskGetName(xHandle), uxTaskPriorityGet(xHandle),
-				pcTaskGetName(NULL), uxTaskPriorityGet(NULL));
-			#if (rtosDEBUG_SEMA > 1)
-			#define rtosBASE 1
-			RP(" A=%p B=%p C=%p D=%p E=%p\r\n", __builtin_return_address(rtosBASE),
-				__builtin_return_address(rtosBASE+1), __builtin_return_address(rtosBASE+2),
-				__builtin_return_address(rtosBASE+3), __builtin_return_address(rtosBASE+4));
-			#else
-			RP(strCRLF);
-			#endif
-		}
 	} while (tWait > tStep);
 	return btRV;
 
 	#else
 
-	return xSemaphoreTake(*pSema, tWait);
+	return xSemaphoreTake(*pSH, tWait);
 
 	#endif
 }
 
-BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSema) {
+BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 	IF_myASSERT(debugTRACK, halNVIC_CalledFromISR() == 0);
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSema == 0)
+	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSH == 0)
 		return pdTRUE;
-	return xSemaphoreGive(*pSema);
+	#if	(configPRODUCTION == 0)  && (rtosDEBUG_SEMA > 0)
+	IF_P((pSHmatch != NULL) && (pSH == pSHmatch), "SH Give %p\r\n", pSH);
+	#endif
+	return xSemaphoreGive(*pSH);
 }
 
-void vRtosSemaphoreDelete(SemaphoreHandle_t * pSema) {
-	if (*pSema) {
-		vSemaphoreDelete(*pSema);
-		*pSema = 0;
+void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
+	if (*pSH) {
+		vSemaphoreDelete(*pSH);
+		#if	(configPRODUCTION == 0)  && (rtosDEBUG_SEMA > 0)
+		IF_P((pSHmatch != NULL) && (pSH == pSHmatch), "SH Delete %p\r\n", pSH);
+		#endif
+		*pSH = 0;
 	}
 }
 

@@ -74,8 +74,8 @@ extern "C" {
 // #################################### FreeRTOS global variables ##################################
 
 extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
-#if (rtosDEBUG_SEMA > 0)
-	extern SemaphoreHandle_t * pSemaMatch;
+#if (configPRODUCTION == 0) && (rtosDEBUG_SEMA > 0)
+	extern SemaphoreHandle_t * pSHmatch;
 #endif
 
 // ##################################### global function prototypes ################################
