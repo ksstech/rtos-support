@@ -470,7 +470,8 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 	void * pvParameters,
 	UBaseType_t uxPriority,
 	TaskHandle_t * pxCreatedTask,
-	const BaseType_t xCoreID) {
+	const BaseType_t xCoreID)
+{
 	IF_P(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
 	int iRV = pdFAIL ;
 	#ifdef CONFIG_FREERTOS_UNICORE
@@ -479,14 +480,14 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 	iRV = xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
 	#endif
 	IF_myASSERT(debugRESULT, iRV == pdPASS);
-//	return (iRV == pdPASS) ? erSUCCESS : erFAILURE ;
 	return iRV;
 }
 
 TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName,
 	const u32_t usStackDepth, void * const pvParameters,
 	UBaseType_t uxPriority, StackType_t * const pxStackBuffer,
-    StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID) {
+    StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID)
+{
 	IF_P(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
 	#ifdef CONFIG_FREERTOS_UNICORE
 	TaskHandle_t thRV = xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
