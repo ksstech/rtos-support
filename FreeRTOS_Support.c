@@ -428,7 +428,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 	return iRV;
 }
 
-int vRtosReportMemory(char * pcBuf, size_t Size, fm_t sFM) {
+int xRtosReportMemory(char * pcBuf, size_t Size, fm_t sFM) {
 	int iRV = 0;
 	if (pcBuf == NULL || Size == 0)
 		printfx_lock();
