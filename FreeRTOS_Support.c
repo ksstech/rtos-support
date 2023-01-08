@@ -270,8 +270,8 @@ bool bRtosStatsUpdateHook(void) {
 			IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
 		IF_SYSTIMER_INIT(debugTIMING, stRTOS, stMICROS, "FreeRTOS", 1200, 5000);
 	}
-	IF_SYSTIMER_START(debugTIMING, stRTOS);
 	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
+	IF_SYSTIMER_START(debugTIMING, stRTOS);
 	u32_t NowTotal;
 	memset(sTS, 0, sizeof(sTS));
 
@@ -316,8 +316,8 @@ bool bRtosStatsUpdateHook(void) {
 			break ;
 		}
 	}
+	IF_SYSTIMER_STOP(debugTIMING, stRTOS);
 	xRtosSemaphoreGive(&RtosStatsMux);
-	IF_SYSTIMER_STOP(debugTIMING, stRTOS) ;
 	return 1 ;
 }
 #endif
