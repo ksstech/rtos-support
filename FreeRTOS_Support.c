@@ -392,7 +392,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 			continue;
 	    // if task info display not enabled, skip....
 		if (FlagMask.uCount & TaskMask) {
-			if (FlagMask.bCount) iRV += wsnprintfx(&pcBuf, &Size, "%2u ",psTS->xTaskNumber);
+			if (FlagMask.bCount) iRV += wsnprintfx(&pcBuf, &Size, "%2u ", psTS->xTaskNumber);
 			if (FlagMask.bPrioX) iRV += wsnprintfx(&pcBuf, &Size, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
 			iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
 			if (FlagMask.bState) iRV += wsnprintfx(&pcBuf, &Size, "%c ", TaskState[psTS->eCurrentState]);
@@ -416,7 +416,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 			else
 				iRV += wsnprintfx(&pcBuf, &Size, strCRLF);
 		}
-		TaskMask <<= 1 ;
+		TaskMask <<= 1;
 	}
 
 	// Calculate & display total for "real" tasks utilization.
@@ -432,10 +432,8 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
     	iRV += wsnprintfx(&pcBuf, &Size, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
     }
 	#endif
-    iRV += wsnprintfx(&pcBuf, &Size, "\r\nEvt=0x%X  Run=0x%X  Del=0x%X",
-    		xEventGroupGetBits(xEventStatus),
-			xEventGroupGetBits(TaskRunState),
-			xEventGroupGetBits(TaskDeleteState));
+    iRV += wsnprintfx(&pcBuf, &Size, "\r\nEvt=0x%X  Run=0x%X  Del=0x%X", xEventGroupGetBits(xEventStatus),
+			xEventGroupGetBits(TaskRunState), xEventGroupGetBits(TaskDeleteState));
     iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\r\n\n" : strCRLF);
 	if (pcBuf == NULL || Size == 0)
 		printfx_unlock();
@@ -533,7 +531,7 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 	char * pcName = pcTaskGetName(xHandle);
 	#endif
 	EventBits_t EB = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
-	if (EB) {
+	if (EB) {						// Clear the RUN & DELETE task flags
 		xRtosClearStateRUN(EB);
 		xRtosClearStateDELETE(EB);
 		IF_P(debugTRACK && UpDown, "[%s] RUN/DELETE flags cleared\r\n", pcName);
