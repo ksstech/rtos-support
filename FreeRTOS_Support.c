@@ -388,17 +388,15 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 	u32_t TaskMask = 0x1, Units, Fract;
 	for (int a = 1; a <= MaxNum; ++a) {
 		TaskStatus_t * psTS = psRtosStatsFindWithNumber(a);
-		if (psTS == NULL)
-			continue;
-	    // if task info display not enabled, skip....
-		if (FlagMask.uCount & TaskMask) {
+		if (psTS && (FlagMask.uCount & TaskMask)) {		// task not found / info display not enabled, skip
 			if (FlagMask.bCount) iRV += wsnprintfx(&pcBuf, &Size, "%2u ", psTS->xTaskNumber);
 			if (FlagMask.bPrioX) iRV += wsnprintfx(&pcBuf, &Size, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
 			iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
 			if (FlagMask.bState) iRV += wsnprintfx(&pcBuf, &Size, "%c ", TaskState[psTS->eCurrentState]);
 			if (FlagMask.bStack) iRV += wsnprintfx(&pcBuf, &Size, "%4u ", psTS->usStackHighWaterMark);
 			#if (portNUM_PROCESSORS > 1)
-			myASSERT(halCONFIG_inSRAM(psTS) && ((psTS->xCoreID == 0) || (psTS->xCoreID == 1) || (psTS->xCoreID == tskNO_AFFINITY)));
+			myASSERT(halCONFIG_inSRAM(psTS));
+			myASSERT((psTS->xCoreID == 0) || (psTS->xCoreID == 1) || (psTS->xCoreID == tskNO_AFFINITY));
 			if (FlagMask.bCore) iRV += wsnprintfx(&pcBuf, &Size, "%c ", caMCU[(psTS->xCoreID > 1) ? 2 : psTS->xCoreID]);
 			#endif
 			// Calculate & display individual task utilisation.
