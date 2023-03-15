@@ -240,7 +240,7 @@ static u64rt_t Active;									// Sum non-IDLE tasks
 static u8_t NumTasks;									// Currently "active" tasks
 static u8_t MaxNum;										// Highest logical task number
 
-static const char TaskState[] = "RPBSD";
+static const char TaskState[6] = { 'A', 'R', 'B', 'S', 'D', 'I' };
 static TaskHandle_t IdleHandle[portNUM_PROCESSORS] = { 0 };
 static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 #if	(portNUM_PROCESSORS > 1)
@@ -283,7 +283,9 @@ bool bRtosStatsUpdateHook(void) {
 	Total.LSW = NowTotal;
 
 	Active.U64 = 0;
+	#if	(portNUM_PROCESSORS > 1)
 	memset(&Cores[0], 0, sizeof(Cores));
+	#endif
 	for (int a = 0; a < NumTasks; ++a) {
 		TaskStatus_t * psTS = &sTS[a];
 		if (MaxNum < psTS->xTaskNumber)
@@ -388,32 +390,38 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 	u32_t TaskMask = 0x1, Units, Fract;
 	for (int a = 1; a <= MaxNum; ++a) {
 		TaskStatus_t * psTS = psRtosStatsFindWithNumber(a);
-		if (psTS && (FlagMask.uCount & TaskMask)) {		// task not found / info display not enabled, skip
-			if (FlagMask.bCount) iRV += wsnprintfx(&pcBuf, &Size, "%2u ", psTS->xTaskNumber);
-			if (FlagMask.bPrioX) iRV += wsnprintfx(&pcBuf, &Size, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
-			iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
-			if (FlagMask.bState) iRV += wsnprintfx(&pcBuf, &Size, "%c ", TaskState[psTS->eCurrentState]);
-			#if (portNUM_PROCESSORS > 1)
-			myASSERT(halCONFIG_inSRAM(psTS));
-			myASSERT((psTS->xCoreID == 0) || (psTS->xCoreID == 1) || (psTS->xCoreID == tskNO_AFFINITY));
-			if (FlagMask.bCore) iRV += wsnprintfx(&pcBuf, &Size, "%c ", caMCU[(psTS->xCoreID > 1) ? 2 : psTS->xCoreID]);
-			#endif
-			// Calculate & display individual task utilisation.
-			#if (configRUNTIME_SIZE == 8)
-			u64_t u64RunTime = psTS->ulRunTimeCounter;
-			#else
-			u64_t u64RunTime = xRtosStatsFindRuntime(psTS->xHandle);
-			#endif
-	    	Units = u64RunTime / TotalAdj;
-	    	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
-			iRV += wsnprintfx(&pcBuf, &Size, "%2lu.%02lu %#'5llu", Units, Fract, u64RunTime);
-
-			if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && FlagMask.bXtras)
-				iRV += wsnprintfx(&pcBuf, &Size, " %p %p\r\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
-			else
-				iRV += wsnprintfx(&pcBuf, &Size, strCRLF);
-		}
+		if ((psTS == NULL) ||
+			(psTS->eCurrentState >= eInvalid) ||
+			(FlagMask.uCount & TaskMask) == 0 ||
+			(psTS->uxCurrentPriority >= (UBaseType_t) configMAX_PRIORITIES) ||
+			(psTS->uxBasePriority >= configMAX_PRIORITIES))
+			goto next;
+		if ((psTS->xCoreID >= portNUM_PROCESSORS) &&
+			(psTS->xCoreID != tskNO_AFFINITY))
+			goto next;
+		if (FlagMask.bCount) iRV += wsnprintfx(&pcBuf, &Size, "%2u ", psTS->xTaskNumber);
+		if (FlagMask.bPrioX) iRV += wsnprintfx(&pcBuf, &Size, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
+		iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
+		if (FlagMask.bState) iRV += wsnprintfx( &pcBuf, &Size, "%c ", TaskState[psTS->eCurrentState]);
+		#if (portNUM_PROCESSORS > 1)
+		if (FlagMask.bCore) iRV += wsnprintfx(&pcBuf, &Size, "%c ", caMCU[psTS->xCoreID==tskNO_AFFINITY ? 2 : psTS->xCoreID]);
+		#endif
 		if (FlagMask.bStack) iRV += wsnprintfx(&pcBuf, &Size, "%4u ", psTS->usStackHighWaterMark);
+		// Calculate & display individual task utilisation.
+		#if (configRUNTIME_SIZE == 8)
+		u64_t u64RunTime = psTS->ulRunTimeCounter;
+		#else
+		u64_t u64RunTime = xRtosStatsFindRuntime(psTS->xHandle);
+		#endif
+    	Units = u64RunTime / TotalAdj;
+    	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
+		iRV += wsnprintfx(&pcBuf, &Size, "%2lu.%02lu %#'5llu", Units, Fract, u64RunTime);
+
+		if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && FlagMask.bXtras)
+			iRV += wsnprintfx(&pcBuf, &Size, " %p %p\r\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
+		else
+			iRV += wsnprintfx(&pcBuf, &Size, strCRLF);
+next:
 		TaskMask <<= 1;
 	}
 
