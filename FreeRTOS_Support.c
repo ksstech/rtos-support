@@ -433,8 +433,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
     iRV += wsnprintfx(&pcBuf, &Size, "\r\nEvt=0x%X  Run=0x%X  Del=0x%X", xEventGroupGetBits(xEventStatus),
 			xEventGroupGetBits(TaskRunState), xEventGroupGetBits(TaskDeleteState));
     iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\r\n\n" : strCRLF);
-	if (pcBuf == NULL || Size == 0)
-		printfx_unlock();
+	if (pcBuf == NULL || Size == 0) printfx_unlock();	// unbuffered output, lock stdout
 	return iRV;
 }
 
