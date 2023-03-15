@@ -374,10 +374,10 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 	if (FlagMask.bPrioX) iRV += wsnprintfx(&pcBuf, &Size, "Pc/Pb ");
 	iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_HDR_DETAIL);
 	if (FlagMask.bState) iRV += wsnprintfx(&pcBuf, &Size, "S ");
-	if (FlagMask.bStack) iRV += wsnprintfx(&pcBuf, &Size, "LowS ");
 	#if (portNUM_PROCESSORS > 1)
 	if (FlagMask.bCore) iRV += wsnprintfx(&pcBuf, &Size, "X ");
 	#endif
+	if (FlagMask.bStack) iRV += wsnprintfx(&pcBuf, &Size, "LowS ");
 	iRV += wsnprintfx(&pcBuf, &Size, " Util Ticks");
 	#if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE))
 	if (FlagMask.bXtras) iRV += wsnprintfx(&pcBuf, &Size, " Stack Base -Task TCB-");
@@ -393,7 +393,6 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 			if (FlagMask.bPrioX) iRV += wsnprintfx(&pcBuf, &Size, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
 			iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
 			if (FlagMask.bState) iRV += wsnprintfx(&pcBuf, &Size, "%c ", TaskState[psTS->eCurrentState]);
-			if (FlagMask.bStack) iRV += wsnprintfx(&pcBuf, &Size, "%4u ", psTS->usStackHighWaterMark);
 			#if (portNUM_PROCESSORS > 1)
 			myASSERT(halCONFIG_inSRAM(psTS));
 			myASSERT((psTS->xCoreID == 0) || (psTS->xCoreID == 1) || (psTS->xCoreID == tskNO_AFFINITY));
@@ -414,6 +413,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 			else
 				iRV += wsnprintfx(&pcBuf, &Size, strCRLF);
 		}
+		if (FlagMask.bStack) iRV += wsnprintfx(&pcBuf, &Size, "%4u ", psTS->usStackHighWaterMark);
 		TaskMask <<= 1;
 	}
 
