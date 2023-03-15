@@ -368,7 +368,7 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 	if (TotalAdj == 0ULL)
 		return 0;
 	int	iRV = 0 ;
-	if (pcBuf == NULL || Size == 0) printfx_lock();
+	if (pcBuf == NULL || Size == 0) printfx_lock();		// unbuffered output, lock stdout
 	if (FlagMask.bColor) iRV += wsnprintfx(&pcBuf, &Size, "%C", colourFG_CYAN);
 	if (FlagMask.bCount) iRV += wsnprintfx(&pcBuf, &Size, "T# ");
 	if (FlagMask.bPrioX) iRV += wsnprintfx(&pcBuf, &Size, "Pc/Pb ");
