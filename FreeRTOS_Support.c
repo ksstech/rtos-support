@@ -585,11 +585,10 @@ void vTaskDumpStack(void * pTCB) {
 	printfx("Cur SP : %p - Stack HWM : %p\r\r\n", pxTOS,
 			(u8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
 }
-/*
-void vRtosReportCallers(int Base, int Depth) {
+
+/*void vRtosReportCallers(int Base, int Depth) {
 	for (int i=Base; i < (Base+Depth); ++i) {
 		void * pVoid = __builtin_return_address(i);
 		P("%d=%p  ", i, pVoid);
 	}
-}
-*/
+}*/
