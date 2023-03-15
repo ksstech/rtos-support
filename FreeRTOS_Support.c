@@ -525,13 +525,14 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 		xHandle = xTaskGetCurrentTaskHandle();
 	bool UpDown = ioB1GET(ioUpDown);
 	#if (debugTRACK)
-	char * pcName = pcTaskGetName(xHandle);
+	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN];
+	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
 	#endif
 	EventBits_t EB = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
 	if (EB) {						// Clear the RUN & DELETE task flags
 		xRtosClearStateRUN(EB);
 		xRtosClearStateDELETE(EB);
-		IF_P(debugTRACK && UpDown, "[%s] RUN/DELETE flags cleared\r\n", pcName);
+		IF_P(debugTRACK && UpDown, "[%s] RUN/DELETE flags cleared\r\n", caName);
 	}
 
 	#if (configRUNTIME_SIZE == 4)
@@ -541,18 +542,18 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 		if (Handle[i] == xHandle) {	// Clear dynamic runtime info
 			Tasks[i].U64 = 0ULL;
 			Handle[i] = NULL;
-			IF_P(debugTRACK && UpDown, "[%s] dynamic stats removed\r\n", pcName);
+			IF_P(debugTRACK && UpDown, "[%s] dynamic stats removed\r\n", caName);
 			break;
 		}
 	}
 	if (psTS) {						// Clear "static" task info
 		memset(psTS, 0, sizeof(TaskStatus_t));
-		IF_P(debugTRACK && UpDown, "[%s] static task info cleared\r\n", pcName);
+		IF_P(debugTRACK && UpDown, "[%s] static task info cleared\r\n", caName);
 	}
 	xRtosSemaphoreGive(&RtosStatsMux);
 	#endif
 
-	IF_P(debugTRACK && UpDown, "[%s] deleting\r\n", pcName);
+	IF_P(debugTRACK && UpDown, "[%s] deleting\r\n", caName);
 	vTaskDelete(xHandle);
 }
 
