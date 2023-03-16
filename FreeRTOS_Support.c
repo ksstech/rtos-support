@@ -25,7 +25,10 @@
 
 // #################################### FreeRTOS global variables ##################################
 
-EventGroupHandle_t	xEventStatus = 0,TaskRunState = 0, TaskDeleteState, HttpRequests = 0;
+EventGroupHandle_t	xEventStatus = 0,
+					TaskRunState = 0,
+					TaskDeleteState = 0,
+					HttpRequests = 0;
 static u32_t g_HeapBegin;
 
 // ################################# FreeRTOS heap & stack  ########################################
