@@ -12,6 +12,7 @@
 #include "freertos/event_groups.h"
 
 #include "struct_union.h"		// x_time definitions stdint time
+
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -115,6 +116,7 @@ bool bRtosVerifyState(const EventBits_t uxTaskToVerify);
 bool bRtosStatsUpdateHook(void);
 int	xRtosReportTasks(report_t * psRprt);
 int xRtosReportMemory(report_t * psRprt);
+int xRtosReportTimer(report_t * psRprt, TimerHandle_t thTimer);
 
 // ################################## Task creation/deletion #######################################
 
