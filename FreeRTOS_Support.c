@@ -353,7 +353,7 @@ TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 	return NULL;
 }
 
-int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
+int	xRtosReportTasks(report_t * psRprt) {
 	#if (configRUNTIME_SIZE == 8)
 	if (IdleHandle[0] == NULL || IdleHandle[1] == NULL) {		// first time once only
 		for (int i = 0; i < portNUM_PROCESSORS; ++i)
@@ -383,43 +383,54 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 	if (TotalAdj == 0ULL)
 		return 0;
 	int	iRV = 0 ;
-	if (pcBuf == NULL || Size == 0) printfx_lock();		// unbuffered output, lock stdout
-	if (FlagMask.bColor) iRV += wsnprintfx(&pcBuf, &Size, "%C", colourFG_CYAN);
-	if (FlagMask.bCount) iRV += wsnprintfx(&pcBuf, &Size, "T# ");
-	if (FlagMask.bPrioX) iRV += wsnprintfx(&pcBuf, &Size, "Pc/Pb ");
-	iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_HDR_DETAIL);
-	if (FlagMask.bState) iRV += wsnprintfx(&pcBuf, &Size, "S ");
+	wsnPRINTFX_LOCK(&psRprt->pcBuf, &psRprt->Size);
+	if (psRprt->sFM.bColor)
+		iRV += wprintfx(psRprt, "%C", colourFG_CYAN);
+	if (psRprt->sFM.bTskNum)
+		iRV += wprintfx(psRprt, "T# ");
+	if (psRprt->sFM.bPrioX)
+		iRV += wprintfx(psRprt, "Pc/Pb ");
+	iRV += wprintfx(psRprt, configFREERTOS_TASKLIST_HDR_DETAIL);
+	if (psRprt->sFM.bState)
+		iRV += wprintfx(psRprt, "S ");
 	#if (portNUM_PROCESSORS > 1)
-	if (FlagMask.bCore) iRV += wsnprintfx(&pcBuf, &Size, "X ");
+	if (psRprt->sFM.bCore)
+		iRV += wprintfx(psRprt, "X ");
 	#endif
-	if (FlagMask.bStack) iRV += wsnprintfx(&pcBuf, &Size, "LowS ");
-	iRV += wsnprintfx(&pcBuf, &Size, " Util Ticks");
+	if (psRprt->sFM.bStack)
+		iRV += wprintfx(psRprt, "LowS ");
+	iRV += wprintfx(psRprt, " Util Ticks");
 	#if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE))
-	if (FlagMask.bXtras) iRV += wsnprintfx(&pcBuf, &Size, " Stack Base -Task TCB-");
+	if (psRprt->sFM.bXtras) iRV += wprintfx(psRprt, " Stack Base -Task TCB-");
 	#endif
-	if (FlagMask.bColor) iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET);
-	iRV += wsnprintfx(&pcBuf, &Size, strCRLF);
+	if (psRprt->sFM.bColor)
+		iRV += wprintfx(psRprt, "%C", attrRESET);
+	iRV += wprintfx(psRprt, strCRLF);
 
 	u32_t TaskMask = 0x1, Units, Fract;
 	for (int a = 1; a <= MaxNum; ++a) {
 		TaskStatus_t * psTS = psRtosStatsFindWithNumber(a);
 		if ((psTS == NULL) ||
 			(psTS->eCurrentState >= eInvalid) ||
-			(FlagMask.uCount & TaskMask) == 0 ||
+			(psRprt->sFM.uCount & TaskMask) == 0 ||
 			(psTS->uxCurrentPriority >= (UBaseType_t) configMAX_PRIORITIES) ||
 			(psTS->uxBasePriority >= configMAX_PRIORITIES))
 			goto next;
-		if ((psTS->xCoreID >= portNUM_PROCESSORS) &&
-			(psTS->xCoreID != tskNO_AFFINITY))
+		if ((psTS->xCoreID >= portNUM_PROCESSORS) && (psTS->xCoreID != tskNO_AFFINITY))
 			goto next;
-		if (FlagMask.bCount) iRV += wsnprintfx(&pcBuf, &Size, "%2u ", psTS->xTaskNumber);
-		if (FlagMask.bPrioX) iRV += wsnprintfx(&pcBuf, &Size, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
-		iRV += wsnprintfx(&pcBuf, &Size, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
-		if (FlagMask.bState) iRV += wsnprintfx( &pcBuf, &Size, "%c ", TaskState[psTS->eCurrentState]);
+		if (psRprt->sFM.bTskNum)
+			iRV += wprintfx(psRprt, "%2u ", psTS->xTaskNumber);
+		if (psRprt->sFM.bPrioX)
+			iRV += wprintfx(psRprt, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
+		iRV += wprintfx(psRprt, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
+		if (psRprt->sFM.bState)
+			iRV += wprintfx(psRprt, "%c ", TaskState[psTS->eCurrentState]);
 		#if (portNUM_PROCESSORS > 1)
-		if (FlagMask.bCore) iRV += wsnprintfx(&pcBuf, &Size, "%c ", caMCU[psTS->xCoreID==tskNO_AFFINITY ? 2 : psTS->xCoreID]);
+		if (psRprt->sFM.bCore)
+			iRV += wprintfx(psRprt, "%c ", caMCU[psTS->xCoreID==tskNO_AFFINITY ? 2 : psTS->xCoreID]);
 		#endif
-		if (FlagMask.bStack) iRV += wsnprintfx(&pcBuf, &Size, "%4u ", psTS->usStackHighWaterMark);
+		if (psRprt->sFM.bStack)
+			iRV += wprintfx(psRprt, "%4u ", psTS->usStackHighWaterMark);
 		// Calculate & display individual task utilisation.
 		#if (configRUNTIME_SIZE == 8)
 		u64_t u64RunTime = psTS->ulRunTimeCounter;
@@ -428,68 +439,66 @@ int	xRtosReportTasks(char * pcBuf, size_t Size, const fm_t FlagMask) {
 		#endif
     	Units = u64RunTime / TotalAdj;
     	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
-		iRV += wsnprintfx(&pcBuf, &Size, "%2lu.%02lu %#'5llu", Units, Fract, u64RunTime);
+		iRV += wprintfx(psRprt, "%2lu.%02lu %#'5llu", Units, Fract, u64RunTime);
 
-		if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && FlagMask.bXtras)
-			iRV += wsnprintfx(&pcBuf, &Size, " %p %p\r\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
+		if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && psRprt->sFM.bXtras)
+			iRV += wprintfx(psRprt, " %p %p\r\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
 		else
-			iRV += wsnprintfx(&pcBuf, &Size, strCRLF);
+			iRV += wprintfx(psRprt, strCRLF);
 next:
 		TaskMask <<= 1;
 	}
 
 	// Calculate & display total for "real" tasks utilization.
 	Units = Active.U64 / TotalAdj;
-	Fract = ((Active.U64 * 100) / TotalAdj) % 100 ;
-	iRV += wsnprintfx(&pcBuf, &Size, "T=%u U=%lu.%02lu", NumTasks, Units, Fract);
+	Fract = ((Active.U64 * 100) / TotalAdj) % 100;
+	iRV += wprintfx(psRprt, "T=%u U=%lu.%02lu", NumTasks, Units, Fract);
 
 	#if	(portNUM_PROCESSORS > 1)
 	// calculate & display individual core's utilization
     for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
     	Units = Cores[i].U64 / TotalAdj;
     	Fract = ((Cores[i].U64 * 100) / TotalAdj) % 100;
-    	iRV += wsnprintfx(&pcBuf, &Size, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
+    	iRV += wprintfx(psRprt, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
     }
 	#endif
-    iRV += wsnprintfx(&pcBuf, &Size, "\r\nEvt=0x%X  Run=0x%X  Del=0x%X", xEventGroupGetBits(xEventStatus),
+    iRV += wprintfx(psRprt, "\r\nEvt=0x%X  Run=0x%X  Del=0x%X", xEventGroupGetBits(xEventStatus),
 			xEventGroupGetBits(TaskRunState), xEventGroupGetBits(TaskDeleteState));
-    iRV += wsnprintfx(&pcBuf, &Size, FlagMask.bNL ? "\r\n\n" : strCRLF);
-	if (pcBuf == NULL || Size == 0) printfx_unlock();	// unbuffered output, lock stdout
+    iRV += wprintfx(psRprt, psRprt->sFM.bNL ? "\r\n\n" : strCRLF);
+	wsnPRINTFX_UNLOCK(&psRprt->pcBuf, &psRprt->Size);
 	return iRV;
 }
 
-int xRtosReportMemory(char * pcBuf, size_t Size, fm_t sFM) {
+int xRtosReportMemory(report_t * psRprt) {
 	int iRV = 0;
-	if (pcBuf == NULL || Size == 0)
-		printfx_lock();
+	wsnPRINTFX_LOCK(&psRprt->pcBuf, &psRprt->Size);
 	#if defined(ESP_PLATFORM)
-	if (sFM.rm32b)
-		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_32BIT);
-	if (sFM.rm8b)
-		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_8BIT);
-	if (sFM.rmDma)
-		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_DMA);
-	if (sFM.rmExec)
-		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_EXEC);
-	if (sFM.rmIram)
-		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_IRAM_8BIT);
+	if (psRprt->sFM.rm32b)
+		iRV += halMCU_ReportMemory(psRprt, MALLOC_CAP_32BIT);
+	if (psRprt->sFM.rm8b)
+		iRV += halMCU_ReportMemory(psRprt, MALLOC_CAP_8BIT);
+	if (psRprt->sFM.rmDma)
+		iRV += halMCU_ReportMemory(psRprt, MALLOC_CAP_DMA);
+	if (psRprt->sFM.rmExec)
+		iRV += halMCU_ReportMemory(psRprt, MALLOC_CAP_EXEC);
+	if (psRprt->sFM.rmIram)
+		iRV += halMCU_ReportMemory(psRprt, MALLOC_CAP_IRAM_8BIT);
 	#ifdef CONFIG_SOC_SPIRAM_SUPPORTED
-	if (sFM.rmPSram)
-		iRV += halMCU_ReportMemory(&pcBuf, &Size, sFM, MALLOC_CAP_SPIRAM);
+	if (psRprt->sFM.rmPSram)
+		iRV += halMCU_ReportMemory(psRprt, MALLOC_CAP_SPIRAM);
 	#endif
 	#endif
-    if (sFM.rmColor) {
-    	iRV += wsnprintfx(&pcBuf, &Size, "%C", colourFG_CYAN);
+    if (psRprt->sFM.bColor) {
+    	iRV += wprintfx(psRprt, "%C", colourFG_CYAN);
     }
-    iRV += wsnprintfx(&pcBuf, &Size, "FreeRTOS");
-    if (sFM.rmColor) {
-    	iRV += wsnprintfx(&pcBuf, &Size, "%C", attrRESET);
+    iRV += wprintfx(psRprt, "FreeRTOS");
+    if (psRprt->sFM.bColor) {
+    	iRV += wprintfx(psRprt, "%C", attrRESET);
     }
-	iRV += wsnprintfx(&pcBuf, &Size, "    Min=%#'u  Free=%#'u  Orig=%#'u\r\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
-	if (sFM.rmSmall)
-		iRV += wsnprintfx(&pcBuf, &Size, strCRLF);
-	if (pcBuf == NULL || Size == 0)
-		printfx_unlock();
+	iRV += wprintfx(psRprt, "    Min=%#'u  Free=%#'u  Orig=%#'u\r\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
+	if (psRprt->sFM.rmSmall)
+		iRV += wprintfx(psRprt, strCRLF);
+	wsnPRINTFX_UNLOCK(&psRprt->pcBuf, &psRprt->Size);
 	return iRV;
 }
 

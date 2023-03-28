@@ -113,8 +113,8 @@ bool bRtosVerifyState(const EventBits_t uxTaskToVerify);
 // ################################### Task status reporting #######################################
 
 bool bRtosStatsUpdateHook(void);
-int	xRtosReportTasks(char *, size_t, fm_t);
-int xRtosReportMemory(char *, size_t, fm_t);
+int	xRtosReportTasks(report_t * psRprt);
+int xRtosReportMemory(report_t * psRprt);
 
 // ################################## Task creation/deletion #######################################
 
