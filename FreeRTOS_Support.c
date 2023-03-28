@@ -169,6 +169,16 @@ void vRtosFree(void * pV) {
 	free(pV);
 }
 
+// ################################### Task status manipulation ####################################
+
+inline EventBits_t xRtosGetStateRUN(EventBits_t ebX) {
+	return xEventGroupGetBits(TaskRunState) & ebX;
+}
+
+inline EventBits_t xRtosGetStateDELETE(EventBits_t ebX) {
+	return xEventGroupGetBits(TaskDeleteState) & ebX;
+}
+
 // ################################### Event status manipulation ###################################
 
 bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) {
