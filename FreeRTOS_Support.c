@@ -3,11 +3,12 @@
  *	Copyright (c) 2015-22 Andre M. MAree / KSS Technologies (Pty) Ltd.
  */
 
-#include "main.h"
-#include "FreeRTOS_Support.h"						// Must be before hal_nvic.h"
+#include "hal_variables.h"			// required by options.h
+
+#include "FreeRTOS_Support.h"							// Must be before hal_nvic.h"
 #include "hal_nvic.h"
 #include "hal_mcu.h"									// halMCU_ReportMemory
-
+#include "options.h"
 #include "printfx.h"									// +x_definitions +stdarg +stdint +stdio
 #include "syslog.h"
 #include "systiming.h"
