@@ -504,7 +504,7 @@ int xRtosReportMemory(report_t * psRprt) {
 }
 
 int xRtosReportTimer(report_t * psRprt, TimerHandle_t thTimer) {
-	return wprintfx(psRprt, "\t%s  Reload=%c  Period=%lu  Expiry=%lu  #=%lu\r\n",
+	return wprintfx(psRprt, "\tTimer:'%s'  Reload=%c  Period=%lu  Expiry=%lu  #=%lu\r\n",
 			pcTimerGetName(thTimer), uxTimerGetReloadMode(thTimer) ? CHR_Y : CHR_N,
 			xTimerGetPeriod(thTimer), xTimerGetExpiryTime(thTimer), uxTimerGetTimerNumber(thTimer));
 }
