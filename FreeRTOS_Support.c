@@ -573,7 +573,6 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 	}
 
 	#if (configRUNTIME_SIZE == 4)
-	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
 	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
 	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
 		if (Handle[i] == xHandle) {	// Clear dynamic runtime info
@@ -583,6 +582,7 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 			break;
 		}
 	}
+	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
 	if (psTS) {						// Clear "static" task info
 		memset(psTS, 0, sizeof(TaskStatus_t));
 		IF_P(debugTRACK && UpDown, "[%s] static task info cleared\r\n", caName);
