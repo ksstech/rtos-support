@@ -25,7 +25,7 @@ extern "C" {
 
 // ##################################### MACRO definitions #########################################
 
-#if (tskKERNEL_VERSION_MAJOR > 9 && tskKERNEL_VERSION_MINOR > 3 && tskKERNEL_VERSION_BUILD > 4)
+#if (tskKERNEL_VERSION_MAJOR >= 10 && tskKERNEL_VERSION_MINOR >= 5 && tskKERNEL_VERSION_BUILD >= 0)
 	#define configRUNTIME_SIZE	8
 #else
 	#define configRUNTIME_SIZE	4
