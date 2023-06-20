@@ -131,7 +131,6 @@ TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const
 void vRtosTaskTerminate(const EventBits_t uxTaskMask);
 void vRtosTaskDelete(TaskHandle_t TH);
 
-
 // ####################################### Debug support ###########################################
 
 void vTaskDumpStack(void *);
