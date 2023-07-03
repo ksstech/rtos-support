@@ -36,46 +36,18 @@ extern "C" {
 
 // ###################################### BUILD : CONFIG definitions ##############################
 
-#define rtosDEBUG_SEMA	1			// 0=disable, 1=no return Address, >1=add return addresses
+#define rtosDEBUG_SEMA			0			// 0=disable, 1=no return Address, >1=add return addresses
 
 // ################################### Event status manipulation ###################################
 
-#define	xRtosSetStateRUN(X)			xEventGroupSetBits(TaskRunState, (X))
-#define	xRtosClearStateRUN(X)		xEventGroupClearBits(TaskRunState, (X))
-#define	xRtosWaitStateRUN(X,Y)		xEventGroupWaitBits(TaskRunState, (X), pdFALSE, pdTRUE, (Y))
-
-#define	xRtosSetStateDELETE(X)		xEventGroupSetBits(TaskDeleteState, (X))
-#define	xRtosClearStateDELETE(X)	xEventGroupClearBits(TaskDeleteState, (X))
-#define	xRtosWaitStateDELETE(X,Y)	xEventGroupWaitBits(TaskDeleteState, (X), pdFALSE, pdTRUE, (Y))
-
-#define	xRtosSetStatus(X)			xEventGroupSetBits(xEventStatus, (X))
 #define	xRtosClearStatus(X)			xEventGroupClearBits(xEventStatus, (X))
-
-/**
- * @brief	Wait until ALL of bit[s] (X) are set
- */
-#define	vRtosWaitStatus(X)			xEventGroupWaitBits(xEventStatus, (X), pdFALSE, pdTRUE, portMAX_DELAY)
-/**
- * @brief	Wait (Y) ticks for ANY of bit[s] (X) to be set
- * @return	bits of X that are set
- */
-#define	xRtosWaitStatusANY(X,Y)		(xEventGroupWaitBits(xEventStatus, (X), pdFALSE, pdFALSE, (Y)) & (X))
-/**
- * @brief	read mask X of event status bits
- * @return	bits of X that are set
- */
-#define	xRtosGetStatus(X)			(xEventGroupGetBits(xEventStatus) & (X))
-/***
- * @brief	check for an EXACT match of ALL event status bits specified
- */
-#define bRtosCheckStatus(X)			((xRtosGetStatus(X) == (X)) ? 1 : 0)
 
 // ############################################ Enumerations #######################################
 
 
 // #################################### FreeRTOS global variables ##################################
 
-extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState ;
+extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState;
 #if (configPRODUCTION == 0) && (rtosDEBUG_SEMA > 0)
 	extern SemaphoreHandle_t * pSHmatch;
 #endif
@@ -88,8 +60,7 @@ void vApplicationMallocFailedHook(void);
 
 // ##################################### Semaphore support #########################################
 
-SemaphoreHandle_t xRtosSemaphoreInit(void);
-void vRtosSemaphoreInit(SemaphoreHandle_t *);
+SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t *);
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t *, TickType_t);
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t *);
 void vRtosSemaphoreDelete(SemaphoreHandle_t *);
@@ -98,18 +69,48 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t *);
 
 void * pvRtosMalloc(size_t S);
 void vRtosFree(void * pV);
-
 void vRtosHeapSetup(void);
-
-// ################################### Task status manipulation ####################################
-
-EventBits_t xRtosGetStateRUN(EventBits_t ebX);
-EventBits_t xRtosGetStateDELETE(EventBits_t ebX);
 
 // ################################### Event status manipulation ###################################
 
-bool bRtosToggleStatus(const EventBits_t uxBitsToToggle);
-bool bRtosVerifyState(const EventBits_t uxTaskToVerify);
+/**
+ * @brief	Set specified event status bits
+ * @return	bits that are now set
+ */
+EventBits_t xRtosSetStatus(const EventBits_t ebX);
+
+/**
+ * @brief	read mask X of event status bits
+ * @return	bits that are set
+ */
+EventBits_t	xRtosGetStatus(EventBits_t ebX);
+
+/**
+ * @brief	Wait (Y) ticks for ANY of bit[s] (X) to be set
+ * @return	bits of X that are set
+ */
+EventBits_t xRtosWaitStatusANY(EventBits_t ebX, TickType_t tWait);
+
+/**
+ * @brief	Wait until ALL of bit[s] (X) are set
+ */
+bool bRtosWaitStatusALL(EventBits_t ebX, TickType_t tWait);
+
+bool bRtosCheckStatus(const EventBits_t ebX);
+
+// ################################### Task status manipulation ####################################
+
+/**
+ * @brief	Set specified event status bits
+ * @return	bits that are now set
+ */
+EventBits_t xRtosTaskSetRUN(EventBits_t ebX);
+EventBits_t xRtosTaskClearRUN(EventBits_t ebX);
+EventBits_t xRtosTaskSetDELETE(EventBits_t ebX);
+EventBits_t xRtosTaskClearDELETE(EventBits_t ebX);
+EventBits_t xRtosTaskWaitDELETE(EventBits_t ebX, TickType_t ttW);
+bool bRtosTaskCheckOK(const EventBits_t ebX);
+bool bRtosTaskWaitOK(const EventBits_t ebX, TickType_t ttW);
 
 // ################################### Task status reporting #######################################
 
@@ -138,4 +139,9 @@ void vRtosReportCallers(int Base, int Depth);
 
 #ifdef __cplusplus
 }
+
+inline EventBits_t xRtosWaitStatusANY(EventBits_t ebX, TickType_t tWait) {
+	return xEventGroupWaitBits(xEventStatus, ebX, pdFALSE, pdFALSE, tWait);
+}
+
 #endif
