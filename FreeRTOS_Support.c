@@ -32,6 +32,13 @@ EventGroupHandle_t	xEventStatus = 0,
 					HttpRequests = 0;
 static u32_t g_HeapBegin;
 
+#if (configRUNTIME_SIZE == 4)
+	static SemaphoreHandle_t RtosStatsMux;
+	static u16_t Counter;
+	static u64rt_t Tasks[configFR_MAX_TASKS];
+	static TaskHandle_t Handle[configFR_MAX_TASKS];
+#endif
+
 // ################################# FreeRTOS heap & stack  ########################################
 
 /*
@@ -41,38 +48,42 @@ static u32_t g_HeapBegin;
  * low address to high address.
  */
 #if	 defined(cc3200) && defined( __TI_ARM__ )
-	extern	u32_t	__TI_static_base__, __HEAP_SIZE ;
+	extern	u32_t	__TI_static_base__, __HEAP_SIZE;
 	HeapRegion_t xHeapRegions[] = {
 		{ ( u8_t * ) SRAM_BASE,				SRAM1_SIZE 				},	// portion of memory used by bootloader
 		{ ( u8_t * )	&__TI_static_base__, 	(size_t) &__HEAP_SIZE	},
 		{ ( u8_t * ) NULL, 					0						},
-	} ;
+	};
 
 #elif defined(HW_P_PHOTON) && defined( __CC_ARM )
-	extern	u8_t		Image$$RW_IRAM1$$ZI$$Limit[] ;
-	extern	u8_t		Image$$ARM_LIB_STACK$$ZI$$Base[] ;
+	extern	u8_t		Image$$RW_IRAM1$$ZI$$Limit[];
+	extern	u8_t		Image$$ARM_LIB_STACK$$ZI$$Base[];
 	HeapRegion_t xHeapRegions[] = {
 		{ Image$$RW_IRAM1$$ZI$$Limit,	(size_t) Image$$ARM_LIB_STACK$$ZI$$Base } ,
 		{ NULL,							0 }
-	} ;
+	};
 
 #elif defined(HW_P_PHOTON) && defined( __GNUC__ )
-	extern	u8_t		__HEAP_BASE[], __HEAP_SIZE[] ;
+	extern	u8_t		__HEAP_BASE[], __HEAP_SIZE[];
 	HeapRegion_t xHeapRegions[] = {
 		{ __HEAP_BASE,	(size_t) __HEAP_SIZE } ,
 		{ NULL,					0 }
-	} ;
+	};
 #endif
 
 void vRtosHeapSetup(void ) {
 	#if defined(HW_P_PHOTON ) && defined( __CC_ARM )
-	xHeapRegions[0].xSizeInBytes	-= (size_t) Image$$RW_IRAM1$$ZI$$Limit ;
-	vPortDefineHeapRegions(xHeapRegions) ;
+	xHeapRegions[0].xSizeInBytes	-= (size_t) Image$$RW_IRAM1$$ZI$$Limit;
+	vPortDefineHeapRegions(xHeapRegions);
 	#elif defined( cc3200 ) && defined( __TI_ARM__ )
-	vPortDefineHeapRegions(xHeapRegions) ;
+	vPortDefineHeapRegions(xHeapRegions);
 	#endif
-	g_HeapBegin = xPortGetFreeHeapSize() ;
+	g_HeapBegin = xPortGetFreeHeapSize();
 }
+
+// ################################### Forward declarations ########################################
+
+TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t);
 
 // ##################################### Semaphore support #########################################
 
@@ -80,18 +91,16 @@ void vRtosHeapSetup(void ) {
 SemaphoreHandle_t * pSHmatch = NULL;
 #endif
 
-SemaphoreHandle_t xRtosSemaphoreInit(void) {
-	SemaphoreHandle_t xHandle = xSemaphoreCreateMutex();
-	IF_myASSERT(debugRESULT, xHandle != 0);
-	return xHandle;
-}
-
-void vRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
-	*pSH = xSemaphoreCreateMutex();
-	#if	(configPRODUCTION == 0)  && (rtosDEBUG_SEMA > 0)
-	IF_P((pSHmatch != NULL) && (pSH == pSHmatch), "SH Init %p=%p\r\n", pSH, *pSH);
+SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
+	SemaphoreHandle_t shX = xSemaphoreCreateMutex();
+	if (pSH)
+		*pSH = shX;
+	#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > 1)
+	if (pSHmatch && pSH==pSHmatch)
+		RP("SH Init %p=%p\r\n", pSH, *pSH);
 	#endif
-	IF_myASSERT(debugRESULT, *pSH != 0);
+	IF_myASSERT(debugRESULT, shX != 0);
+	return shX;
 }
 
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
@@ -99,26 +108,76 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING)
 		return pdTRUE;
 	if (*pSH == NULL)				// ensure initialized
-		vRtosSemaphoreInit(pSH);
+		xRtosSemaphoreInit(pSH);
 
-	#if	(configPRODUCTION == 0)  && (rtosDEBUG_SEMA > 0)
+	#if	(configPRODUCTION == 0  && rtosDEBUG_SEMA > 0)
 	TickType_t tStep = (tWait == portMAX_DELAY) ? pdMS_TO_TICKS(10000) : tWait / 10;
 	TickType_t tElap = 0;
 	BaseType_t btRV;
 	do {
 		btRV = xSemaphoreTake(*pSH, tStep);
-		if ((pSHmatch != NULL) && (pSHmatch == pSH)) {
-			TaskHandle_t xHandle = xSemaphoreGetMutexHolder(*pSH);
-			P("SH Take %p  %lu: #%u  H=%s/%d  R=%s/%d", pSH, tElap, esp_cpu_get_core_id(),
-				pcTaskGetName(xHandle), uxTaskPriorityGet(xHandle),
-				pcTaskGetName(NULL), uxTaskPriorityGet(NULL));
-			#if (rtosDEBUG_SEMA > 1)
-			#define rtosBASE 1
-			P(" A=%p B=%p C=%p D=%p E=%p\r\n", __builtin_return_address(rtosBASE),
-				__builtin_return_address(rtosBASE+1), __builtin_return_address(rtosBASE+2),
-				__builtin_return_address(rtosBASE+3), __builtin_return_address(rtosBASE+4));
+		if (pSHmatch && pSHmatch == pSH) {
+			TaskHandle_t thHolder = xSemaphoreGetMutexHolder(*pSH);
+			RP("SH Take %d %p t=%lu H=%s/%d R=%s/%d 0=%p", esp_cpu_get_core_id(), pSH, tElap,
+				pcTaskGetName(thHolder), uxTaskPriorityGet(thHolder),
+				pcTaskGetName(NULL), uxTaskPriorityGet(NULL),
+				__builtin_return_address(0));
+			#if (rtosDEBUG_SEMA == 1)
+			RP(" %p\r\n", __builtin_return_address(1));
+
+			#elif (rtosDEBUG_SEMA == 2)
+			RP(" %p %p\r\n",__builtin_return_address(1), __builtin_return_address(2));
+
+			#elif (rtosDEBUG_SEMA == 3)
+			RP(" %p %p %p\r\n",
+				__builtin_return_address(1), __builtin_return_address(2), __builtin_return_address(3));
+
+			#elif (rtosDEBUG_SEMA == 4)
+			RP(" %p %p %p 4=%p\r\n", __builtin_return_address(1),
+				__builtin_return_address(2), __builtin_return_address(3), __builtin_return_address(4));
+
+			#elif (rtosDEBUG_SEMA == 5)
+			RP(" %p %p %p 4=%p %p\r\n", __builtin_return_address(1), __builtin_return_address(2),
+				__builtin_return_address(3), __builtin_return_address(4), __builtin_return_address(5));
+
+			#elif (rtosDEBUG_SEMA == 6)
+			RP(" %p %p %p 4=%p %p %p\r\n",
+				__builtin_return_address(1), __builtin_return_address(2), __builtin_return_address(3),
+				__builtin_return_address(4), __builtin_return_address(5), __builtin_return_address(6));
+
+			#elif (rtosDEBUG_SEMA == 7)
+			RP(" %p %p %p %p %p %p %p\r\n", __builtin_return_address(1),
+				__builtin_return_address(2), __builtin_return_address(3), __builtin_return_address(4),
+				__builtin_return_address(5), __builtin_return_address(6), __builtin_return_address(7));
+
+			#elif (rtosDEBUG_SEMA == 8)
+			RP(" %p %p %p %p %p %p %p %p\r\n", __builtin_return_address(1), __builtin_return_address(2),
+				__builtin_return_address(3), __builtin_return_address(4), __builtin_return_address(5),
+				__builtin_return_address(6), __builtin_return_address(7), __builtin_return_address(8));
+
+			#elif (rtosDEBUG_SEMA == 9)
+			RP(" %p %p %p %p %p %p %p %p %p\r\n",
+				__builtin_return_address(1), __builtin_return_address(2), __builtin_return_address(3),
+				__builtin_return_address(4), __builtin_return_address(5), __builtin_return_address(6),
+				__builtin_return_address(7), __builtin_return_address(8), __builtin_return_address(9));
+
+			#elif (rtosDEBUG_SEMA < 13)
+			RP(" %p %p %p %p %p %p %p %p %p %p %p %p\r\n",
+				__builtin_return_address(1), __builtin_return_address(2), __builtin_return_address(3),
+				__builtin_return_address(4), __builtin_return_address(5), __builtin_return_address(6),
+				__builtin_return_address(7), __builtin_return_address(8), __builtin_return_address(9),
+				__builtin_return_address(10), __builtin_return_address(11), __builtin_return_address(12));
+
+			#elif (rtosDEBUG_SEMA < 16)
+			RP(" %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p\r\n",
+				__builtin_return_address(1), __builtin_return_address(2), __builtin_return_address(3),
+				__builtin_return_address(4), __builtin_return_address(5), __builtin_return_address(6),
+				__builtin_return_address(7), __builtin_return_address(8), __builtin_return_address(9),
+				__builtin_return_address(10), __builtin_return_address(11), __builtin_return_address(12),
+				__builtin_return_address(13), __builtin_return_address(14), __builtin_return_address(15));
+
 			#else
-			P(strCRLF);
+			RP(strCRLF);
 			#endif
 		}
 		if (btRV == pdTRUE)
@@ -130,9 +189,7 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	return btRV;
 
 	#else
-
 	return xSemaphoreTake(*pSH, tWait);
-
 	#endif
 }
 
@@ -140,8 +197,13 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 	IF_myASSERT(debugTRACK, halNVIC_CalledFromISR() == 0);
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSH == 0)
 		return pdTRUE;
-	#if	(configPRODUCTION == 0)  && (rtosDEBUG_SEMA > 0)
-	IF_P((pSHmatch != NULL) && (pSH == pSHmatch), "SH Give %p\r\n", pSH);
+	#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > 1)
+	if (pSHmatch && pSH == pSHmatch) {
+		TaskHandle_t thHolder = xSemaphoreGetMutexHolder(*pSH);
+		RP("SH Give %d %p H=%s/%d R=%s/%d", esp_cpu_get_core_id(), pSH,
+			pcTaskGetName(thHolder), uxTaskPriorityGet(thHolder),
+			pcTaskGetName(NULL), uxTaskPriorityGet(NULL));
+	}
 	#endif
 	return xSemaphoreGive(*pSH);
 }
@@ -149,8 +211,9 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	if (*pSH) {
 		vSemaphoreDelete(*pSH);
-		#if	(configPRODUCTION == 0)  && (rtosDEBUG_SEMA > 0)
-		IF_P((pSHmatch != NULL) && (pSH == pSHmatch), "SH Delete %p\r\n", pSH);
+		#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > 1)
+		if (pSHmatch && pSH == pSHmatch)
+			RP("SH Delete %p\r\n", pSH);
 		#endif
 		*pSH = 0;
 	}
@@ -166,49 +229,161 @@ void * pvRtosMalloc(size_t S) {
 }
 
 void vRtosFree(void * pV) {
-	IF_RP(debugTRACK && ioB1GET(ioMemory), " free  %p\r\n", pV) ;
+	IF_RP(debugTRACK && ioB1GET(ioMemory), " free  %p\r\n", pV);
 	free(pV);
-}
-
-// ################################### Task status manipulation ####################################
-
-inline EventBits_t xRtosGetStateRUN(EventBits_t ebX) {
-	return xEventGroupGetBits(TaskRunState) & ebX;
-}
-
-inline EventBits_t xRtosGetStateDELETE(EventBits_t ebX) {
-	return xEventGroupGetBits(TaskDeleteState) & ebX;
 }
 
 // ################################### Event status manipulation ###################################
 
-bool bRtosToggleStatus(const EventBits_t uxBitsToToggle) {
-	if (bRtosCheckStatus(uxBitsToToggle) == 1) {
-		xRtosClearStatus(uxBitsToToggle) ;
-		return 0 ;
-	}
-	xRtosSetStatus(uxBitsToToggle) ;
-	return 1 ;
+inline EventBits_t xRtosSetStatus(const EventBits_t ebX) { return xEventGroupSetBits(xEventStatus, ebX); }
+
+inline EventBits_t xRtosGetStatus(const EventBits_t ebX) { return xEventGroupGetBits(xEventStatus) & ebX; }
+
+inline EventBits_t xRtosWaitStatusANY(EventBits_t ebX, TickType_t ttW) {
+	return xEventGroupWaitBits(xEventStatus, ebX, pdFALSE, pdFALSE, ttW);
+}
+
+inline bool bRtosWaitStatusALL(EventBits_t ebX, TickType_t ttW) {
+	return ((xEventGroupWaitBits(xEventStatus, ebX, pdFALSE, pdTRUE, ttW) == ebX) ? 1 : 0);
+}
+
+inline bool bRtosCheckStatus(const EventBits_t ebX) {
+	return (xEventGroupGetBits(xEventStatus) & ebX) == ebX ? 1 : 0;
+}
+
+// ################################### Task status manipulation ####################################
+
+inline EventBits_t xRtosTaskSetRUN(EventBits_t ebX) {
+	return xEventGroupSetBits(TaskRunState, ebX);
+}
+
+inline EventBits_t xRtosTaskClearRUN(EventBits_t ebX) {
+	return xEventGroupClearBits(TaskRunState, ebX);
+}
+
+inline EventBits_t xRtosTaskSetDELETE(EventBits_t ebX) {
+	return xEventGroupSetBits(TaskDeleteState, ebX);
+}
+
+inline EventBits_t xRtosTaskClearDELETE(EventBits_t ebX) {
+	return xEventGroupClearBits(TaskDeleteState, ebX);
+}
+
+inline EventBits_t xRtosTaskWaitDELETE(EventBits_t ebX, TickType_t ttW) {
+	return xEventGroupWaitBits(TaskDeleteState, ebX, pdFALSE, pdTRUE, ttW);
+}
+
+bool bRtosTaskCheckOK(const EventBits_t ebX) {
+	// step 1: if task is meant to delete/terminate, PROBLEM !!!
+	if ((xEventGroupGetBits(TaskDeleteState) & ebX) == ebX ||
+		(xEventGroupGetBits(TaskRunState) & ebX) != ebX)
+		return 0;
+	return 1;
 }
 
 /**
- * check if a task should a) terminate or b) run
- * @brief	if, at entry, set to terminate immediately return result
+ * @brief	check if a task should a) terminate or b) run
+ *			if, at entry, set to terminate immediately return result
  * 			if not, wait (possibly 0 ticks) for run status
  *			Before returning, again check if set to terminate.
  * @param	uxTaskMask - specific task bitmap
  * @return	0 if task should delete, 1 if it should run...
  */
-bool bRtosVerifyState(const EventBits_t uxTaskMask) {
+bool bRtosTaskWaitOK(const EventBits_t xEB, TickType_t ttW) {
 	// step 1: if task is meant to delete/terminate, inform it as such
-	if ((xEventGroupGetBits(TaskDeleteState) & uxTaskMask) == uxTaskMask)
+	if ((xEventGroupGetBits(TaskDeleteState) & xEB) == xEB)
 		return 0;
 
 	// step 2: if not meant to terminate, check if/wait until enabled to run again
-	xEventGroupWaitBits(TaskRunState, uxTaskMask, pdFALSE, pdTRUE, portMAX_DELAY);
+	xEventGroupWaitBits(TaskRunState, xEB, pdFALSE, pdTRUE, ttW);
 
 	// step 3: since now definitely enabled to run, check for delete state again
-	return ((xEventGroupGetBits(TaskDeleteState) & uxTaskMask) == uxTaskMask) ? 0 : 1;
+	return ((xEventGroupGetBits(TaskDeleteState) & xEB) == xEB) ? 0 : 1;
+}
+
+// ################################## Task creation/deletion #######################################
+
+int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
+	const char * const pcName, const u32_t usStackDepth,
+	void * pvParameters,
+	UBaseType_t uxPriority,
+	TaskHandle_t * pxCreatedTask,
+	const BaseType_t xCoreID)
+{
+	IF_CP(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
+	int iRV = pdFAIL;
+	#ifdef CONFIG_FREERTOS_UNICORE
+	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
+	#else
+	iRV = xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
+	#endif
+	IF_myASSERT(debugRESULT, iRV == pdPASS);
+	return iRV;
+}
+
+TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName,
+	const u32_t usStackDepth, void * const pvParameters,
+	UBaseType_t uxPriority, StackType_t * const pxStackBuffer,
+    StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID)
+{
+	IF_CP(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
+	#ifdef CONFIG_FREERTOS_UNICORE
+	TaskHandle_t thRV = xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
+	#else
+	TaskHandle_t thRV = xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
+	#endif
+	IF_myASSERT(debugRESULT, thRV != 0);
+	return thRV;
+}
+
+/**
+ * @brief	Set/clear all flags to force task[s] to initiate an organised shutdown
+ * @param	mask indicating the task[s] to terminate
+ */
+void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
+	xRtosTaskSetDELETE(uxTaskMask);
+	xRtosTaskSetRUN(uxTaskMask);						// must enable run to trigger delete
+}
+
+/**
+ * @brief	Clear task runtime and static statistics data then delete the task
+ * @param	Handle of task to be terminated (NULL = calling task)
+ */
+void vRtosTaskDelete(TaskHandle_t xHandle) {
+	if (xHandle == NULL)
+		xHandle = xTaskGetCurrentTaskHandle();
+	bool UpDown = ioB1GET(ioUpDown);
+	#if (debugTRACK)
+	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN];
+	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
+	#endif
+	EventBits_t ebX = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
+	if (ebX) {						// Clear the RUN & DELETE task flags
+		xRtosTaskClearRUN(ebX);
+		xRtosTaskClearDELETE(ebX);
+		IF_CP(debugTRACK && UpDown, "[%s] RUN/DELETE flags cleared\r\n", caName);
+	}
+
+	#if (configRUNTIME_SIZE == 4)	// 32bit tick counters, clear runtime stats collected.
+	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
+	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
+		if (Handle[i] == xHandle) {	// Clear dynamic runtime info
+			Tasks[i].U64 = 0ULL;
+			Handle[i] = NULL;
+			IF_CP(debugTRACK && UpDown, "[%s] dynamic stats removed\r\n", caName);
+			break;
+		}
+	}
+	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
+	if (psTS) {						// Clear "static" task info
+		memset(psTS, 0, sizeof(TaskStatus_t));
+		IF_CP(debugTRACK && UpDown, "[%s] static task info cleared\r\n", caName);
+	}
+	xRtosSemaphoreGive(&RtosStatsMux);
+	#endif
+
+	IF_CP(debugTRACK && UpDown, "[%s] deleting\r\n", caName);
+	vTaskDelete(xHandle);
 }
 
 // ################################### Task status reporting #######################################
@@ -244,11 +419,6 @@ bool bRtosVerifyState(const EventBits_t uxTaskMask) {
 	#error "CONFIG_FREERTOS_MAX_TASK_NAME_LEN is out of range !!!"
 #endif
 
-typedef union {				// LSW then MSW sequence critical
-	struct { u32_t LSW, MSW; };
-	u64_t U64;
-} u64rt_t;
-
 static u64rt_t Total;									// Sum all tasks (incl IDLE)
 static u64rt_t Active;									// Sum non-IDLE tasks
 static u8_t NumTasks;									// Currently "active" tasks
@@ -263,11 +433,6 @@ static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 #endif
 
 #if (configRUNTIME_SIZE == 4)
-static SemaphoreHandle_t RtosStatsMux;
-static u16_t Counter;
-static u64rt_t Tasks[configFR_MAX_TASKS];
-static TaskHandle_t Handle[configFR_MAX_TASKS];
-
 u64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
 	for (int i = 0; i < configFR_MAX_TASKS; ++i) {
 		if (Handle[i] == xHandle)
@@ -317,24 +482,24 @@ bool bRtosStatsUpdateHook(void) {
 			}
 
 			// For idle task(s) we do not want to add RunTime %'s to the task's RunTime or Cores' RunTime
-			int c ;
+			int c;
 			for (c = 0; c < portNUM_PROCESSORS; ++c) {
 				if (Handle[b] == IdleHandle[c])
 					break;
 			}
 			if (c == portNUM_PROCESSORS) {				// NOT an IDLE task?
-				Active.U64 += Tasks[b].U64 ;
+				Active.U64 += Tasks[b].U64;
 				#if	(portNUM_PROCESSORS > 1)
 				c = (psTS->xCoreID != tskNO_AFFINITY) ? psTS->xCoreID : 2;
-				Cores[c].U64 += Tasks[b].U64 ;
+				Cores[c].U64 += Tasks[b].U64;
 				#endif
 			}
-			break ;
+			break;
 		}
 	}
 	IF_SYSTIMER_STOP(debugTIMING, stRTOS);
 	xRtosSemaphoreGive(&RtosStatsMux);
-	return 1 ;
+	return 1;
 }
 #endif
 
@@ -383,7 +548,7 @@ int	xRtosReportTasks(report_t * psRprt) {
 	u64_t TotalAdj = Total.U64 / (100ULL / portNUM_PROCESSORS);
 	if (TotalAdj == 0ULL)
 		return 0;
-	int	iRV = 0 ;
+	int	iRV = 0;
 	wsnPRINTFX_LOCK(&psRprt->pcBuf, &psRprt->Size);
 	if (psRprt->sFM.bColor)
 		iRV += wprintfx(psRprt, "%C", colourFG_CYAN);
@@ -509,91 +674,6 @@ int xRtosReportTimer(report_t * psRprt, TimerHandle_t thTimer) {
 			xTimerGetPeriod(thTimer), xTimerGetExpiryTime(thTimer), uxTimerGetTimerNumber(thTimer));
 }
 
-// ################################## Task creation/deletion #######################################
-
-int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
-	const char * const pcName, const u32_t usStackDepth,
-	void * pvParameters,
-	UBaseType_t uxPriority,
-	TaskHandle_t * pxCreatedTask,
-	const BaseType_t xCoreID)
-{
-	IF_P(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
-	int iRV = pdFAIL ;
-	#ifdef CONFIG_FREERTOS_UNICORE
-	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
-	#else
-	iRV = xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
-	#endif
-	IF_myASSERT(debugRESULT, iRV == pdPASS);
-	return iRV;
-}
-
-TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName,
-	const u32_t usStackDepth, void * const pvParameters,
-	UBaseType_t uxPriority, StackType_t * const pxStackBuffer,
-    StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID)
-{
-	IF_P(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
-	#ifdef CONFIG_FREERTOS_UNICORE
-	TaskHandle_t thRV = xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
-	#else
-	TaskHandle_t thRV = xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
-	#endif
-	IF_myASSERT(debugRESULT, thRV != 0);
-	return thRV;
-}
-
-/**
- * @brief	Set/clear all flags to force task[s] to initiate an organised shutdown
- * @param	mask indicating the task[s] to terminate
- */
-void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
-	xRtosSetStateDELETE(uxTaskMask);
-	xRtosSetStateRUN(uxTaskMask);						// must enable run to trigger delete
-}
-
-/**
- * @brief	Clear task runtime and static statistics data then delete the task
- * @param	Handle of task to be terminated (NULL = calling task)
- */
-void vRtosTaskDelete(TaskHandle_t xHandle) {
-	if (xHandle == NULL)
-		xHandle = xTaskGetCurrentTaskHandle();
-	bool UpDown = ioB1GET(ioUpDown);
-	#if (debugTRACK)
-	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN];
-	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
-	#endif
-	EventBits_t EB = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
-	if (EB) {						// Clear the RUN & DELETE task flags
-		xRtosClearStateRUN(EB);
-		xRtosClearStateDELETE(EB);
-		IF_P(debugTRACK && UpDown, "[%s] RUN/DELETE flags cleared\r\n", caName);
-	}
-
-	#if (configRUNTIME_SIZE == 4)	// 32bit tick counters, clear runtime stats collected.
-	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
-	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
-		if (Handle[i] == xHandle) {	// Clear dynamic runtime info
-			Tasks[i].U64 = 0ULL;
-			Handle[i] = NULL;
-			IF_P(debugTRACK && UpDown, "[%s] dynamic stats removed\r\n", caName);
-			break;
-		}
-	}
-	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
-	if (psTS) {						// Clear "static" task info
-		memset(psTS, 0, sizeof(TaskStatus_t));
-		IF_P(debugTRACK && UpDown, "[%s] static task info cleared\r\n", caName);
-	}
-	xRtosSemaphoreGive(&RtosStatsMux);
-	#endif
-
-	IF_P(debugTRACK && UpDown, "[%s] deleting\r\n", caName);
-	vTaskDelete(xHandle);
-}
-
 // ####################################### Debug support ###########################################
 
 /*
@@ -606,21 +686,21 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
  * 	48 - 51			pxStack. If stack growing downwards, end of stack
  * 	?? - ??			pxEndOfStack
  * 	Example code:
-	u32_t	OldStackMark, NewStackMark ;
-	OldStackMark = uxTaskGetStackHighWaterMark(NULL) ;
-   	NewStackMark = uxTaskGetStackHighWaterMark(NULL) ;
+	u32_t	OldStackMark, NewStackMark;
+	OldStackMark = uxTaskGetStackHighWaterMark(NULL);
+   	NewStackMark = uxTaskGetStackHighWaterMark(NULL);
    	if (NewStackMark != OldStackMark) {
-   		vFreeRTOSDumpStack(NULL, STACK_SIZE) ;
-   		OldStackMark = NewStackMark ;
+   		vFreeRTOSDumpStack(NULL, STACK_SIZE);
+   		OldStackMark = NewStackMark;
    	}
  */
 void vTaskDumpStack(void * pTCB) {
 	if (pTCB == NULL)
-		pTCB = xTaskGetCurrentTaskHandle() ;
-	void * pxTOS	= (void *) * ((u32_t *) pTCB)  ;
-	void * pxStack	= (void *) * ((u32_t *) pTCB + 12) ;		// 48 bytes / 4 = 12
+		pTCB = xTaskGetCurrentTaskHandle();
+	void * pxTOS	= (void *) * ((u32_t *) pTCB) ;
+	void * pxStack	= (void *) * ((u32_t *) pTCB + 12);		// 48 bytes / 4 = 12
 	printfx("Cur SP : %p - Stack HWM : %p\r\r\n", pxTOS,
-			(u8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t))) ;
+			(u8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t)));
 }
 
 /*void vRtosReportCallers(int Base, int Depth) {
