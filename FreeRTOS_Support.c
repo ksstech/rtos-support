@@ -244,11 +244,11 @@ inline EventBits_t xRtosGetStatus(const EventBits_t ebX) {
 }
 
 inline EventBits_t xRtosWaitStatusANY(EventBits_t ebX, TickType_t ttW) {
-	return xEventGroupWaitBits(xEventStatus, ebX, pdFALSE, pdFALSE, ttW);
+	return xEventGroupWaitBits(xEventStatus, ebX, pdFALSE, pdFALSE, ttW) & ebX;
 }
 
 inline bool bRtosWaitStatusALL(EventBits_t ebX, TickType_t ttW) {
-	return ((xEventGroupWaitBits(xEventStatus, ebX, pdFALSE, pdTRUE, ttW) == ebX) ? 1 : 0);
+	return (xEventGroupWaitBits(xEventStatus, ebX, pdFALSE, pdTRUE, ttW) & ebX) == ebX ? 1 : 0;
 }
 
 inline bool bRtosCheckStatus(const EventBits_t ebX) {
