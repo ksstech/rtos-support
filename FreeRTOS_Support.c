@@ -235,9 +235,13 @@ void vRtosFree(void * pV) {
 
 // ################################### Event status manipulation ###################################
 
-inline EventBits_t xRtosSetStatus(const EventBits_t ebX) { return xEventGroupSetBits(xEventStatus, ebX); }
+inline EventBits_t xRtosSetStatus(const EventBits_t ebX) {
+	return xEventGroupSetBits(xEventStatus, ebX);
+}
 
-inline EventBits_t xRtosGetStatus(const EventBits_t ebX) { return xEventGroupGetBits(xEventStatus) & ebX; }
+inline EventBits_t xRtosGetStatus(const EventBits_t ebX) {
+	return xEventGroupGetBits(xEventStatus) & ebX;
+}
 
 inline EventBits_t xRtosWaitStatusANY(EventBits_t ebX, TickType_t ttW) {
 	return xEventGroupWaitBits(xEventStatus, ebX, pdFALSE, pdFALSE, ttW);
@@ -669,9 +673,11 @@ int xRtosReportMemory(report_t * psRprt) {
 }
 
 int xRtosReportTimer(report_t * psRprt, TimerHandle_t thTimer) {
-	return wprintfx(psRprt, "\tTimer:'%s'  Reload=%c  Period=%lu  Expiry=%lu  #=%lu\r\n",
-			pcTimerGetName(thTimer), uxTimerGetReloadMode(thTimer) ? CHR_Y : CHR_N,
-			xTimerGetPeriod(thTimer), xTimerGetExpiryTime(thTimer), uxTimerGetTimerNumber(thTimer));
+	u32_t tExp = xTimerGetExpiryTime(thTimer);
+	i32_t tRem = tExp - xTimeStampAsSeconds(RunTime);
+	return wprintfx(psRprt, "\tTimer=%s  Reload=%c  Period=%lu  Expiry=%lu (%ld)  #=%lu\r\n",
+		pcTimerGetName(thTimer), uxTimerGetReloadMode(thTimer) ? CHR_Y : CHR_N,
+		xTimerGetPeriod(thTimer), tExp, tRem, uxTimerGetTimerNumber(thTimer));
 }
 
 // ####################################### Debug support ###########################################
