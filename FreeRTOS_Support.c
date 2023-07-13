@@ -701,12 +701,16 @@ int xRtosReportMemory(report_t * psRprt) {
 	return iRV;
 }
 
-int xRtosReportTimer(report_t * psRprt, TimerHandle_t thTimer) {
-	u32_t tExp = xTimerGetExpiryTime(thTimer);
-	i32_t tRem = tExp - xTimeStampAsSeconds(RunTime);
-	return wprintfx(psRprt, "\tTimer=%s  Reload=%c  Period=%lu  Expiry=%lu (%ld)  #=%lu\r\n",
-		pcTimerGetName(thTimer), uxTimerGetReloadMode(thTimer) ? CHR_Y : CHR_N,
-		xTimerGetPeriod(thTimer), tExp, tRem, uxTimerGetTimerNumber(thTimer));
+int xRtosReportTimer(report_t * psRprt, TimerHandle_t thTmr) {
+	TickType_t tPer = xTimerGetPeriod(thTmr);
+	TickType_t tExp = xTimerGetExpiryTime(thTmr);
+	i32_t tRem = tExp - xTaskGetTickCount();
+	BaseType_t bActive = xTimerIsTimerActive(thTmr);
+	int iRV = wprintfx(psRprt, "\t%s: #=%lu Auto=%c Run=%s", pcTimerGetName(thTmr), uxTimerGetTimerNumber(thTmr),
+		uxTimerGetReloadMode(thTmr) ? CHR_Y : CHR_N, bActive ? "Y" : "N\r\n");
+	if (bActive)
+		iRV += wprintfx(psRprt, " tPer=%lu tExp=%lu tRem=%ld\r\n", tPer, tExp, tRem);
+	return iRV;
 }
 
 // ####################################### Debug support ###########################################
