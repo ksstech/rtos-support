@@ -87,7 +87,7 @@ TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t);
 
 // ##################################### Semaphore support #########################################
 
-#if	(configPRODUCTION == 0) && (rtosDEBUG_SEMA > 0)
+#if	(configPRODUCTION == 0) && (rtosDEBUG_SEMA > -1)
 SemaphoreHandle_t * pSHmatch = NULL;
 #endif
 
@@ -95,9 +95,8 @@ SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 	SemaphoreHandle_t shX = xSemaphoreCreateMutex();
 	if (pSH)
 		*pSH = shX;
-	#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > 1)
-	if (pSHmatch && pSH==pSHmatch)
-		RP("SH Init %p=%p\r\n", pSH, *pSH);
+	#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > -1)
+	if (pSHmatch && pSH==pSHmatch) RP("SH Init %p=%p\r\n", pSH, *pSH);
 	#endif
 	IF_myASSERT(debugRESULT, shX != 0);
 	return shX;
@@ -107,113 +106,143 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	IF_myASSERT(debugTRACK, halNVIC_CalledFromISR() == 0);
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING)
 		return pdTRUE;
-	if (*pSH == NULL)				// ensure initialized
+	if (*pSH == NULL) {				// ensure initialized
 		xRtosSemaphoreInit(pSH);
+		#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > -1)
+		pSHmatch = &shSENSE;		// SL_VarMux SL_NetMux i2cPortMux[0] printfxMux
+		#endif
+	}
 
-	#if	(configPRODUCTION == 0  && rtosDEBUG_SEMA > 0)
+#if	(configPRODUCTION == 0  && rtosDEBUG_SEMA > -1)
 	TickType_t tStep = (tWait == portMAX_DELAY) ? pdMS_TO_TICKS(10000) : tWait / 10;
 	TickType_t tElap = 0;
 	BaseType_t btRV;
 	do {
 		btRV = xSemaphoreTake(*pSH, tStep);
+	#if (rtosDEBUG_SEMA > -1)
 		if (pSHmatch && pSHmatch == pSH) {
+			#if (rtosDEBUG_SEMA_HLDR > 0)
 			TaskHandle_t thHolder = xSemaphoreGetMutexHolder(*pSH);
-			RP("SH Take %d %p t=%lu H=%s/%d R=%s/%d 0=%p", esp_cpu_get_core_id(), pSH, tElap,
+			#endif
+			RP("SH Take %d %p"
+				#if (rtosDEBUG_SEMA_HLDR > 0)
+				" H=%s/%d"
+				#endif
+				#if (rtosDEBUG_SEMA_RCVR > 0)
+				" R=%s/%d"
+				#endif
+				" t=%lu",
+				esp_cpu_get_core_id(), pSH,
+				#if (rtosDEBUG_SEMA_HLDR > 0)
 				pcTaskGetName(thHolder), uxTaskPriorityGet(thHolder),
+				#endif
+				#if (rtosDEBUG_SEMA_RCVR > 0)
 				pcTaskGetName(NULL), uxTaskPriorityGet(NULL),
-				__builtin_return_address(0));
+				#endif
+				tElap);
 			#if (rtosDEBUG_SEMA == 1)
-			RP(" %p\r\n", __builtin_return_address(1));
+			RP(" %p\r\n", __builtin_return_address(0));
 
 			#elif (rtosDEBUG_SEMA == 2)
-			RP(" %p %p\r\n",__builtin_return_address(1), __builtin_return_address(2));
+			RP(" %p %p\r\n",__builtin_return_address(0), __builtin_return_address(1));
 
 			#elif (rtosDEBUG_SEMA == 3)
 			RP(" %p %p %p\r\n",
-				__builtin_return_address(1), __builtin_return_address(2), __builtin_return_address(3));
+				__builtin_return_address(0), __builtin_return_address(1), __builtin_return_address(2));
 
 			#elif (rtosDEBUG_SEMA == 4)
-			RP(" %p %p %p 4=%p\r\n", __builtin_return_address(1),
-				__builtin_return_address(2), __builtin_return_address(3), __builtin_return_address(4));
+			RP(" %p %p %p 4=%p\r\n", __builtin_return_address(0),
+				__builtin_return_address(1), __builtin_return_address(2), __builtin_return_address(3));
 
 			#elif (rtosDEBUG_SEMA == 5)
-			RP(" %p %p %p 4=%p %p\r\n", __builtin_return_address(1), __builtin_return_address(2),
-				__builtin_return_address(3), __builtin_return_address(4), __builtin_return_address(5));
+			RP(" %p %p %p 4=%p %p\r\n", __builtin_return_address(0), __builtin_return_address(1),
+				__builtin_return_address(2), __builtin_return_address(3), __builtin_return_address(4));
 
 			#elif (rtosDEBUG_SEMA == 6)
 			RP(" %p %p %p 4=%p %p %p\r\n",
+				__builtin_return_address(0), __builtin_return_address(1), __builtin_return_address(2),
+				__builtin_return_address(3), __builtin_return_address(4), __builtin_return_address(5));
+
+			#elif (rtosDEBUG_SEMA == 7)
+			RP(" %p %p %p %p %p %p %p\r\n", __builtin_return_address(0),
 				__builtin_return_address(1), __builtin_return_address(2), __builtin_return_address(3),
 				__builtin_return_address(4), __builtin_return_address(5), __builtin_return_address(6));
 
-			#elif (rtosDEBUG_SEMA == 7)
-			RP(" %p %p %p %p %p %p %p\r\n", __builtin_return_address(1),
+			#elif (rtosDEBUG_SEMA == 8)
+			RP(" %p %p %p %p %p %p %p %p\r\n", __builtin_return_address(0), __builtin_return_address(1),
 				__builtin_return_address(2), __builtin_return_address(3), __builtin_return_address(4),
 				__builtin_return_address(5), __builtin_return_address(6), __builtin_return_address(7));
 
-			#elif (rtosDEBUG_SEMA == 8)
-			RP(" %p %p %p %p %p %p %p %p\r\n", __builtin_return_address(1), __builtin_return_address(2),
+			#elif (rtosDEBUG_SEMA == 9)
+			RP(" %p %p %p %p %p %p %p %p %p\r\n",
+				__builtin_return_address(0), __builtin_return_address(1), __builtin_return_address(2),
 				__builtin_return_address(3), __builtin_return_address(4), __builtin_return_address(5),
 				__builtin_return_address(6), __builtin_return_address(7), __builtin_return_address(8));
 
-			#elif (rtosDEBUG_SEMA == 9)
-			RP(" %p %p %p %p %p %p %p %p %p\r\n",
-				__builtin_return_address(1), __builtin_return_address(2), __builtin_return_address(3),
-				__builtin_return_address(4), __builtin_return_address(5), __builtin_return_address(6),
-				__builtin_return_address(7), __builtin_return_address(8), __builtin_return_address(9));
-
-			#elif (rtosDEBUG_SEMA < 13)
+			#elif (rtosDEBUG_SEMA == 10)
 			RP(" %p %p %p %p %p %p %p %p %p %p %p %p\r\n",
-				__builtin_return_address(1), __builtin_return_address(2), __builtin_return_address(3),
-				__builtin_return_address(4), __builtin_return_address(5), __builtin_return_address(6),
-				__builtin_return_address(7), __builtin_return_address(8), __builtin_return_address(9),
-				__builtin_return_address(10), __builtin_return_address(11), __builtin_return_address(12));
+				__builtin_return_address(0), __builtin_return_address(1), __builtin_return_address(2),
+				__builtin_return_address(3), __builtin_return_address(4), __builtin_return_address(5),
+				__builtin_return_address(6), __builtin_return_address(7), __builtin_return_address(8),
+				__builtin_return_address(9));
 
-			#elif (rtosDEBUG_SEMA < 16)
+			#elif (rtosDEBUG_SEMA > 10)
 			RP(" %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p\r\n",
-				__builtin_return_address(1), __builtin_return_address(2), __builtin_return_address(3),
-				__builtin_return_address(4), __builtin_return_address(5), __builtin_return_address(6),
-				__builtin_return_address(7), __builtin_return_address(8), __builtin_return_address(9),
-				__builtin_return_address(10), __builtin_return_address(11), __builtin_return_address(12),
-				__builtin_return_address(13), __builtin_return_address(14), __builtin_return_address(15));
+				__builtin_return_address(0), __builtin_return_address(1), __builtin_return_address(2),
+				__builtin_return_address(3), __builtin_return_address(4), __builtin_return_address(5),
+				__builtin_return_address(6), __builtin_return_address(7), __builtin_return_address(8),
+				__builtin_return_address(9), __builtin_return_address(10));
 
 			#else
 			RP(strCRLF);
 			#endif
 		}
-		if (btRV == pdTRUE)
-			break;
-		if (tWait != portMAX_DELAY)
-			tWait -= tStep;
+	#endif
+		if (btRV == pdTRUE)				break;
+		if (tWait != portMAX_DELAY)		tWait -= tStep;
 		tElap += tStep;
 	} while (tWait > tStep);
 	return btRV;
 
-	#else
+#else
 	return xSemaphoreTake(*pSH, tWait);
-	#endif
+#endif
 }
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 	IF_myASSERT(debugTRACK, halNVIC_CalledFromISR() == 0);
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSH == 0)
 		return pdTRUE;
-	#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > 1)
+#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > -1)
 	if (pSHmatch && pSH == pSHmatch) {
+		#if (rtosDEBUG_SEMA_HLDR > 0)
 		TaskHandle_t thHolder = xSemaphoreGetMutexHolder(*pSH);
-		RP("SH Give %d %p H=%s/%d R=%s/%d", esp_cpu_get_core_id(), pSH,
-			pcTaskGetName(thHolder), uxTaskPriorityGet(thHolder),
-			pcTaskGetName(NULL), uxTaskPriorityGet(NULL));
+		#endif
+		RP("SH Give %d %p"
+			#if (rtosDEBUG_SEMA_HLDR > 0)
+			" H=%s/%d"
+			#endif
+			#if (rtosDEBUG_SEMA_RCVR > 0)
+			" R=%s/%d"
+			#endif
+			, esp_cpu_get_core_id(), pSH
+			#if (rtosDEBUG_SEMA_HLDR > 0)
+			,pcTaskGetName(thHolder), uxTaskPriorityGet(thHolder)
+			#endif
+			#if (rtosDEBUG_SEMA_RCVR > 0)
+			,pcTaskGetName(NULL), uxTaskPriorityGet(NULL)
+			#endif
+			);
 	}
-	#endif
+#endif
 	return xSemaphoreGive(*pSH);
 }
 
 void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	if (*pSH) {
 		vSemaphoreDelete(*pSH);
-		#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > 1)
-		if (pSHmatch && pSH == pSHmatch)
-			RP("SH Delete %p\r\n", pSH);
+		#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > -1)
+		if (pSHmatch && pSH == pSHmatch) RP("SH Delete %p\r\n", pSH);
 		#endif
 		*pSH = 0;
 	}

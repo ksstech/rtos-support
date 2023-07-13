@@ -13,7 +13,7 @@
 
 #include "struct_union.h"		// x_time definitions stdint time
 
-#include <stddef.h>
+//#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,7 +36,9 @@ extern "C" {
 
 // ###################################### BUILD : CONFIG definitions ##############################
 
-#define rtosDEBUG_SEMA			0			// 0=disable, 1=no return Address, >1=add return addresses
+#define rtosDEBUG_SEMA			-1			// -1=disable, 0=no return Address, >0=add return addresses
+#define rtosDEBUG_SEMA_HLDR		0
+#define rtosDEBUG_SEMA_RCVR		0
 
 // ################################### Event status manipulation ###################################
 
@@ -48,7 +50,7 @@ extern "C" {
 // #################################### FreeRTOS global variables ##################################
 
 extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState;
-#if (configPRODUCTION == 0) && (rtosDEBUG_SEMA > 0)
+#if (configPRODUCTION == 0) && (rtosDEBUG_SEMA > -1)
 	extern SemaphoreHandle_t * pSHmatch;
 #endif
 
