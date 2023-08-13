@@ -294,6 +294,10 @@ inline EventBits_t xRtosTaskClearRUN(EventBits_t ebX) {
 	return xEventGroupClearBits(TaskRunState, ebX);
 }
 
+inline EventBits_t xRtosTaskWaitRUN(EventBits_t ebX, TickType_t ttW) {
+	return xEventGroupWaitBits(TaskRunState, ebX, pdFALSE, pdTRUE, ttW);
+}
+
 inline EventBits_t xRtosTaskSetDELETE(EventBits_t ebX) {
 	return xEventGroupSetBits(TaskDeleteState, ebX);
 }
