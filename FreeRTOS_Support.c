@@ -556,7 +556,7 @@ TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 	return NULL;
 }
 
-int	xRtosReportTasks(report_t * psRprt) {
+int	xRtosReportTasks(report_t * psR) {
 	#if (configRUNTIME_SIZE == 8)
 	if (IdleHandle[0] == NULL || IdleHandle[1] == NULL) {		// first time once only
 		for (int i = 0; i < portNUM_PROCESSORS; ++i)
@@ -586,54 +586,54 @@ int	xRtosReportTasks(report_t * psRprt) {
 	if (TotalAdj == 0ULL)
 		return 0;
 	int	iRV = 0;
-	wsnPRINTFX_LOCK(&psRprt->pcBuf, &psRprt->Size);
-	if (psRprt->sFM.bColor)
-		iRV += wprintfx(psRprt, "%C", colourFG_CYAN);
-	if (psRprt->sFM.bTskNum)
-		iRV += wprintfx(psRprt, "T# ");
-	if (psRprt->sFM.bPrioX)
-		iRV += wprintfx(psRprt, "Pc/Pb ");
-	iRV += wprintfx(psRprt, configFREERTOS_TASKLIST_HDR_DETAIL);
-	if (psRprt->sFM.bState)
-		iRV += wprintfx(psRprt, "S ");
+	WPRINTFX_LOCK(&psR->pcBuf, &psR->Size);
+	if (psR->sFM.bColor)
+		iRV += wprintfx(psR, "%C", colourFG_CYAN);
+	if (psR->sFM.bTskNum)
+		iRV += wprintfx(psR, "T# ");
+	if (psR->sFM.bPrioX)
+		iRV += wprintfx(psR, "Pc/Pb ");
+	iRV += wprintfx(psR, configFREERTOS_TASKLIST_HDR_DETAIL);
+	if (psR->sFM.bState)
+		iRV += wprintfx(psR, "S ");
 	#if (portNUM_PROCESSORS > 1)
-	if (psRprt->sFM.bCore)
-		iRV += wprintfx(psRprt, "X ");
+	if (psR->sFM.bCore)
+		iRV += wprintfx(psR, "X ");
 	#endif
-	if (psRprt->sFM.bStack)
-		iRV += wprintfx(psRprt, "LowS ");
-	iRV += wprintfx(psRprt, " Util Ticks");
+	if (psR->sFM.bStack)
+		iRV += wprintfx(psR, "LowS ");
+	iRV += wprintfx(psR, " Util Ticks");
 	#if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE))
-	if (psRprt->sFM.bXtras) iRV += wprintfx(psRprt, " Stack Base -Task TCB-");
+	if (psR->sFM.bXtras) iRV += wprintfx(psR, " Stack Base -Task TCB-");
 	#endif
-	if (psRprt->sFM.bColor)
-		iRV += wprintfx(psRprt, "%C", attrRESET);
-	iRV += wprintfx(psRprt, strCRLF);
+	if (psR->sFM.bColor)
+		iRV += wprintfx(psR, "%C", attrRESET);
+	iRV += wprintfx(psR, strCRLF);
 
 	u32_t TaskMask = 0x1, Units, Fract;
 	for (int a = 1; a <= MaxNum; ++a) {
 		TaskStatus_t * psTS = psRtosStatsFindWithNumber(a);
 		if ((psTS == NULL) ||
 			(psTS->eCurrentState >= eInvalid) ||
-			(psRprt->sFM.uCount & TaskMask) == 0 ||
+			(psR->sFM.uCount & TaskMask) == 0 ||
 			(psTS->uxCurrentPriority >= (UBaseType_t) configMAX_PRIORITIES) ||
 			(psTS->uxBasePriority >= configMAX_PRIORITIES))
 			goto next;
 		if ((psTS->xCoreID >= portNUM_PROCESSORS) && (psTS->xCoreID != tskNO_AFFINITY))
 			goto next;
-		if (psRprt->sFM.bTskNum)
-			iRV += wprintfx(psRprt, "%2u ", psTS->xTaskNumber);
-		if (psRprt->sFM.bPrioX)
-			iRV += wprintfx(psRprt, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
-		iRV += wprintfx(psRprt, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
-		if (psRprt->sFM.bState)
-			iRV += wprintfx(psRprt, "%c ", TaskState[psTS->eCurrentState]);
+		if (psR->sFM.bTskNum)
+			iRV += wprintfx(psR, "%2u ", psTS->xTaskNumber);
+		if (psR->sFM.bPrioX)
+			iRV += wprintfx(psR, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
+		iRV += wprintfx(psR, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
+		if (psR->sFM.bState)
+			iRV += wprintfx(psR, "%c ", TaskState[psTS->eCurrentState]);
 		#if (portNUM_PROCESSORS > 1)
-		if (psRprt->sFM.bCore)
-			iRV += wprintfx(psRprt, "%c ", caMCU[psTS->xCoreID==tskNO_AFFINITY ? 2 : psTS->xCoreID]);
+		if (psR->sFM.bCore)
+			iRV += wprintfx(psR, "%c ", caMCU[psTS->xCoreID==tskNO_AFFINITY ? 2 : psTS->xCoreID]);
 		#endif
-		if (psRprt->sFM.bStack)
-			iRV += wprintfx(psRprt, "%4u ", psTS->usStackHighWaterMark);
+		if (psR->sFM.bStack)
+			iRV += wprintfx(psR, "%4u ", psTS->usStackHighWaterMark);
 		// Calculate & display individual task utilisation.
 		#if (configRUNTIME_SIZE == 8)
 		u64_t u64RunTime = psTS->ulRunTimeCounter;
@@ -642,12 +642,12 @@ int	xRtosReportTasks(report_t * psRprt) {
 		#endif
     	Units = u64RunTime / TotalAdj;
     	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
-		iRV += wprintfx(psRprt, "%2lu.%02lu %#'5llu", Units, Fract, u64RunTime);
+		iRV += wprintfx(psR, "%2lu.%02lu %#'5llu", Units, Fract, u64RunTime);
 
-		if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && psRprt->sFM.bXtras)
-			iRV += wprintfx(psRprt, " %p %p\r\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
+		if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && psR->sFM.bXtras)
+			iRV += wprintfx(psR, " %p %p\r\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
 		else
-			iRV += wprintfx(psRprt, strCRLF);
+			iRV += wprintfx(psR, strCRLF);
 next:
 		TaskMask <<= 1;
 	}
@@ -655,65 +655,54 @@ next:
 	// Calculate & display total for "real" tasks utilization.
 	Units = Active.U64 / TotalAdj;
 	Fract = ((Active.U64 * 100) / TotalAdj) % 100;
-	iRV += wprintfx(psRprt, "T=%u U=%lu.%02lu", NumTasks, Units, Fract);
+	iRV += wprintfx(psR, "T=%u U=%lu.%02lu", NumTasks, Units, Fract);
 
 	#if	(portNUM_PROCESSORS > 1)
 	// calculate & display individual core's utilization
     for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
     	Units = Cores[i].U64 / TotalAdj;
     	Fract = ((Cores[i].U64 * 100) / TotalAdj) % 100;
-    	iRV += wprintfx(psRprt, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
+    	iRV += wprintfx(psR, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
     }
 	#endif
-    iRV += wprintfx(psRprt, "\r\nEvt=0x%X  Run=0x%X  Del=0x%X", xEventGroupGetBits(xEventStatus),
+    iRV += wprintfx(psR, "\r\nEvt=0x%X  Run=0x%X  Del=0x%X", xEventGroupGetBits(xEventStatus),
 			xEventGroupGetBits(TaskRunState), xEventGroupGetBits(TaskDeleteState));
-    iRV += wprintfx(psRprt, psRprt->sFM.bNL ? "\r\n\n" : strCRLF);
-	wsnPRINTFX_UNLOCK(&psRprt->pcBuf, &psRprt->Size);
+    iRV += wprintfx(psR, psR->sFM.bNL ? "\r\n\n" : strCRLF);
+	WPRINTFX_UNLOCK(&psR->pcBuf, &psR->Size);
 	return iRV;
 }
 
-int xRtosReportMemory(report_t * psRprt) {
+int xRtosReportMemory(report_t * psR) {
 	int iRV = 0;
-	wsnPRINTFX_LOCK(&psRprt->pcBuf, &psRprt->Size);
-	#if defined(ESP_PLATFORM)
-	if (psRprt->sFM.rm32b)
-		iRV += halMCU_ReportMemory(psRprt, MALLOC_CAP_32BIT);
-	if (psRprt->sFM.rm8b)
-		iRV += halMCU_ReportMemory(psRprt, MALLOC_CAP_8BIT);
-	if (psRprt->sFM.rmDma)
-		iRV += halMCU_ReportMemory(psRprt, MALLOC_CAP_DMA);
-	if (psRprt->sFM.rmExec)
-		iRV += halMCU_ReportMemory(psRprt, MALLOC_CAP_EXEC);
-	if (psRprt->sFM.rmIram)
-		iRV += halMCU_ReportMemory(psRprt, MALLOC_CAP_IRAM_8BIT);
+	WPRINTFX_LOCK(&psR->pcBuf, &psR->Size);
+#if defined(ESP_PLATFORM)
+	if (psR->sFM.rmCAPS & MALLOC_CAP_32BIT) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_32BIT);
+	if (psR->sFM.rmCAPS & MALLOC_CAP_8BIT) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_8BIT);
+	if (psR->sFM.rmCAPS & MALLOC_CAP_DMA) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_DMA);
+	if (psR->sFM.rmCAPS & MALLOC_CAP_EXEC) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_EXEC);
+	if (psR->sFM.rmCAPS & MALLOC_CAP_IRAM_8BIT) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_IRAM_8BIT);
 	#ifdef CONFIG_SOC_SPIRAM_SUPPORTED
-	if (psRprt->sFM.rmPSram)
-		iRV += halMCU_ReportMemory(psRprt, MALLOC_CAP_SPIRAM);
+	if (psR->sFM.rmCAPS & MALLOC_CAP_SPIRAM) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_SPIRAM);
 	#endif
-	#endif
-    if (psRprt->sFM.bColor) {
-    	iRV += wprintfx(psRprt, "%C", colourFG_CYAN);
-    }
-    iRV += wprintfx(psRprt, "FreeRTOS");
-    if (psRprt->sFM.bColor) {
-    	iRV += wprintfx(psRprt, "%C", attrRESET);
-    }
-	iRV += wprintfx(psRprt, "    Min=%#'u  Free=%#'u  Orig=%#'u\r\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
-	if (psRprt->sFM.rmSmall)
-		iRV += wprintfx(psRprt, strCRLF);
-	wsnPRINTFX_UNLOCK(&psRprt->pcBuf, &psRprt->Size);
+#endif
+    if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", colourFG_CYAN);
+    iRV += wprintfx(psR, "FreeRTOS");
+    if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", attrRESET);
+	iRV += wprintfx(psR, "    Min=%#'u  Free=%#'u  Orig=%#'u\r\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
+	if (psR->sFM.rmCompact) iRV += wprintfx(psR, strCRLF);
+	WPRINTFX_UNLOCK(&psR->pcBuf, &psR->Size);
 	return iRV;
 }
 
-int xRtosReportTimer(report_t * psRprt, TimerHandle_t thTmr) {
+int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 	TickType_t tPer = xTimerGetPeriod(thTmr);
 	TickType_t tExp = xTimerGetExpiryTime(thTmr);
 	i32_t tRem = tExp - xTaskGetTickCount();
 	BaseType_t bActive = xTimerIsTimerActive(thTmr);
-	int iRV = wprintfx(psRprt, "\t%s: #=%lu Auto=%c Run=%s", pcTimerGetName(thTmr), uxTimerGetTimerNumber(thTmr),
+	int iRV = wprintfx(psR, "\t%s: #=%lu Auto=%c Run=%s", pcTimerGetName(thTmr), uxTimerGetTimerNumber(thTmr),
 		uxTimerGetReloadMode(thTmr) ? CHR_Y : CHR_N, bActive ? "Y" : "N\r\n");
 	if (bActive)
-		iRV += wprintfx(psRprt, " tPer=%lu tExp=%lu tRem=%ld\r\n", tPer, tExp, tRem);
+		iRV += wprintfx(psR, " tPer=%lu tExp=%lu tRem=%ld\r\n", tPer, tExp, tRem);
 	return iRV;
 }
 
