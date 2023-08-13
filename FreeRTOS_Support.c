@@ -391,7 +391,7 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 		xHandle = xTaskGetCurrentTaskHandle();
 	bool UpDown = ioB1GET(ioUpDown);
 	#if (debugTRACK)
-	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN];
+	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN+1];
 	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
 	#endif
 	EventBits_t ebX = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
