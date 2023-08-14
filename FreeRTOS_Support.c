@@ -586,7 +586,7 @@ int	xRtosReportTasks(report_t * psR) {
 	if (TotalAdj == 0ULL)
 		return 0;
 	int	iRV = 0;
-	WPRINTFX_LOCK(&psR->pcBuf, &psR->Size);
+	printfx_lock(psR);
 	if (psR->sFM.bColor)
 		iRV += wprintfx(psR, "%C", colourFG_CYAN);
 	if (psR->sFM.bTskNum)
@@ -668,13 +668,13 @@ next:
     iRV += wprintfx(psR, "\r\nEvt=0x%X  Run=0x%X  Del=0x%X", xEventGroupGetBits(xEventStatus),
 			xEventGroupGetBits(TaskRunState), xEventGroupGetBits(TaskDeleteState));
     iRV += wprintfx(psR, psR->sFM.bNL ? "\r\n\n" : strCRLF);
-	WPRINTFX_UNLOCK(&psR->pcBuf, &psR->Size);
+	printfx_unlock(psR);
 	return iRV;
 }
 
 int xRtosReportMemory(report_t * psR) {
 	int iRV = 0;
-	WPRINTFX_LOCK(&psR->pcBuf, &psR->Size);
+	printfx_lock(psR);
 #if defined(ESP_PLATFORM)
 	if (psR->sFM.rmCAPS & MALLOC_CAP_32BIT) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_32BIT);
 	if (psR->sFM.rmCAPS & MALLOC_CAP_8BIT) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_8BIT);
@@ -690,7 +690,7 @@ int xRtosReportMemory(report_t * psR) {
     if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", attrRESET);
 	iRV += wprintfx(psR, "    Min=%#'u  Free=%#'u  Orig=%#'u\r\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
 	if (psR->sFM.rmCompact) iRV += wprintfx(psR, strCRLF);
-	WPRINTFX_UNLOCK(&psR->pcBuf, &psR->Size);
+	printfx_unlock(psR);
 	return iRV;
 }
 
