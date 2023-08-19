@@ -32,13 +32,6 @@ EventGroupHandle_t	xEventStatus = 0,
 					HttpRequests = 0;
 static u32_t g_HeapBegin;
 
-#if (configRUNTIME_SIZE == 4)
-	static SemaphoreHandle_t RtosStatsMux;
-	static u16_t Counter;
-	static u64rt_t Tasks[configFR_MAX_TASKS];
-	static TaskHandle_t Handle[configFR_MAX_TASKS];
-#endif
-
 // ################################# FreeRTOS heap & stack  ########################################
 
 /*
@@ -218,6 +211,13 @@ static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 #if	(portNUM_PROCESSORS > 1)
 	static const char caMCU[3] = { '0', '1', 'X' };
 	static u64rt_t Cores[portNUM_PROCESSORS+1];			// Sum of non-IDLE task runtime/core
+#endif
+
+#if (configRUNTIME_SIZE == 4)
+	static SemaphoreHandle_t RtosStatsMux;
+	static u16_t Counter;
+	static u64rt_t Tasks[configFR_MAX_TASKS];
+	static TaskHandle_t Handle[configFR_MAX_TASKS];
 #endif
 
 #if (configRUNTIME_SIZE == 4)
