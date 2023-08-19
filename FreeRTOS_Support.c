@@ -165,8 +165,7 @@ bool bRtosTaskCheckOK(const EventBits_t ebX) {
  */
 bool bRtosTaskWaitOK(const EventBits_t xEB, TickType_t ttW) {
 	// step 1: if task is meant to delete/terminate, inform it as such
-	if ((xEventGroupGetBits(TaskDeleteState) & xEB) == xEB)
-		return 0;
+	if ((xEventGroupGetBits(TaskDeleteState) & xEB) == xEB) return 0;
 
 	// step 2: if not meant to terminate, check if/wait until enabled to run again
 	xEventGroupWaitBits(TaskRunState, xEB, pdFALSE, pdTRUE, ttW);
@@ -224,18 +223,15 @@ static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 #if (configRUNTIME_SIZE == 4)
 u64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
 	for (int i = 0; i < configFR_MAX_TASKS; ++i) {
-		if (Handle[i] == xHandle)
-			return Tasks[i].U64;
+		if (Handle[i] == xHandle) return Tasks[i].U64;
 	}
 	return 0ULL;
 }
 
 bool bRtosStatsUpdateHook(void) {
-	if (++Counter % CONFIG_FREERTOS_HZ)
-		return 1;
+	if (++Counter % CONFIG_FREERTOS_HZ) return 1;
 	if (NumTasks == 0) {							// Initial, once-off processing
-		for (int i = 0; i < portNUM_PROCESSORS; ++i)
-			IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
+		for (int i = 0; i < portNUM_PROCESSORS; ++i) IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
 		IF_SYSTIMER_INIT(debugTIMING, stRTOS, stMICROS, "FreeRTOS", 1200, 5000);
 	}
 	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
@@ -246,8 +242,7 @@ bool bRtosStatsUpdateHook(void) {
 	NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &NowTotal);
 	IF_myASSERT(debugPARAM, NumTasks < configFR_MAX_TASKS);
 
-	if (Total.U64 && Total.LSW > NowTotal)
-		++Total.MSW;		// Handle wrapped System counter
+	if (Total.U64 && Total.LSW > NowTotal) ++Total.MSW;		// Handle wrapped System counter
 	Total.LSW = NowTotal;
 
 	Active.U64 = 0;
@@ -256,12 +251,10 @@ bool bRtosStatsUpdateHook(void) {
 	#endif
 	for (int a = 0; a < NumTasks; ++a) {
 		TaskStatus_t * psTS = &sTS[a];
-		if (MaxNum < psTS->xTaskNumber)
-			MaxNum = psTS->xTaskNumber;
+		if (MaxNum < psTS->xTaskNumber) MaxNum = psTS->xTaskNumber;
 		for (int b = 0; b <= configFR_MAX_TASKS; ++b) {
 			if (Handle[b] == psTS->xHandle) {		// known task, update RT
-				if (Tasks[b].LSW > psTS->ulRunTimeCounter)
-					++Tasks[b].MSW;
+				if (Tasks[b].LSW > psTS->ulRunTimeCounter) ++Tasks[b].MSW;
 				Tasks[b].LSW = psTS->ulRunTimeCounter;
 			} else if (Handle[b] == NULL) {			// empty entry so add ...
 				Handle[b] = psTS->xHandle;
@@ -273,8 +266,7 @@ bool bRtosStatsUpdateHook(void) {
 			// For idle task(s) we do not want to add RunTime %'s to the task's RunTime or Cores' RunTime
 			int c;
 			for (c = 0; c < portNUM_PROCESSORS; ++c) {
-				if (Handle[b] == IdleHandle[c])
-					break;
+				if (Handle[b] == IdleHandle[c]) break;
 			}
 			if (c == portNUM_PROCESSORS) {				// NOT an IDLE task?
 				Active.U64 += Tasks[b].U64;
@@ -294,8 +286,7 @@ bool bRtosStatsUpdateHook(void) {
 
 TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
 	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
-		if (sTS[i].xHandle == xHandle)
-			return &sTS[i];
+		if (sTS[i].xHandle == xHandle) return &sTS[i];
 	}
 	return NULL;
 }
