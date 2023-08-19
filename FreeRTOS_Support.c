@@ -90,12 +90,12 @@ TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t);
 void * pvRtosMalloc(size_t S) {
 	void * pV = malloc(S);
 	IF_myASSERT(debugRESULT, pV);
-	IF_RP(debugTRACK && ioB1GET(ioMemory), "malloc %p:%u\r\n", pV, S);
+	IF_CP(debugTRACK && ioB1GET(ioMemory), "malloc %p:%u\r\n", pV, S);
 	return pV;
 }
 
 void vRtosFree(void * pV) {
-	IF_RP(debugTRACK && ioB1GET(ioMemory), " free  %p\r\n", pV);
+	IF_CP(debugTRACK && ioB1GET(ioMemory), " free  %p\r\n", pV);
 	free(pV);
 }
 
