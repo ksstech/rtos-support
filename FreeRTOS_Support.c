@@ -338,91 +338,6 @@ bool bRtosTaskWaitOK(const EventBits_t xEB, TickType_t ttW) {
 	return ((xEventGroupGetBits(TaskDeleteState) & xEB) == xEB) ? 0 : 1;
 }
 
-// ################################## Task creation/deletion #######################################
-
-int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
-	const char * const pcName, const u32_t usStackDepth,
-	void * pvParameters,
-	UBaseType_t uxPriority,
-	TaskHandle_t * pxCreatedTask,
-	const BaseType_t xCoreID)
-{
-	IF_CP(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
-	int iRV = pdFAIL;
-	#ifdef CONFIG_FREERTOS_UNICORE
-	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
-	#else
-	iRV = xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
-	#endif
-	IF_myASSERT(debugRESULT, iRV == pdPASS);
-	return iRV;
-}
-
-TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName,
-	const u32_t usStackDepth, void * const pvParameters,
-	UBaseType_t uxPriority, StackType_t * const pxStackBuffer,
-    StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID)
-{
-	IF_CP(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
-	#ifdef CONFIG_FREERTOS_UNICORE
-	TaskHandle_t thRV = xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
-	#else
-	TaskHandle_t thRV = xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
-	#endif
-	IF_myASSERT(debugRESULT, thRV != 0);
-	return thRV;
-}
-
-/**
- * @brief	Set/clear all flags to force task[s] to initiate an organised shutdown
- * @param	mask indicating the task[s] to terminate
- */
-void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
-	xRtosTaskSetDELETE(uxTaskMask);
-	xRtosTaskSetRUN(uxTaskMask);						// must enable run to trigger delete
-}
-
-/**
- * @brief	Clear task runtime and static statistics data then delete the task
- * @param	Handle of task to be terminated (NULL = calling task)
- */
-void vRtosTaskDelete(TaskHandle_t xHandle) {
-	if (xHandle == NULL)
-		xHandle = xTaskGetCurrentTaskHandle();
-	bool UpDown = ioB1GET(ioUpDown);
-	#if (debugTRACK)
-	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN+1];
-	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
-	#endif
-	EventBits_t ebX = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
-	if (ebX) {						// Clear the RUN & DELETE task flags
-		xRtosTaskClearRUN(ebX);
-		xRtosTaskClearDELETE(ebX);
-		IF_CP(debugTRACK && UpDown, "[%s] RUN/DELETE flags cleared\r\n", caName);
-	}
-
-	#if (configRUNTIME_SIZE == 4)	// 32bit tick counters, clear runtime stats collected.
-	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
-	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
-		if (Handle[i] == xHandle) {	// Clear dynamic runtime info
-			Tasks[i].U64 = 0ULL;
-			Handle[i] = NULL;
-			IF_CP(debugTRACK && UpDown, "[%s] dynamic stats removed\r\n", caName);
-			break;
-		}
-	}
-	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
-	if (psTS) {						// Clear "static" task info
-		memset(psTS, 0, sizeof(TaskStatus_t));
-		IF_CP(debugTRACK && UpDown, "[%s] static task info cleared\r\n", caName);
-	}
-	xRtosSemaphoreGive(&RtosStatsMux);
-	#endif
-
-	IF_CP(debugTRACK && UpDown, "[%s] deleting\r\n", caName);
-	vTaskDelete(xHandle);
-}
-
 // ################################### Task status reporting #######################################
 
 #if		(CONFIG_FREERTOS_MAX_TASK_NAME_LEN == 16)
@@ -704,6 +619,90 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 	if (bActive)
 		iRV += wprintfx(psR, " tPer=%lu tExp=%lu tRem=%ld\r\n", tPer, tExp, tRem);
 	return iRV;
+}
+
+// ################################## Task creation/deletion #######################################
+
+int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
+	const char * const pcName, const u32_t usStackDepth,
+	void * pvParameters,
+	UBaseType_t uxPriority,
+	TaskHandle_t * pxCreatedTask,
+	const BaseType_t xCoreID)
+{
+	IF_CP(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
+	int iRV = pdFAIL;
+	#ifdef CONFIG_FREERTOS_UNICORE
+	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
+	#else
+	iRV = xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
+	#endif
+	IF_myASSERT(debugRESULT, iRV == pdPASS);
+	return iRV;
+}
+
+TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName,
+	const u32_t usStackDepth, void * const pvParameters,
+	UBaseType_t uxPriority, StackType_t * const pxStackBuffer,
+    StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID)
+{
+	IF_CP(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
+	#ifdef CONFIG_FREERTOS_UNICORE
+	TaskHandle_t thRV = xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
+	#else
+	TaskHandle_t thRV = xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
+	#endif
+	IF_myASSERT(debugRESULT, thRV != 0);
+	return thRV;
+}
+
+/**
+ * @brief	Set/clear all flags to force task[s] to initiate an organised shutdown
+ * @param	mask indicating the task[s] to terminate
+ */
+void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
+	xRtosTaskSetDELETE(uxTaskMask);
+	xRtosTaskSetRUN(uxTaskMask);						// must enable run to trigger delete
+}
+
+/**
+ * @brief	Clear task runtime and static statistics data then delete the task
+ * @param	Handle of task to be terminated (NULL = calling task)
+ */
+void vRtosTaskDelete(TaskHandle_t xHandle) {
+	if (xHandle == NULL) xHandle = xTaskGetCurrentTaskHandle();
+	bool UpDown = ioB1GET(ioUpDown);
+	#if (debugTRACK)
+	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN+1];
+	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
+	#endif
+	EventBits_t ebX = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
+	if (ebX) {						// Clear the RUN & DELETE task flags
+		xRtosTaskClearRUN(ebX);
+		xRtosTaskClearDELETE(ebX);
+		IF_CP(debugTRACK && UpDown, "[%s] RUN/DELETE flags cleared\r\n", caName);
+	}
+
+	#if (configRUNTIME_SIZE == 4)	// 32bit tick counters, clear runtime stats collected.
+	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
+	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
+		if (Handle[i] == xHandle) {	// Clear dynamic runtime info
+			Tasks[i].U64 = 0ULL;
+			Handle[i] = NULL;
+			IF_CP(debugTRACK && UpDown, "[%s] dynamic stats removed\r\n", caName);
+			break;
+		}
+	}
+	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
+	if (psTS) {						// Clear "static" task info
+		memset(psTS, 0, sizeof(TaskStatus_t));
+		IF_CP(debugTRACK && UpDown, "[%s] static task info cleared\r\n", caName);
+	}
+	xRtosSemaphoreGive(&RtosStatsMux);
+	#endif
+
+	IF_CP(debugTRACK && UpDown, "[%s] deleting\r\n", caName);
+	vTaskDelete(xHandle);
 }
 
 // ####################################### Debug support ###########################################
