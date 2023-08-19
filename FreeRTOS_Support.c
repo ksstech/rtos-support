@@ -712,8 +712,7 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
    	}
  */
 void vTaskDumpStack(void * pTCB) {
-	if (pTCB == NULL)
-		pTCB = xTaskGetCurrentTaskHandle();
+	if (pTCB == NULL) pTCB = xTaskGetCurrentTaskHandle();
 	void * pxTOS	= (void *) * ((u32_t *) pTCB) ;
 	void * pxStack	= (void *) * ((u32_t *) pTCB + 12);		// 48 bytes / 4 = 12
 	printfx("Cur SP : %p - Stack HWM : %p\r\r\n", pxTOS,
@@ -734,22 +733,15 @@ void vTaskDumpStack(void * pTCB) {
 //                        /* Ignore the first corrupted PC in case of InstrFetchProhibited */
 //                       (stk_frame.exc_frame && ((XtExcFrame *)stk_frame.exc_frame)->exccause == EXCCAUSE_INSTR_PROHIBITED)));
 
-esp_err_t IRAM_ATTR esp_backtrace_print_all_tasks(int depth, bool panic)
-{
+esp_err_t IRAM_ATTR esp_backtrace_print_all_tasks(int depth, bool panic) {
     u32_t task_count = uxTaskGetNumberOfTasks();
-
     TaskSnapshot_t* snapshots = (TaskSnapshot_t*) calloc(task_count * sizeof(TaskSnapshot_t), 1);
-
     // get snapshots
     UBaseType_t tcb_size = 0;
     u32_t got = uxTaskGetSnapshotAll(snapshots, task_count, &tcb_size);
-
     u32_t len = got < task_count ? got : task_count;
-
 //    print_str("printing all tasks:\n\n", panic);
-
     esp_err_t err = ESP_OK;
-
     for (u32_t i = 0; i < len; i++) {
 /*
         TaskHandle_t handle = (TaskHandle_t) snapshots[i].pxTCB;
@@ -763,7 +755,6 @@ esp_err_t IRAM_ATTR esp_backtrace_print_all_tasks(int depth, bool panic)
             err = nerr;
         }
     }
-
     free(snapshots);
     return err;
 }
