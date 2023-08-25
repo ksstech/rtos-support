@@ -395,8 +395,6 @@ next:
     	iRV += wprintfx(psR, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
     }
 	#endif
-    iRV += wprintfx(psR, "\r\nEvt=0x%X  Run=0x%X  Del=0x%X", xEventGroupGetBits(xEventStatus),
-			xEventGroupGetBits(TaskRunState), xEventGroupGetBits(TaskDeleteState));
     iRV += wprintfx(psR, psR->sFM.bNL ? "\r\n\n" : strCRLF);
 	printfx_unlock(psR);
 	return iRV;
