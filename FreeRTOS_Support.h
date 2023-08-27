@@ -13,8 +13,6 @@
 
 #include "struct_union.h"		// x_time definitions stdint time
 
-//#include <stddef.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
