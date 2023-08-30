@@ -114,6 +114,24 @@ inline bool bRtosCheckStatus(const EventBits_t ebX) {
 	return (xEventGroupGetBits(xEventStatus) & ebX) == ebX ? 1 : 0;
 }
 
+// ################################ Device EVENT status support ####################################
+
+inline EventBits_t xRtosSetEVTdevice(const EventBits_t ebX) {
+	return xEventGroupSetBits(EventDevices, ebX);
+}
+
+inline EventBits_t xRtosGetEVTdevice(const EventBits_t ebX) {
+	return xEventGroupGetBits(EventDevices) & ebX;
+}
+
+inline bool bRtosWaitEVTdevices(EventBits_t ebX, TickType_t ttW) {
+	return (xEventGroupWaitBits(EventDevices, ebX, pdFALSE, pdTRUE, ttW) & ebX) == ebX ? 1 : 0;
+}
+
+inline bool bRtosCheckEVTdevices(const EventBits_t ebX) {
+	return (xEventGroupGetBits(EventDevices) & ebX) == ebX ? 1 : 0;
+}
+
 // ################################### Task status manipulation ####################################
 
 inline EventBits_t xRtosTaskSetRUN(EventBits_t ebX) {

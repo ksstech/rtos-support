@@ -98,6 +98,13 @@ bool bRtosWaitStatusALL(EventBits_t ebX, TickType_t tWait);
 
 bool bRtosCheckStatus(const EventBits_t ebX);
 
+// ################################ Device EVENT status support ####################################
+
+EventBits_t xRtosSetEVTdevice(const EventBits_t ebX);
+EventBits_t xRtosGetEVTdevice(const EventBits_t ebX);
+bool bRtosWaitEVTdevices(EventBits_t ebX, TickType_t ttW);
+bool bRtosCheckEVTdevices(const EventBits_t ebX);
+
 // ################################### Task status manipulation ####################################
 
 /**
