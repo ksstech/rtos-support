@@ -236,10 +236,7 @@ static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 
 #if (configRUNTIME_SIZE == 4)
 u64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
-	for (int i = 0; i < configFR_MAX_TASKS; ++i) {
-		if (Handle[i] == xHandle) return Tasks[i].U64;
-	}
-	return 0ULL;
+	for (int i = 0; i < configFR_MAX_TASKS; ++i) { if (Handle[i] == xHandle) return Tasks[i].U64; } return 0ULL;
 }
 
 bool bRtosStatsUpdateHook(void) {
@@ -280,13 +277,13 @@ bool bRtosStatsUpdateHook(void) {
 			// For idle task(s) we do not want to add RunTime %'s to the task's RunTime or Cores' RunTime
 			int c;
 			for (c = 0; c < portNUM_PROCESSORS; ++c) {
-				if (Handle[b] == IdleHandle[c]) break;
+				if (Handle[b] == IdleHandle[c]) break;	// IDLE task, skip and try the next...
 			}
-			if (c == portNUM_PROCESSORS) {				// NOT an IDLE task?
-				Active.U64 += Tasks[b].U64;
+			if (c == portNUM_PROCESSORS) {				// NOT an IDLE task
+				Active.U64 += Tasks[b].U64;				// Update total active time
 				#if	(portNUM_PROCESSORS > 1)
 				c = (psTS->xCoreID != tskNO_AFFINITY) ? psTS->xCoreID : 2;
-				Cores[c].U64 += Tasks[b].U64;
+				Cores[c].U64 += Tasks[b].U64;			// Update specific core's active time
 				#endif
 			}
 			break;
