@@ -490,59 +490,8 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 				#endif
 				tElap);
 			// Decode return addresses [optional]
-			#if (rtosDEBUG_SEMA == 1)
-			CP(" %p\r\n", __builtin_return_address(0));
-
-			#elif (rtosDEBUG_SEMA == 2)
-			CP(" %p %p\r\n",__builtin_return_address(0), __builtin_return_address(1));
-
-			#elif (rtosDEBUG_SEMA == 3)
-			CP(" %p %p %p\r\n",
-				__builtin_return_address(0), __builtin_return_address(1), __builtin_return_address(2));
-
-			#elif (rtosDEBUG_SEMA == 4)
-			CP(" %p %p %p %p\r\n", __builtin_return_address(0),
-				__builtin_return_address(1), __builtin_return_address(2), __builtin_return_address(3));
-
-			#elif (rtosDEBUG_SEMA == 5)
-			CP(" %p %p %p %p %p\r\n", __builtin_return_address(0), __builtin_return_address(1),
-				__builtin_return_address(2), __builtin_return_address(3), __builtin_return_address(4));
-
-			#elif (rtosDEBUG_SEMA == 6)
-			CP(" %p %p %p %p %p %p\r\n",
-				__builtin_return_address(0), __builtin_return_address(1), __builtin_return_address(2),
-				__builtin_return_address(3), __builtin_return_address(4), __builtin_return_address(5));
-
-			#elif (rtosDEBUG_SEMA == 7)
-			CP(" %p %p %p %p %p %p %p\r\n", __builtin_return_address(0),
-				__builtin_return_address(1), __builtin_return_address(2), __builtin_return_address(3),
-				__builtin_return_address(4), __builtin_return_address(5), __builtin_return_address(6));
-
-			#elif (rtosDEBUG_SEMA == 8)
-			CP(" %p %p %p %p %p %p %p %p\r\n", __builtin_return_address(0), __builtin_return_address(1),
-				__builtin_return_address(2), __builtin_return_address(3), __builtin_return_address(4),
-				__builtin_return_address(5), __builtin_return_address(6), __builtin_return_address(7));
-
-			#elif (rtosDEBUG_SEMA == 9)
-			CP(" %p %p %p %p %p %p %p %p %p\r\n",
-				__builtin_return_address(0), __builtin_return_address(1), __builtin_return_address(2),
-				__builtin_return_address(3), __builtin_return_address(4), __builtin_return_address(5),
-				__builtin_return_address(6), __builtin_return_address(7), __builtin_return_address(8));
-
-			#elif (rtosDEBUG_SEMA == 10)
-			CP(" %p %p %p %p %p %p %p %p %p %p\r\n",
-				__builtin_return_address(0), __builtin_return_address(1), __builtin_return_address(2),
-				__builtin_return_address(3), __builtin_return_address(4), __builtin_return_address(5),
-				__builtin_return_address(6), __builtin_return_address(7), __builtin_return_address(8),
-				__builtin_return_address(9));
-
-			#elif (rtosDEBUG_SEMA > 10)
-			CP(" %p %p %p %p %p %p %p %p %p %p %p\r\n",
-				__builtin_return_address(0), __builtin_return_address(1), __builtin_return_address(2),
-				__builtin_return_address(3), __builtin_return_address(4), __builtin_return_address(5),
-				__builtin_return_address(6), __builtin_return_address(7), __builtin_return_address(8),
-				__builtin_return_address(9), __builtin_return_address(10));
-
+			#if (rtosDEBUG_SEMA > 0)
+			esp_backtrace_print(rtosDEBUG_SEMA)
 			#else
 			CP(strCRLF);
 			#endif
