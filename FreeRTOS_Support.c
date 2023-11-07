@@ -387,8 +387,8 @@ TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const
  * @param	mask indicating the task[s] to terminate
  */
 void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
-	xRtosTaskSetDELETE(uxTaskMask);
-	xRtosTaskSetRUN(uxTaskMask);						// must enable run to trigger delete
+	xRtosSetTaskDELETE(uxTaskMask);
+	xRtosSetTaskRUN(uxTaskMask);						// must enable run to trigger delete
 }
 
 /**
@@ -404,8 +404,8 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 	#endif
 	EventBits_t ebX = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
 	if (ebX) {						// Clear the RUN & DELETE task flags
-		xRtosTaskClearRUN(ebX);
-		xRtosTaskClearDELETE(ebX);
+		xRtosClearTaskRUN(ebX);
+		xRtosClearTaskDELETE(ebX);
 		IF_CP(debugTRACK && UpDown, "[%s] RUN/DELETE flags cleared\r\n", caName);
 	}
 
