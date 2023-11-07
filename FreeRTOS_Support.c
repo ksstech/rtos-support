@@ -436,10 +436,7 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 
 #if	(configPRODUCTION == 0) && (rtosDEBUG_SEMA > -1)
 SemaphoreHandle_t * pSHmatch = NULL;
-
-extern SemaphoreHandle_t i2cPortMux;
-
-SemaphoreHandle_t * IgnoreList[] = { &RtosStatsMux, &printfxMux, &SL_VarMux, &SL_NetMux, &i2cPortMux, NULL };
+SemaphoreHandle_t * IgnoreList[] = { };	// &RtosStatsMux, &printfxMux, &SL_VarMux, &SL_NetMux
 
 bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
 	for(int i = 0; i < NO_MEM(IgnoreList); ++i) if (IgnoreList[i] == pSH) return 1;
