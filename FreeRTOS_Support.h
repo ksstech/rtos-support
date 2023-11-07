@@ -97,9 +97,4 @@ void vRtosReportCallers(int Base, int Depth);
 
 #ifdef __cplusplus
 }
-
-inline EventBits_t xRtosWaitStatusANY(EventBits_t ebX, TickType_t tWait) {
-	return xEventGroupWaitBits(xEventStatus, ebX, pdFALSE, pdFALSE, tWait);
-}
-
 #endif
