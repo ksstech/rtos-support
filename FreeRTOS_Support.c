@@ -442,7 +442,7 @@ extern SemaphoreHandle_t i2cPortMux;
 SemaphoreHandle_t * IgnoreList[] = { &RtosStatsMux, &printfxMux, &SL_VarMux, &SL_NetMux, &i2cPortMux, NULL };
 
 bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
-	for(int i = 0; IgnoreList[i] != NULL; ++i) if (IgnoreList[i] == pSH) return 1;
+	for(int i = 0; i < NO_MEM(IgnoreList); ++i) if (IgnoreList[i] == pSH) return 1;
 	return 0;
 }
 
