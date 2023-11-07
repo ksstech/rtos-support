@@ -457,7 +457,11 @@ SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 }
 
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
-	IF_myASSERT(debugTRACK, halNVIC_CalledFromISR() == 0);
+	if (halNVIC_CalledFromISR()) {
+		esp_backtrace_print(3);
+		*pSH = NULL;
+		return pdTRUE;
+	}
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) return pdTRUE;
 	if (*pSH == NULL) xRtosSemaphoreInit(pSH);
 
@@ -499,7 +503,10 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 }
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
-	IF_myASSERT(debugTRACK, halNVIC_CalledFromISR() == 0);
+	if (halNVIC_CalledFromISR()) {
+		esp_backtrace_print(3);
+		return pdTRUE;
+	}
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSH == 0) return pdTRUE;
 	#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > -1)
 	if (!xRtosSemaphoreCheck(pSH) && (anySYSFLAGS(sfTRACKER) || (pSHmatch && pSH == pSHmatch))) {
