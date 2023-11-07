@@ -139,9 +139,7 @@ static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 	static u16_t Counter;
 	static u64rt_t Tasks[configFR_MAX_TASKS];
 	static TaskHandle_t Handle[configFR_MAX_TASKS];
-#endif
 
-#if (configRUNTIME_SIZE == 4)
 u64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
 	for (int i = 0; i < configFR_MAX_TASKS; ++i) {
 		if (Handle[i] == xHandle) return Tasks[i].U64;
