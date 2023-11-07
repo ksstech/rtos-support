@@ -580,7 +580,7 @@ void vTaskDumpStack(void * pTCB) {
 //         /*whitelist*/  esp_cpu_process_stack_pc(stk_frame.pc) == 0x400559DD ||
 //                        /* Ignore the first corrupted PC in case of InstrFetchProhibited */
 //                       (stk_frame.exc_frame && ((XtExcFrame *)stk_frame.exc_frame)->exccause == EXCCAUSE_INSTR_PROHIBITED)));
-
+/*
 esp_err_t IRAM_ATTR esp_backtrace_print_all_tasks(int depth, bool panic) {
     u32_t task_count = uxTaskGetNumberOfTasks();
     TaskSnapshot_t* snapshots = (TaskSnapshot_t*) calloc(task_count * sizeof(TaskSnapshot_t), 1);
@@ -588,14 +588,13 @@ esp_err_t IRAM_ATTR esp_backtrace_print_all_tasks(int depth, bool panic) {
     UBaseType_t tcb_size = 0;
     u32_t got = uxTaskGetSnapshotAll(snapshots, task_count, &tcb_size);
     u32_t len = got < task_count ? got : task_count;
-//    print_str("printing all tasks:\n\n", panic);
+    print_str("printing all tasks:\n\n", panic);
     esp_err_t err = ESP_OK;
     for (u32_t i = 0; i < len; i++) {
 /*
         TaskHandle_t handle = (TaskHandle_t) snapshots[i].pxTCB;
         char* name = pcTaskGetName(handle);
-        print_str(name ? name : "No Name" , panic);
-*/
+        print_str(name ? name : "No Name", panic);
         XtExcFrame* xtf = (XtExcFrame*)snapshots[i].pxTopOfStack;
         esp_backtrace_frame_t frame = { .pc = xtf->pc, .sp = xtf->a1, .next_pc = xtf->a0, .exc_frame = xtf };
         esp_err_t nerr = esp_backtrace_print_from_frame(depth, &frame, panic);
@@ -604,3 +603,4 @@ esp_err_t IRAM_ATTR esp_backtrace_print_all_tasks(int depth, bool panic) {
     free(snapshots);
     return err;
 }
+*/
