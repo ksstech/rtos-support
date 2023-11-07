@@ -533,7 +533,7 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	if (*pSH) {
 		vSemaphoreDelete(*pSH);
 		#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > -1)
-		IF_RP (anySYSFLAGS(sfTRACKER) || (pSHmatch && pSH == pSHmatch), "SH Delete %p\r\n", pSH);
+		IF_CP (anySYSFLAGS(sfTRACKER) || (pSHmatch && pSH == pSHmatch), "SH Delete %p\r\n", pSH);
 		#endif
 		*pSH = 0;
 	}
