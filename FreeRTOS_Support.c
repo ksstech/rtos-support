@@ -473,22 +473,15 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 			#if (rtosDEBUG_SEMA_HLDR > 0)
 			TaskHandle_t thHolder = xSemaphoreGetMutexHolder(*pSH);
 			#endif
-			CP("SH Take %d %p"
-				#if (rtosDEBUG_SEMA_HLDR > 0)
-				" H=%s/%d"
-				#endif
-				#if (rtosDEBUG_SEMA_RCVR > 0)
-				" R=%s/%d"
-				#endif
-				" t=%lu\r\n",
-				esp_cpu_get_core_id(), pSH,
-				#if (rtosDEBUG_SEMA_HLDR > 0)
-				pcTaskGetName(thHolder), uxTaskPriorityGet(thHolder),
-				#endif
-				#if (rtosDEBUG_SEMA_RCVR > 0)
-				pcTaskGetName(NULL), uxTaskPriorityGet(NULL),
-				#endif
-				tElap);
+			#if (rtosDEBUG_SEMA_HLDR > 0) && (rtosDEBUG_SEMA_RCVR > 0)
+			CP("SH Take %d %p H=%s/%d R=%s/%d t=%lu\r\n", esp_cpu_get_core_id(), pSH, tElap);
+			#elif (rtosDEBUG_SEMA_HLDR > 0)
+			CP("SH Take %d %p H=%s/%d t=%lu\r\n", esp_cpu_get_core_id(), pSH, tElap);
+			#elif(rtosDEBUG_SEMA_RCVR > 0)
+			CP("SH Take %d %p R=%s/%d t=%lu\r\n", esp_cpu_get_core_id(), pSH, tElap);
+			#else
+			CP("SH Take %d %p t=%lu\r\n", esp_cpu_get_core_id(), pSH, tElap);
+			#endif
 			// Decode return addresses [optional]
 			#if (rtosDEBUG_SEMA > 0)
 			esp_backtrace_print(rtosDEBUG_SEMA)
