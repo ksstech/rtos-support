@@ -143,7 +143,10 @@ static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 
 #if (configRUNTIME_SIZE == 4)
 u64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
-	for (int i = 0; i < configFR_MAX_TASKS; ++i) { if (Handle[i] == xHandle) return Tasks[i].U64; } return 0ULL;
+	for (int i = 0; i < configFR_MAX_TASKS; ++i) {
+		if (Handle[i] == xHandle) return Tasks[i].U64;
+	}
+	return 0ULL;
 }
 
 bool bRtosStatsUpdateHook(void) {
