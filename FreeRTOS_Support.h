@@ -38,16 +38,11 @@ extern "C" {
 #define rtosDEBUG_SEMA_HLDR		0
 #define rtosDEBUG_SEMA_RCVR		0
 
-// ################################### Event status manipulation ###################################
-
-#define	xRtosClearStatus(X)			xEventGroupClearBits(xEventStatus, (X))
-
 // ############################################ Enumerations #######################################
 
 
 // #################################### FreeRTOS global variables ##################################
 
-extern	EventGroupHandle_t	xEventStatus, TaskRunState,	TaskDeleteState;
 #if (configPRODUCTION == 0) && (rtosDEBUG_SEMA > -1)
 	extern SemaphoreHandle_t * pSHmatch;
 #endif
@@ -71,56 +66,8 @@ void * pvRtosMalloc(size_t S);
 void vRtosFree(void * pV);
 void vRtosHeapSetup(void);
 
-// ################################### Event status manipulation ###################################
-
-/**
- * @brief	Set specified event status bits
- * @return	bits that are now set
- */
-EventBits_t xRtosSetStatus(const EventBits_t ebX);
-
-/**
- * @brief	read mask X of event status bits
- * @return	bits that are set
- */
-EventBits_t	xRtosGetStatus(EventBits_t ebX);
-
-/**
- * @brief	Wait (Y) ticks for ANY of bit[s] (X) to be set
- * @return	bits of X that are set
- */
-EventBits_t xRtosWaitStatusANY(EventBits_t ebX, TickType_t tWait);
-
-/**
- * @brief	Wait until ALL of bit[s] (X) are set
- */
-bool bRtosWaitStatusALL(EventBits_t ebX, TickType_t tWait);
-
-bool bRtosCheckStatus(const EventBits_t ebX);
-
-// ################################ Device EVENT status support ####################################
-
-EventBits_t xRtosSetEVTdevice(const EventBits_t ebX);
-EventBits_t xRtosGetEVTdevice(const EventBits_t ebX);
-bool bRtosWaitEVTdevices(EventBits_t ebX, TickType_t ttW);
-bool bRtosCheckEVTdevices(const EventBits_t ebX);
-
 // ################################### Task status manipulation ####################################
 
-/**
- * @brief	Set specified event status bits
- * @return	bits that are now set
- */
-EventBits_t xRtosTaskSetRUN(EventBits_t ebX);
-EventBits_t xRtosTaskClearRUN(EventBits_t ebX);
-EventBits_t xRtosTaskWaitRUN(EventBits_t ebX, TickType_t ttW);
-
-EventBits_t xRtosTaskSetDELETE(EventBits_t ebX);
-EventBits_t xRtosTaskClearDELETE(EventBits_t ebX);
-EventBits_t xRtosTaskWaitDELETE(EventBits_t ebX, TickType_t ttW);
-
-bool bRtosTaskCheckOK(const EventBits_t ebX);
-bool bRtosTaskWaitOK(const EventBits_t ebX, TickType_t ttW);
 
 // ################################### Task status reporting #######################################
 
