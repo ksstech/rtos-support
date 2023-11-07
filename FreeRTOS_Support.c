@@ -337,6 +337,7 @@ int xRtosReportMemory(report_t * psR) {
 }
 
 int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
+	if (!halCONFIG_inSRAM(thTmr))  return wprintfx(psR, "\t%p Invalid Timer handle", thTmr);
 	TickType_t tPer = xTimerGetPeriod(thTmr);
 	TickType_t tExp = xTimerGetExpiryTime(thTmr);
 	i32_t tRem = tExp - xTaskGetTickCount();
