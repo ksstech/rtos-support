@@ -219,8 +219,7 @@ TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 int	xRtosReportTasks(report_t * psR) {
 	#if (configRUNTIME_SIZE == 8)
 	if (IdleHandle[0] == NULL || IdleHandle[1] == NULL) {		// first time once only
-		for (int i = 0; i < portNUM_PROCESSORS; ++i)
-			IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
+		for (int i = 0; i < portNUM_PROCESSORS; ++i) IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
 	}
 	// Get up-to-date task status
 	memset(sTS, 0, sizeof(sTS));
@@ -229,8 +228,7 @@ int	xRtosReportTasks(report_t * psR) {
 	Active.U64 = 0;
 	for (int a = 0; a < NowTasks; ++a) {
 		TaskStatus_t * psTS = &sTS[a];
-		if (MaxNum < psTS->xTaskNumber)
-			MaxNum = psTS->xTaskNumber;
+		if (MaxNum < psTS->xTaskNumber) MaxNum = psTS->xTaskNumber;
 		// If not an IDLE task
 		if (IdleHandle[0] != psTS->xHandle && IdleHandle[1] != psTS->xHandle)
 			Active.U64 += psTS->ulRunTimeCounter;		// update active tasks RT
@@ -243,8 +241,7 @@ int	xRtosReportTasks(report_t * psR) {
 
 	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
 	u64_t TotalAdj = Total.U64 / (100ULL / portNUM_PROCESSORS);
-	if (TotalAdj == 0ULL)
-		return 0;
+	if (TotalAdj == 0ULL) return 0;
 	int	iRV = 0;
 	printfx_lock(psR);
 	if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", colourFG_CYAN);
@@ -272,8 +269,7 @@ int	xRtosReportTasks(report_t * psR) {
 			(psTS->uxCurrentPriority >= (UBaseType_t) configMAX_PRIORITIES) ||
 			(psTS->uxBasePriority >= configMAX_PRIORITIES))
 			goto next;
-		if ((psTS->xCoreID >= portNUM_PROCESSORS) && (psTS->xCoreID != tskNO_AFFINITY))
-			goto next;
+		if ((psTS->xCoreID >= portNUM_PROCESSORS) && (psTS->xCoreID != tskNO_AFFINITY)) goto next;
 		if (psR->sFM.bTskNum) iRV += wprintfx(psR, "%2u ", psTS->xTaskNumber);
 		if (psR->sFM.bPrioX) iRV += wprintfx(psR, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
 		iRV += wprintfx(psR, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
@@ -551,8 +547,8 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 			CP(strCRLF);
 			#endif
 		}
-		if (btRV == pdTRUE)				break;
-		if (tWait != portMAX_DELAY)		tWait -= tStep;
+		if (btRV == pdTRUE) break;
+		if (tWait != portMAX_DELAY) tWait -= tStep;
 		tElap += tStep;
 	} while (tWait > tStep);
 	return btRV;
@@ -660,9 +656,7 @@ esp_err_t IRAM_ATTR esp_backtrace_print_all_tasks(int depth, bool panic) {
         XtExcFrame* xtf = (XtExcFrame*)snapshots[i].pxTopOfStack;
         esp_backtrace_frame_t frame = { .pc = xtf->pc, .sp = xtf->a1, .next_pc = xtf->a0, .exc_frame = xtf };
         esp_err_t nerr = esp_backtrace_print_from_frame(depth, &frame, panic);
-        if (nerr != ESP_OK) {
-            err = nerr;
-        }
+        if (nerr != ESP_OK) err = nerr;
     }
     free(snapshots);
     return err;
