@@ -34,7 +34,7 @@ extern "C" {
 
 // ###################################### BUILD : CONFIG definitions ##############################
 
-#define rtosDEBUG_SEMA			-1			// -1=disable, 0=no return Address, >0=add return addresses
+#define rtosDEBUG_SEMA			0			// -1=disable, 0=no return Address, >0=add return addresses
 #define rtosDEBUG_SEMA_HLDR		0
 #define rtosDEBUG_SEMA_RCVR		0
 
@@ -93,7 +93,6 @@ void vRtosTaskDelete(TaskHandle_t TH);
 // ####################################### Debug support ###########################################
 
 void vTaskDumpStack(void *);
-void vRtosReportCallers(int Base, int Depth);
 
 #ifdef __cplusplus
 }
