@@ -566,21 +566,16 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 		#if (rtosDEBUG_SEMA_HLDR > 0)
 		TaskHandle_t thHolder = xSemaphoreGetMutexHolder(*pSH);
 		#endif
-		CP("SH Give %d %p"
-			#if (rtosDEBUG_SEMA_HLDR > 0)
-			" H=%s/%d"
-			#endif
-			#if (rtosDEBUG_SEMA_RCVR > 0)
-			" R=%s/%d"
-			#endif
-			"\r\n", esp_cpu_get_core_id(), pSH
-			#if (rtosDEBUG_SEMA_HLDR > 0)
-			,pcTaskGetName(thHolder), uxTaskPriorityGet(thHolder)
-			#endif
-			#if (rtosDEBUG_SEMA_RCVR > 0)
-			,pcTaskGetName(NULL), uxTaskPriorityGet(NULL)
-			#endif
-			);
+
+		#if (rtosDEBUG_SEMA_HLDR > 0) && (rtosDEBUG_SEMA_RCVR > 0)
+		CP("SH Give %d %p H=%s/%d R=%s/%d\r\n", esp_cpu_get_core_id(), pSH);
+		#elif (rtosDEBUG_SEMA_HLDR > 0)
+		CP("SH Give %d %p H=%s/%d\r\n", esp_cpu_get_core_id(), pSH);
+		#elif(rtosDEBUG_SEMA_RCVR > 0)
+		CP("SH Give %d %p R=%s/%d\r\n", esp_cpu_get_core_id(), pSH);
+		#else
+		CP("SH Give %d %p\r\n", esp_cpu_get_core_id(), pSH);
+		#endif
 	}
 	#endif
 	return xSemaphoreGive(*pSH);
