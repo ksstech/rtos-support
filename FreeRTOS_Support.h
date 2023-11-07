@@ -11,7 +11,7 @@
 #include "freertos/semphr.h"
 #include "freertos/event_groups.h"
 
-#include "struct_union.h"		// x_time definitions stdint time
+#include "definitions.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,9 +72,10 @@ void vRtosHeapSetup(void);
 // ################################### Task status reporting #######################################
 
 bool bRtosStatsUpdateHook(void);
-int	xRtosReportTasks(report_t * psRprt);
-int xRtosReportMemory(report_t * psRprt);
-int xRtosReportTimer(report_t * psRprt, TimerHandle_t thTimer);
+struct report_t;
+int	xRtosReportTasks(struct report_t * psRprt);
+int xRtosReportMemory(struct report_t * psRprt);
+int xRtosReportTimer(struct report_t * psRprt, TimerHandle_t thTimer);
 
 // ################################## Task creation/deletion #######################################
 
