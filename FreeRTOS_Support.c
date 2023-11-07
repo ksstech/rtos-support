@@ -567,7 +567,7 @@ void vTaskDumpStack(void * pTCB) {
 			(u8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t)));
 }
 
-#include "freertos/task_snapshot.h"
+//#include "freertos/task_snapshot.h"
 #include "esp_debug_helpers.h"
 
 // note for ESP32S3, you must alter esp_backtrace_print_from_frame to whitelist 0x400559DD
@@ -591,7 +591,6 @@ esp_err_t IRAM_ATTR esp_backtrace_print_all_tasks(int depth, bool panic) {
     print_str("printing all tasks:\n\n", panic);
     esp_err_t err = ESP_OK;
     for (u32_t i = 0; i < len; i++) {
-/*
         TaskHandle_t handle = (TaskHandle_t) snapshots[i].pxTCB;
         char* name = pcTaskGetName(handle);
         print_str(name ? name : "No Name", panic);
