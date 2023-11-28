@@ -1,6 +1,5 @@
 /*
- *	FreeRTOS_Support.c
- *	Copyright (c) 2015-22 Andre M. MAree / KSS Technologies (Pty) Ltd.
+ *	FreeRTOS_Support.c - Copyright (c) 2015-23 Andre M. MAree / KSS Technologies (Pty) Ltd.
  */
 
 #include "hal_config.h"
