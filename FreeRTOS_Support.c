@@ -302,6 +302,15 @@ int	xRtosReportTasks(report_t * psR) {
 			iRV += wprintfx(psR, " %p %p\r\n", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
 		else
 			iRV += wprintfx(psR, strCRLF);
+
+		// For idle task(s) we do not want to add RunTime %'s to the task's RunTime or Cores' RunTime
+		if (!bRtosTaskIsIdleTask(psTS->xHandle)) {		// NOT an IDLE task
+			Active.U64 += u64RunTime;					// Update total active time
+			#if	(portNUM_PROCESSORS > 1)
+			int c = (psTS->xCoreID == tskNO_AFFINITY) ? 2 : psTS->xCoreID;
+			Cores[c].U64 += u64RunTime;					// Update specific core's active time
+			#endif
+		}
 next:
 		TaskMask <<= 1;
 	}
