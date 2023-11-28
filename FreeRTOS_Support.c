@@ -225,25 +225,21 @@ bool bRtosTaskIsIdleTask(TaskHandle_t xHandle) {
 
 int	xRtosReportTasks(report_t * psR) {
 	#if (configRUNTIME_SIZE == 8)
-	// Get up-to-date task status
-	memset(sTS, 0, sizeof(sTS));
-	u32_t NowTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &Total.U64);
-	IF_myASSERT(debugPARAM, NowTasks <= configFR_MAX_TASKS);
-	Active.U64 = 0;
-	for (int a = 0; a < NowTasks; ++a) {
-		TaskStatus_t * psTS = &sTS[a];
-		if (MaxNum < psTS->xTaskNumber) MaxNum = psTS->xTaskNumber;
-		// If not an IDLE task
-		if (IdleHandle[0] != psTS->xHandle && IdleHandle[1] != psTS->xHandle)
-			Active.U64 += psTS->ulRunTimeCounter;		// update active tasks RT
 		if (NumTasks == 0) {								// first time once only
 			for (int i = 0; i < portNUM_PROCESSORS; ++i) IdleHandle[i] = xTaskGetIdleTaskHandleForCore(i);
 		}
+		// Get up-to-date task status
+		memset(sTS, 0, sizeof(sTS));
+		NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &Total.U64);
+		IF_myASSERT(debugPARAM, NumTasks <= configFR_MAX_TASKS);
+		Active.U64 = 0;
 		#if	(portNUM_PROCESSORS > 1)
-		int c = (psTS->xCoreID != tskNO_AFFINITY) ? psTS->xCoreID : 2;
-		Cores[c].U64 += psTS->ulRunTimeCounter;
+		memset(&Cores[0], 0, sizeof(Cores));
 		#endif
-	}
+		for (int a = 0; a < NumTasks; ++a) {
+			TaskStatus_t * psTS = &sTS[a];
+			if (psTS->xTaskNumber > MaxNum) MaxNum = psTS->xTaskNumber;
+		}
 	#endif
 
 	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
