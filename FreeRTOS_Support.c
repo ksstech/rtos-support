@@ -225,9 +225,6 @@ bool bRtosTaskIsIdleTask(TaskHandle_t xHandle) {
 
 int	xRtosReportTasks(report_t * psR) {
 	#if (configRUNTIME_SIZE == 8)
-	if (IdleHandle[0] == NULL || IdleHandle[1] == NULL) {		// first time once only
-		for (int i = 0; i < portNUM_PROCESSORS; ++i) IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
-	}
 	// Get up-to-date task status
 	memset(sTS, 0, sizeof(sTS));
 	u32_t NowTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &Total.U64);
@@ -239,6 +236,9 @@ int	xRtosReportTasks(report_t * psR) {
 		// If not an IDLE task
 		if (IdleHandle[0] != psTS->xHandle && IdleHandle[1] != psTS->xHandle)
 			Active.U64 += psTS->ulRunTimeCounter;		// update active tasks RT
+		if (NumTasks == 0) {								// first time once only
+			for (int i = 0; i < portNUM_PROCESSORS; ++i) IdleHandle[i] = xTaskGetIdleTaskHandleForCore(i);
+		}
 		#if	(portNUM_PROCESSORS > 1)
 		int c = (psTS->xCoreID != tskNO_AFFINITY) ? psTS->xCoreID : 2;
 		Cores[c].U64 += psTS->ulRunTimeCounter;
