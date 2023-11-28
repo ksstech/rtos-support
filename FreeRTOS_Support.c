@@ -472,7 +472,7 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) return pdTRUE;
 	if (*pSH == NULL) xRtosSemaphoreInit(pSH);
 
-	#if	(configPRODUCTION == 0  && rtosDEBUG_SEMA > -1)
+		#if	(configPRODUCTION == 0  && rtosDEBUG_SEMA > -1)
 	TickType_t tStep = (tWait == portMAX_DELAY) ? pdMS_TO_TICKS(10000) : tWait / 10;
 	TickType_t tElap = 0;
 	BaseType_t btRV;
