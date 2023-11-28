@@ -216,6 +216,13 @@ TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 	return NULL;
 }
 
+bool bRtosTaskIsIdleTask(TaskHandle_t xHandle) {
+	for (int i = 0; i < portNUM_PROCESSORS; ++i) {
+		 if (xHandle == IdleHandle[i]) return 1;
+	}
+	return 0;
+}
+
 int	xRtosReportTasks(report_t * psR) {
 	#if (configRUNTIME_SIZE == 8)
 	if (IdleHandle[0] == NULL || IdleHandle[1] == NULL) {		// first time once only
