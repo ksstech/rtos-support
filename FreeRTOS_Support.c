@@ -249,7 +249,9 @@ int	xRtosReportTasks(report_t * psR) {
 	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
 	u64_t TotalAdj = Total.U64 / (100ULL / portNUM_PROCESSORS);
 	if (TotalAdj == 0ULL) return 0;
-	int	iRV = 0;
+	
+	// Display the column headers
+	int	iRV = 0;					// reset the character output counter
 	printfx_lock(psR);
 	if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", colourFG_CYAN);
 	if (psR->sFM.bTskNum) iRV += wprintfx(psR, "T# ");
@@ -267,6 +269,7 @@ int	xRtosReportTasks(report_t * psR) {
 	if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", attrRESET);
 	iRV += wprintfx(psR, strCRLF);
 
+	// display individual task info
 	u32_t TaskMask = 0x1, Units, Fract;
 	for (int a = 1; a <= MaxNum; ++a) {
 		TaskStatus_t * psTS = psRtosStatsFindWithNumber(a);
