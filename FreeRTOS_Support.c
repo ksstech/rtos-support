@@ -13,6 +13,8 @@
 #include "systiming.h"
 #include "x_errors_events.h"
 
+#include <string.h>
+
 #define	debugFLAG					0xF000
 
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
@@ -449,6 +451,8 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 
 // ##################################### Semaphore support #########################################
 
+#include "esp_debug_helpers.h"
+
 #if	(configPRODUCTION == 0) && (rtosDEBUG_SEMA > -1)
 SemaphoreHandle_t * pSHmatch = NULL;
 SemaphoreHandle_t * IgnoreList[] = { };	// &RtosStatsMux, &printfxMux, &SL_VarMux, &SL_NetMux
@@ -480,7 +484,7 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) return pdTRUE;
 	if (*pSH == NULL) xRtosSemaphoreInit(pSH);
 
-		#if	(configPRODUCTION == 0  && rtosDEBUG_SEMA > -1)
+	#if	(configPRODUCTION == 0  && rtosDEBUG_SEMA > -1)
 	TickType_t tStep = (tWait == portMAX_DELAY) ? pdMS_TO_TICKS(10000) : tWait / 10;
 	TickType_t tElap = 0;
 	BaseType_t btRV;
