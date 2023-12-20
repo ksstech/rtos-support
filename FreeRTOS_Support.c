@@ -334,16 +334,16 @@ next:
 int xRtosReportMemory(report_t * psR) {
 	int iRV = 0;
 	printfx_lock(psR);
-#if defined(ESP_PLATFORM)
+	#if defined(ESP_PLATFORM)
 	if (psR->sFM.rmCAPS & MALLOC_CAP_32BIT) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_32BIT);
 	if (psR->sFM.rmCAPS & MALLOC_CAP_8BIT) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_8BIT);
 	if (psR->sFM.rmCAPS & MALLOC_CAP_DMA) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_DMA);
 	if (psR->sFM.rmCAPS & MALLOC_CAP_EXEC) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_EXEC);
 	if (psR->sFM.rmCAPS & MALLOC_CAP_IRAM_8BIT) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_IRAM_8BIT);
-	#ifdef CONFIG_SOC_SPIRAM_SUPPORTED
-	if (psR->sFM.rmCAPS & MALLOC_CAP_SPIRAM) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_SPIRAM);
+		#ifdef CONFIG_SOC_SPIRAM_SUPPORTED
+		if (psR->sFM.rmCAPS & MALLOC_CAP_SPIRAM) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_SPIRAM);
+		#endif
 	#endif
-#endif
     if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", colourFG_CYAN);
     iRV += wprintfx(psR, "FreeRTOS");
     if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", attrRESET);
