@@ -122,7 +122,6 @@ void vRtosFree(void * pV) {
 	#error "CONFIG_FREERTOS_MAX_TASK_NAME_LEN is out of range !!!"
 #endif
 
-static u64rt_t Total;									// Sum all tasks (incl IDLE)
 static u64rt_t Active;									// Sum non-IDLE tasks
 static u8_t NumTasks;									// Currently "active" tasks
 static u8_t MaxNum;										// Highest logical task number
@@ -135,11 +134,128 @@ static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 	static u64rt_t Cores[portNUM_PROCESSORS+1];			// Sum of non-IDLE task runtime/core
 #endif
 
-#if (configRUNTIME_SIZE == 4)
-	static SemaphoreHandle_t RtosStatsMux;
-	static u16_t Counter;
-	static u64rt_t Tasks[configFR_MAX_TASKS];
-	static TaskHandle_t Handle[configFR_MAX_TASKS];
+TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
+	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
+		if (sTS[i].xHandle == xHandle) return &sTS[i];
+	}
+	return NULL;
+}
+
+TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
+	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
+		if (sTS[i].xTaskNumber == xTaskNumber) return &sTS[i];
+	}
+	return NULL;
+}
+
+bool bRtosTaskIsIdleTask(TaskHandle_t xHandle) {
+	for (int i = 0; i < portNUM_PROCESSORS; ++i) {
+		 if (xHandle == IdleHandle[i]) return 1;
+	}
+	return 0;
+}
+
+#if (configRUNTIME_SIZE == 8)
+int	xRtosReportTasks(report_t * psR) {
+	if (NumTasks == 0) {								// first time once only
+		for (int i = 0; i < portNUM_PROCESSORS; ++i) IdleHandle[i] = xTaskGetIdleTaskHandleForCore(i);
+	}
+
+	memset(sTS, 0, sizeof(sTS));
+	u64_t TotalAdj;
+	// Get up-to-date task status
+	NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &TotalAdj);
+	IF_myASSERT(debugPARAM, NumTasks <= configFR_MAX_TASKS);
+	TotalAdj /= 100ULL / portNUM_PROCESSORS;			// will be used to calc % for each task...
+	if (TotalAdj == 0ULL) return 0;
+	
+	Active.U64 = 0;										// reset overall active running total
+	if	(portNUM_PROCESSORS > 1) memset(&Cores[0], 0, sizeof(Cores));			// reset time/core running totals
+	for (int a = 0; a < NumTasks; ++a) {				// detemine value of highest numbered task
+		TaskStatus_t * psTS = &sTS[a];
+		if (psTS->xTaskNumber > MaxNum) MaxNum = psTS->xTaskNumber;
+	}
+
+	int	iRV = 0;										// reset the character output counter
+	printfx_lock(psR);									// Display the column headers
+	if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", colourFG_CYAN);
+	if (psR->sFM.bTskNum) iRV += wprintfx(psR, "T# ");
+	if (psR->sFM.bPrioX) iRV += wprintfx(psR, "Pc/Pb ");
+	iRV += wprintfx(psR, configFREERTOS_TASKLIST_HDR_DETAIL);
+	if (psR->sFM.bState) iRV += wprintfx(psR, "S ");
+	if (psR->sFM.bStack) iRV += wprintfx(psR, "LowS ");
+	if (portNUM_PROCESSORS > 1 && psR->sFM.bCore) iRV += wprintfx(psR, "X ");
+	iRV += wprintfx(psR, " Util Ticks");
+	if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE) && psR->sFM.bXtras) iRV += wprintfx(psR, " Stack Base -Task TCB-");
+	if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", attrRESET);
+	iRV += wprintfx(psR, strCRLF);
+
+	u32_t Units, Fracts, TaskMask = 0x1;				// display individual task info
+	for (int a = 1; a <= MaxNum; ++a) {
+		TaskStatus_t * psTS = psRtosStatsFindWithNumber(a);
+		if ((psTS == NULL) ||
+			(psTS->eCurrentState >= eInvalid) ||
+			(psR->sFM.uCount & TaskMask) == 0 ||
+			(psTS->uxCurrentPriority >= (UBaseType_t) configMAX_PRIORITIES) ||
+			(psTS->uxBasePriority >= configMAX_PRIORITIES))
+			goto next;
+		if ((psTS->xCoreID != tskNO_AFFINITY) && !INRANGE(0, psTS->xCoreID, portNUM_PROCESSORS-1)) {
+			iRV += wprintfx(psR, "Skipped #%d = %d !!!\r\n", a, psTS->xCoreID);
+			goto next;
+		}
+		#if	(portNUM_PROCESSORS > 1)
+			int c = (psTS->xCoreID == tskNO_AFFINITY) ? 2 : psTS->xCoreID;
+		#endif
+		if (psR->sFM.bTskNum) iRV += wprintfx(psR, "%2u ", psTS->xTaskNumber);
+		if (psR->sFM.bPrioX) iRV += wprintfx(psR, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
+		iRV += wprintfx(psR, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
+		if (psR->sFM.bState) iRV += wprintfx(psR, "%c ", TaskState[psTS->eCurrentState]);
+		if (psR->sFM.bStack) iRV += wprintfx(psR, "%4u ", psTS->usStackHighWaterMark);
+		#if (portNUM_PROCESSORS > 1)
+			if(psR->sFM.bCore) iRV += wprintfx(psR, "%c ", caMCU[c]);
+		#endif
+		// Calculate & display individual task utilisation.
+		Units = psTS->ulRunTimeCounter / TotalAdj;
+    	Fracts = ((psTS->ulRunTimeCounter * 100) / TotalAdj) % 100;
+		iRV += wprintfx(psR, "%2lu.%02lu %#'5llu", Units, Fracts, psTS->ulRunTimeCounter);
+
+		if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && psR->sFM.bXtras)
+			iRV += wprintfx(psR, " %p %p", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
+		if (psR->sFM.bNL) iRV += wprintfx(psR, strCRLF);
+
+		// For idle task(s) we do not want to add RunTime % to the task or Core RunTime
+		if (!bRtosTaskIsIdleTask(psTS->xHandle)) {		// NOT an IDLE task
+			Active.U64 += psTS->ulRunTimeCounter;		// Update total active time
+			#if	(portNUM_PROCESSORS > 1) 
+				Cores[c].U64 += psTS->ulRunTimeCounter;	// Update core active time
+			#endif
+		}
+next:
+		TaskMask <<= 1;
+	}
+	Units = Active.U64 / TotalAdj;	// Calculate & display total for "real" tasks utilization.
+	Fracts = ((Active.U64 * 100) / TotalAdj) % 100;
+
+	#if	(portNUM_PROCESSORS > 1)	// display 0, 1 & X core utilization
+		iRV += wprintfx(psR, "%u Tasks used=%lu.%02lu%% [", NumTasks, Units, Fracts);
+    	for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
+    		Units = Cores[i].U64 / TotalAdj;
+    		Fracts = ((Cores[i].U64 * 100) / TotalAdj) % 100;
+    		iRV += wprintfx(psR, "%lu.%02lu%c", Units, Fracts, (i < portNUM_PROCESSORS) ? CHR_SPACE : CHR_R_SQUARE);
+    	}
+    	iRV += wprintfx(psR, psR->sFM.bNL ? strCR2xLF : strCRLF);
+	#else
+		iRV += wprintfx(psR, "%u Tasks used=%lu.%02lu%%%s", NumTasks, Units, Fracts, psR->sFM.bNL ? strCR2xLF : strCRLF);
+	#endif
+	printfx_unlock(psR);
+	return iRV;
+}
+#else
+static SemaphoreHandle_t RtosStatsMux;
+static u16_t Counter;
+static u64rt_t Total;									// Sum all tasks (incl IDLE)
+static u64rt_t Tasks[configFR_MAX_TASKS];
+static TaskHandle_t Handle[configFR_MAX_TASKS];
 
 u64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
 	for (int i = 0; i < configFR_MAX_TASKS; ++i) {
@@ -164,10 +280,9 @@ bool bRtosStatsUpdateHook(void) {
 
 	if (Total.U64 && Total.LSW > NowTotal) ++Total.MSW;		// Handle wrapped System counter
 	Total.LSW = NowTotal;
-
 	Active.U64 = 0;
 	#if	(portNUM_PROCESSORS > 1)
-	memset(&Cores[0], 0, sizeof(Cores));
+		memset(&Cores[0], 0, sizeof(Cores));
 	#endif
 	for (int a = 0; a < NumTasks; ++a) {
 		TaskStatus_t * psTS = &sTS[a];
@@ -202,48 +317,8 @@ bool bRtosStatsUpdateHook(void) {
 	xRtosSemaphoreGive(&RtosStatsMux);
 	return 1;
 }
-#endif
-
-TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
-	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
-		if (sTS[i].xHandle == xHandle) return &sTS[i];
-	}
-	return NULL;
-}
-
-TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
-	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
-		if (sTS[i].xTaskNumber == xTaskNumber) return &sTS[i];
-	}
-	return NULL;
-}
-
-bool bRtosTaskIsIdleTask(TaskHandle_t xHandle) {
-	for (int i = 0; i < portNUM_PROCESSORS; ++i) {
-		 if (xHandle == IdleHandle[i]) return 1;
-	}
-	return 0;
-}
 
 int	xRtosReportTasks(report_t * psR) {
-#if (configRUNTIME_SIZE == 8)
-	if (NumTasks == 0) {								// first time once only
-		for (int i = 0; i < portNUM_PROCESSORS; ++i) IdleHandle[i] = xTaskGetIdleTaskHandleForCore(i);
-	}
-	// Get up-to-date task status
-	memset(sTS, 0, sizeof(sTS));
-	NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &Total.U64);
-	IF_myASSERT(debugPARAM, NumTasks <= configFR_MAX_TASKS);
-	Active.U64 = 0;
-	#if	(portNUM_PROCESSORS > 1)
-		memset(&Cores[0], 0, sizeof(Cores));
-	#endif
-	for (int a = 0; a < NumTasks; ++a) {
-		TaskStatus_t * psTS = &sTS[a];
-		if (psTS->xTaskNumber > MaxNum) MaxNum = psTS->xTaskNumber;
-	}
-#endif
-
 	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
 	u64_t TotalAdj = Total.U64 / (100ULL / portNUM_PROCESSORS);
 	if (TotalAdj == 0ULL) return 0;
@@ -287,11 +362,7 @@ int	xRtosReportTasks(report_t * psR) {
 	#endif
 		if (psR->sFM.bStack) iRV += wprintfx(psR, "%4u ", psTS->usStackHighWaterMark);
 		// Calculate & display individual task utilisation.
-	#if (configRUNTIME_SIZE == 8)
-		u64_t u64RunTime = psTS->ulRunTimeCounter;
-	#else
 		u64_t u64RunTime = xRtosStatsFindRuntime(psTS->xHandle);
-	#endif
     	Units = u64RunTime / TotalAdj;
     	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
 		iRV += wprintfx(psR, "%2lu.%02lu %#'5llu", Units, Fract, u64RunTime);
@@ -303,10 +374,10 @@ int	xRtosReportTasks(report_t * psR) {
 		// For idle task(s) we do not want to add RunTime %'s to the task's RunTime or Cores' RunTime
 		if (!bRtosTaskIsIdleTask(psTS->xHandle)) {		// NOT an IDLE task
 			Active.U64 += u64RunTime;					// Update total active time
-		#if	(portNUM_PROCESSORS > 1)
-			int c = (psTS->xCoreID == tskNO_AFFINITY) ? 2 : psTS->xCoreID;
-			Cores[c].U64 += u64RunTime;					// Update specific core's active time
-		#endif
+			#if	(portNUM_PROCESSORS > 1)
+				int c = (psTS->xCoreID == tskNO_AFFINITY) ? 2 : psTS->xCoreID;
+				Cores[c].U64 += u64RunTime;				// Update specific core's active time
+			#endif
 		}
 next:
 		TaskMask <<= 1;
@@ -317,18 +388,19 @@ next:
 	Fract = ((Active.U64 * 100) / TotalAdj) % 100;
 	iRV += wprintfx(psR, "T=%u U=%lu.%02lu", NumTasks, Units, Fract);
 
-#if	(portNUM_PROCESSORS > 1)
-	// calculate & display individual core's utilization
-    for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
-    	Units = Cores[i].U64 / TotalAdj;
-    	Fract = ((Cores[i].U64 * 100) / TotalAdj) % 100;
-    	iRV += wprintfx(psR, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
-    }
-#endif
+	#if	(portNUM_PROCESSORS > 1)
+		// calculate & display individual core's utilization
+    	for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
+    		Units = Cores[i].U64 / TotalAdj;
+    		Fract = ((Cores[i].U64 * 100) / TotalAdj) % 100;
+    		iRV += wprintfx(psR, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
+    	}
+	#endif
     iRV += wprintfx(psR, psR->sFM.bNL ? "\r\n\n" : strCRLF);
 	printfx_unlock(psR);
 	return iRV;
 }
+#endif
 
 int xRtosReportMemory(report_t * psR) {
 	int iRV = 0;
