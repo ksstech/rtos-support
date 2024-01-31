@@ -80,12 +80,12 @@ TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t);
 void * pvRtosMalloc(size_t S) {
 	void * pV = malloc(S);
 	IF_myASSERT(debugRESULT, pV);
-	IF_CP(debugTRACK && ioB1GET(ioMemory), "malloc %p:%u\r\n", pV, S);
+	IF_PX(debugTRACK && ioB1GET(ioMemory), "malloc %p:%u\r\n", pV, S);
 	return pV;
 }
 
 void vRtosFree(void * pV) {
-	IF_CP(debugTRACK && ioB1GET(ioMemory), " free  %p\r\n", pV);
+	IF_PX(debugTRACK && ioB1GET(ioMemory), " free  %p\r\n", pV);
 	free(pV);
 }
 
@@ -445,7 +445,7 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 	TaskHandle_t * pxCreatedTask,
 	const BaseType_t xCoreID)
 {
-	IF_CP(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
+	IF_PX(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
 	int iRV = pdFAIL;
 	#ifdef CONFIG_FREERTOS_UNICORE
 	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
@@ -461,7 +461,7 @@ TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const
 	UBaseType_t uxPriority, StackType_t * const pxStackBuffer,
     StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID)
 {
-	IF_CP(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
+	IF_PX(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
 	#ifdef CONFIG_FREERTOS_UNICORE
 	TaskHandle_t thRV = xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
 	#else
@@ -495,7 +495,7 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 	if (ebX) {						// Clear the RUN & DELETE task flags
 		xRtosClearTaskRUN(ebX);
 		xRtosClearTaskDELETE(ebX);
-		IF_CP(debugTRACK && UpDown, "[%s] RUN/DELETE flags cleared\r\n", caName);
+		IF_PX(debugTRACK && UpDown, "[%s] RUN/DELETE flags cleared\r\n", caName);
 	}
 
 	#if (configRUNTIME_SIZE == 4)	// 32bit tick counters, clear runtime stats collected.
@@ -504,19 +504,19 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 		if (Handle[i] == xHandle) {	// Clear dynamic runtime info
 			Tasks[i].U64 = 0ULL;
 			Handle[i] = NULL;
-			IF_CP(debugTRACK && UpDown, "[%s] dynamic stats removed\r\n", caName);
+			IF_PX(debugTRACK && UpDown, "[%s] dynamic stats removed\r\n", caName);
 			break;
 		}
 	}
 	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
 	if (psTS) {						// Clear "static" task info
 		memset(psTS, 0, sizeof(TaskStatus_t));
-		IF_CP(debugTRACK && UpDown, "[%s] static task info cleared\r\n", caName);
+		IF_PX(debugTRACK && UpDown, "[%s] static task info cleared\r\n", caName);
 	}
 	xRtosSemaphoreGive(&RtosStatsMux);
 	#endif
 
-	IF_CP(debugTRACK && UpDown, "[%s] deleting\r\n", caName);
+	IF_PX(debugTRACK && UpDown, "[%s] deleting\r\n", caName);
 	vTaskDelete(xHandle);
 }
 
@@ -622,7 +622,7 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	if (*pSH) {
 		vSemaphoreDelete(*pSH);
 		#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > -1)
-		IF_CP (anySYSFLAGS(sfTRACKER) || (pSHmatch && pSH == pSHmatch), "SH Delete %p\r\n", pSH);
+		IF_PX (anySYSFLAGS(sfTRACKER) || (pSHmatch && pSH == pSHmatch), "SH Delete %p\r\n", pSH);
 		#endif
 		*pSH = 0;
 	}
