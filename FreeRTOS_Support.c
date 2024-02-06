@@ -166,9 +166,9 @@ int	xRtosReportTasks(report_t * psR) {
 	// Get up-to-date task status
 	NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &TotalAdj);
 	IF_myASSERT(debugPARAM, NumTasks <= configFR_MAX_TASKS);
-	TotalAdj /= 100ULL / portNUM_PROCESSORS;			// will be used to calc % for each task...
+	TotalAdj /= (100ULL / portNUM_PROCESSORS);			// will be used to calc % for each task...
 	if (TotalAdj == 0ULL) return 0;
-	
+
 	Active.U64 = 0;										// reset overall active running total
 	if	(portNUM_PROCESSORS > 1) memset(&Cores[0], 0, sizeof(Cores));			// reset time/core running totals
 	for (int a = 0; a < NumTasks; ++a) {				// detemine value of highest numbered task
@@ -212,7 +212,7 @@ int	xRtosReportTasks(report_t * psR) {
 		if (psR->sFM.bState) iRV += wprintfx(psR, "%c ", TaskState[psTS->eCurrentState]);
 		if (psR->sFM.bStack) iRV += wprintfx(psR, "%4u ", psTS->usStackHighWaterMark);
 		#if (portNUM_PROCESSORS > 1)
-			if(psR->sFM.bCore) iRV += wprintfx(psR, "%c ", caMCU[c]);
+			if (psR->sFM.bCore) iRV += wprintfx(psR, "%c ", caMCU[c]);
 		#endif
 		// Calculate & display individual task utilisation.
 		Units = psTS->ulRunTimeCounter / TotalAdj;
@@ -226,7 +226,7 @@ int	xRtosReportTasks(report_t * psR) {
 		// For idle task(s) we do not want to add RunTime % to the task or Core RunTime
 		if (!bRtosTaskIsIdleTask(psTS->xHandle)) {		// NOT an IDLE task
 			Active.U64 += psTS->ulRunTimeCounter;		// Update total active time
-			#if	(portNUM_PROCESSORS > 1) 
+			#if	(portNUM_PROCESSORS > 1)
 				Cores[c].U64 += psTS->ulRunTimeCounter;	// Update core active time
 			#endif
 		}
@@ -322,7 +322,7 @@ int	xRtosReportTasks(report_t * psR) {
 	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
 	u64_t TotalAdj = Total.U64 / (100ULL / portNUM_PROCESSORS);
 	if (TotalAdj == 0ULL) return 0;
-	
+
 	// Display the column headers
 	int	iRV = 0;					// reset the character output counter
 	printfx_lock(psR);
