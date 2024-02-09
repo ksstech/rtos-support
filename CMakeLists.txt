@@ -3,7 +3,8 @@ set( srcs "FreeRTOS_Support.c" )
 set( include_dirs "." )
 set( priv_include_dirs )
 set( requires )
-set( priv_requires hal_esp32 main printfx syslog systiming )
+set( priv_requires "hal_esp32 main printfx syslog systiming" )
+
 idf_component_register(
 	SRCS ${srcs}
 	INCLUDE_DIRS ${include_dirs}
