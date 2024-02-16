@@ -441,7 +441,7 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 	TaskHandle_t * pxCreatedTask,
 	const BaseType_t xCoreID)
 {
-	IF_PX(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
+	TASK_START(pcName);
 	int iRV = pdFAIL;
 	#ifdef CONFIG_FREERTOS_UNICORE
 	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
@@ -457,7 +457,7 @@ TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const
 	UBaseType_t uxPriority, StackType_t * const pxStackBuffer,
     StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID)
 {
-	IF_PX(debugTRACK && ioB1GET(ioUpDown), "[%s] creating\r\n", pcName);
+	TASK_START(pcName);
 	#ifdef CONFIG_FREERTOS_UNICORE
 	TaskHandle_t thRV = xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
 	#else
@@ -482,7 +482,6 @@ void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
  */
 void vRtosTaskDelete(TaskHandle_t xHandle) {
 	if (xHandle == NULL) xHandle = xTaskGetCurrentTaskHandle();
-	bool UpDown = ioB1GET(ioUpDown);
 	#if (debugTRACK)
 	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN+1];
 	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
@@ -491,7 +490,7 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 	if (ebX) {						// Clear the RUN & DELETE task flags
 		xRtosClearTaskRUN(ebX);
 		xRtosClearTaskDELETE(ebX);
-		IF_PX(debugTRACK && UpDown, "[%s] RUN/DELETE flags cleared\r\n", caName);
+		MESSAGE("[%s] RUN/DELETE flags cleared\r\n", caName);
 	}
 
 	#if (configRUNTIME_SIZE == 4)	// 32bit tick counters, clear runtime stats collected.
@@ -500,19 +499,19 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 		if (Handle[i] == xHandle) {	// Clear dynamic runtime info
 			Tasks[i].U64 = 0ULL;
 			Handle[i] = NULL;
-			IF_PX(debugTRACK && UpDown, "[%s] dynamic stats removed\r\n", caName);
+			MESSAGE("[%s] dynamic stats removed\r\n", caName);
 			break;
 		}
 	}
 	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
 	if (psTS) {						// Clear "static" task info
 		memset(psTS, 0, sizeof(TaskStatus_t));
-		IF_PX(debugTRACK && UpDown, "[%s] static task info cleared\r\n", caName);
+		MESSAGE("[%s] static task info cleared\r\n", caName);
 	}
 	xRtosSemaphoreGive(&RtosStatsMux);
 	#endif
 
-	IF_PX(debugTRACK && UpDown, "[%s] deleting\r\n", caName);
+	TASK_STOP(caName);
 	vTaskDelete(xHandle);
 }
 
