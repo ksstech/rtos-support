@@ -1,6 +1,4 @@
-/*
- * FreeRTOS_Support.h
- */
+// FreeRTOS_Support.h
 
 #pragma	once
 
