@@ -23,8 +23,6 @@
 #define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
 
 // #######################################  Build macros ###########################################
-
-
 // #################################### FreeRTOS global variables ##################################
 
 static u32_t g_HeapBegin;
@@ -72,9 +70,6 @@ void vRtosHeapSetup(void ) {
 }
 
 // ################################### Forward declarations ########################################
-
-TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t);
-
 // ##################################### Malloc/free support #######################################
 
 void * pvRtosMalloc(size_t S) {
@@ -128,6 +123,7 @@ static u8_t MaxNum;										// Highest logical task number
 
 static const char TaskState[6] = { 'A', 'R', 'B', 'S', 'D', 'I' };
 static TaskHandle_t IdleHandle[portNUM_PROCESSORS] = { 0 };
+// table where task status is stored when xRtosReportTasks() is called, avoid alloc/free
 static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 #if	(portNUM_PROCESSORS > 1)
 	static const char caMCU[3] = { '0', '1', 'X' };
@@ -171,7 +167,7 @@ int	xRtosReportTasks(report_t * psR) {
 
 	Active.U64 = 0;										// reset overall active running total
 	if	(portNUM_PROCESSORS > 1) memset(&Cores[0], 0, sizeof(Cores));			// reset time/core running totals
-	for (int a = 0; a < NumTasks; ++a) {				// detemine value of highest numbered task
+	for (int a = 0; a < NumTasks; ++a) {				// determine value of highest numbered task
 		TaskStatus_t * psTS = &sTS[a];
 		if (psTS->xTaskNumber > MaxNum) MaxNum = psTS->xTaskNumber;
 	}
@@ -254,7 +250,7 @@ next:
 static SemaphoreHandle_t RtosStatsMux;
 static u16_t Counter;
 static u64rt_t Total;									// Sum all tasks (incl IDLE)
-static u64rt_t Tasks[configFR_MAX_TASKS];
+static u64rt_t Tasks[configFR_MAX_TASKS];				// Task info, hook updated with wrap handling
 static TaskHandle_t Handle[configFR_MAX_TASKS];
 
 u64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
