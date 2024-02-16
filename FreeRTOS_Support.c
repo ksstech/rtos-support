@@ -130,13 +130,6 @@ static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 	static u64rt_t Cores[portNUM_PROCESSORS+1];			// Sum of non-IDLE task runtime/core
 #endif
 
-TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
-	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
-		if (sTS[i].xHandle == xHandle) return &sTS[i];
-	}
-	return NULL;
-}
-
 TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
 		if (sTS[i].xTaskNumber == xTaskNumber) return &sTS[i];
@@ -395,6 +388,13 @@ next:
     iRV += wprintfx(psR, psR->sFM.bNL ? "\r\n\n" : strCRLF);
 	printfx_unlock(psR);
 	return iRV;
+}
+
+TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
+	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
+		if (sTS[i].xHandle == xHandle) return &sTS[i];
+	}
+	return NULL;
 }
 #endif
 
