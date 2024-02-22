@@ -158,7 +158,7 @@ int	xRtosReportTasks(report_t * psR) {
 	TotalAdj /= (100ULL / portNUM_PROCESSORS);			// will be used to calc % for each task...
 	if (TotalAdj == 0ULL) return 0;
 
-	Active.U64 = 0;										// reset overall active running total
+	Active.U64val = 0;									// reset overall active running total
 	if	(portNUM_PROCESSORS > 1) memset(&Cores[0], 0, sizeof(Cores));			// reset time/core running totals
 	for (int a = 0; a < NumTasks; ++a) {				// determine value of highest numbered task
 		TaskStatus_t * psTS = &sTS[a];
@@ -214,22 +214,22 @@ int	xRtosReportTasks(report_t * psR) {
 
 		// For idle task(s) we do not want to add RunTime % to the task or Core RunTime
 		if (!bRtosTaskIsIdleTask(psTS->xHandle)) {		// NOT an IDLE task
-			Active.U64 += psTS->ulRunTimeCounter;		// Update total active time
+			Active.U64val += psTS->ulRunTimeCounter;	// Update total active time
 			#if	(portNUM_PROCESSORS > 1)
-				Cores[c].U64 += psTS->ulRunTimeCounter;	// Update core active time
+				Cores[c].U64val += psTS->ulRunTimeCounter;	// Update core active time
 			#endif
 		}
 next:
 		TaskMask <<= 1;
 	}
-	Units = Active.U64 / TotalAdj;	// Calculate & display total for "real" tasks utilization.
-	Fracts = ((Active.U64 * 100) / TotalAdj) % 100;
+	Units = Active.U64val / TotalAdj;	// Calculate & display total for "real" tasks utilization.
+	Fracts = ((Active.U64val * 100) / TotalAdj) % 100;
 
 	#if	(portNUM_PROCESSORS > 1)	// display 0, 1 & X core utilization
 		iRV += wprintfx(psR, "%u Tasks used=%lu.%02lu%% [", NumTasks, Units, Fracts);
     	for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
-    		Units = Cores[i].U64 / TotalAdj;
-    		Fracts = ((Cores[i].U64 * 100) / TotalAdj) % 100;
+    		Units = Cores[i].U64val / TotalAdj;
+    		Fracts = ((Cores[i].U64val * 100) / TotalAdj) % 100;
     		iRV += wprintfx(psR, "%lu.%02lu%c", Units, Fracts, (i < portNUM_PROCESSORS) ? CHR_SPACE : CHR_R_SQUARE);
     	}
     	iRV += wprintfx(psR, psR->sFM.bNL ? strCR2xLF : strCRLF);
@@ -248,7 +248,7 @@ static TaskHandle_t Handle[configFR_MAX_TASKS];
 
 u64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
 	for (int i = 0; i < configFR_MAX_TASKS; ++i) {
-		if (Handle[i] == xHandle) return Tasks[i].U64;
+		if (Handle[i] == xHandle) return Tasks[i].U64val;
 	}
 	return 0ULL;
 }
@@ -267,9 +267,9 @@ bool bRtosStatsUpdateHook(void) {
 	NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &NowTotal);
 	IF_myASSERT(debugPARAM, NumTasks < configFR_MAX_TASKS);
 
-	if (Total.U64 && Total.LSW > NowTotal) ++Total.MSW;		// Handle wrapped System counter
+	if (Total.U64val && Total.LSW > NowTotal) ++Total.MSW;		// Handle wrapped System counter
 	Total.LSW = NowTotal;
-	Active.U64 = 0;
+	Active.U64val = 0;
 	#if	(portNUM_PROCESSORS > 1)
 		memset(&Cores[0], 0, sizeof(Cores));
 	#endif
@@ -293,10 +293,10 @@ bool bRtosStatsUpdateHook(void) {
 				if (Handle[b] == IdleHandle[c]) break;	// IDLE task, skip and try the next...
 			}
 			if (c == portNUM_PROCESSORS) {				// NOT an IDLE task
-				Active.U64 += Tasks[b].U64;				// Update total active time
+				Active.U64val += Tasks[b].U64val;				// Update total active time
 				#if	(portNUM_PROCESSORS > 1)
 				c = (psTS->xCoreID != tskNO_AFFINITY) ? psTS->xCoreID : 2;
-				Cores[c].U64 += Tasks[b].U64;			// Update specific core's active time
+				Cores[c].U64val += Tasks[b].U64val;			// Update specific core's active time
 				#endif
 			}
 			break;
@@ -309,7 +309,7 @@ bool bRtosStatsUpdateHook(void) {
 
 int	xRtosReportTasks(report_t * psR) {
 	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
-	u64_t TotalAdj = Total.U64 / (100ULL / portNUM_PROCESSORS);
+	u64_t TotalAdj = Total.U64val / (100ULL / portNUM_PROCESSORS);
 	if (TotalAdj == 0ULL) return 0;
 
 	// Display the column headers
@@ -362,10 +362,10 @@ int	xRtosReportTasks(report_t * psR) {
 
 		// For idle task(s) we do not want to add RunTime %'s to the task's RunTime or Cores' RunTime
 		if (!bRtosTaskIsIdleTask(psTS->xHandle)) {		// NOT an IDLE task
-			Active.U64 += u64RunTime;					// Update total active time
+			Active.U64val += u64RunTime;				// Update total active time
 			#if	(portNUM_PROCESSORS > 1)
 				int c = (psTS->xCoreID == tskNO_AFFINITY) ? 2 : psTS->xCoreID;
-				Cores[c].U64 += u64RunTime;				// Update specific core's active time
+				Cores[c].U64val += u64RunTime;			// Update specific core's active time
 			#endif
 		}
 next:
@@ -373,15 +373,15 @@ next:
 	}
 
 	// Calculate & display total for "real" tasks utilization.
-	Units = Active.U64 / TotalAdj;
-	Fract = ((Active.U64 * 100) / TotalAdj) % 100;
+	Units = Active.U64val / TotalAdj;
+	Fract = ((Active.U64val * 100) / TotalAdj) % 100;
 	iRV += wprintfx(psR, "T=%u U=%lu.%02lu", NumTasks, Units, Fract);
 
 	#if	(portNUM_PROCESSORS > 1)
 		// calculate & display individual core's utilization
     	for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
-    		Units = Cores[i].U64 / TotalAdj;
-    		Fract = ((Cores[i].U64 * 100) / TotalAdj) % 100;
+    		Units = Cores[i].U64val / TotalAdj;
+    		Fract = ((Cores[i].U64val * 100) / TotalAdj) % 100;
     		iRV += wprintfx(psR, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
     	}
 	#endif
@@ -497,7 +497,7 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
 	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
 		if (Handle[i] == xHandle) {	// Clear dynamic runtime info
-			Tasks[i].U64 = 0ULL;
+			Tasks[i].U64val = 0ULL;
 			Handle[i] = NULL;
 			MESSAGE("[%s] dynamic stats removed\r\n", caName);
 			break;
