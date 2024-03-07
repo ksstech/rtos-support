@@ -21,7 +21,18 @@ extern "C" {
 
 // ##################################### MACRO definitions #########################################
 
-#if (tskKERNEL_VERSION_MAJOR >= 10 && tskKERNEL_VERSION_MINOR >= 5 && tskKERNEL_VERSION_BUILD >= 0)
+#if (tskKERNEL_VERSION_MAJOR >= 10) &&	\
+	(tskKERNEL_VERSION_MINOR >= 5) &&	\
+	(tskKERNEL_VERSION_BUILD >= 0) && 	\
+	defined(CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64) && \
+	(CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64 == 1)
+	#define configRUNTIME_SIZE	8
+#else
+	#define configRUNTIME_SIZE	4
+#endif
+
+
+#if defined(CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64) && (CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64 == 1)
 	#define configRUNTIME_SIZE	8
 #else
 	#define configRUNTIME_SIZE	4

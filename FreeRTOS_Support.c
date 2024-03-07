@@ -1,9 +1,6 @@
-/*
- *	FreeRTOS_Support.c - Copyright (c) 2015-24 Andre M. MAree / KSS Technologies (Pty) Ltd.
- */
+//	FreeRTOS_Support.c - Copyright (c) 2015-24 Andre M. MAree / KSS Technologies (Pty) Ltd.
 
 #include "hal_config.h"
-
 #include "FreeRTOS_Support.h"							// Must be before hal_nvic.h"
 #include "hal_options.h"
 #include "hal_mcu.h"									// halMCU_ReportMemory
@@ -12,17 +9,16 @@
 #include "syslog.h"
 #include "systiming.h"
 #include "x_errors_events.h"
-
 #include <string.h>
 
-#define	debugFLAG					0xF000
+// ########################################### Macros ##############################################
 
+#define	debugFLAG					0xF000
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
 #define	debugPARAM					(debugFLAG_GLOBAL & debugFLAG & 0x4000)
 #define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
 
-// #######################################  Build macros ###########################################
 // #################################### FreeRTOS global variables ##################################
 
 static u32_t g_HeapBegin;
@@ -69,7 +65,6 @@ void vRtosHeapSetup(void ) {
 	g_HeapBegin = xPortGetFreeHeapSize();
 }
 
-// ################################### Forward declarations ########################################
 // ##################################### Malloc/free support #######################################
 
 void * pvRtosMalloc(size_t S) {
