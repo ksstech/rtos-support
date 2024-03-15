@@ -19,6 +19,10 @@
 #define	debugPARAM					(debugFLAG_GLOBAL & debugFLAG & 0x4000)
 #define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
 
+
+#define XP							RP
+#define IF_XP						IF_RP
+
 // #################################### FreeRTOS global variables ##################################
 
 static u32_t g_HeapBegin;
@@ -70,12 +74,12 @@ void vRtosHeapSetup(void ) {
 void * pvRtosMalloc(size_t S) {
 	void * pV = malloc(S);
 	IF_myASSERT(debugRESULT, pV);
-	IF_PX(debugTRACK && ioB1GET(ioMemory), "malloc %p:%u\r\n", pV, S);
+	IF_XP(debugTRACK && ioB1GET(ioMemory), "malloc %p:%u\r\n", pV, S);
 	return pV;
 }
 
 void vRtosFree(void * pV) {
-	IF_PX(debugTRACK && ioB1GET(ioMemory), " free  %p\r\n", pV);
+	IF_XP(debugTRACK && ioB1GET(ioMemory), " free  %p\r\n", pV);
 	free(pV);
 }
 
@@ -530,7 +534,7 @@ SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 	if (pSH) *pSH = shX;
 	#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > -1)
 	if (!xRtosSemaphoreCheck(pSH) && (anySYSFLAGS(sfTRACKER) || (pSHmatch && pSH==pSHmatch)))
-		CP("SH Init %p=%p\r\n", pSH, *pSH);
+		XP("SH Init %p=%p\r\n", pSH, *pSH);
 	#endif
 	IF_myASSERT(debugRESULT, shX != 0);
 	return shX;
@@ -556,19 +560,19 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 			TaskHandle_t thHolder = xSemaphoreGetMutexHolder(*pSH);
 			#endif
 			#if (rtosDEBUG_SEMA_HLDR > 0) && (rtosDEBUG_SEMA_RCVR > 0)
-			CP("SH Take %d %p H=%s/%d R=%s/%d t=%lu\r\n", esp_cpu_get_core_id(), pSH, tElap);
+			XP("SH Take %d %p H=%s/%d R=%s/%d t=%lu\r\n", esp_cpu_get_core_id(), pSH, tElap);
 			#elif (rtosDEBUG_SEMA_HLDR > 0)
-			CP("SH Take %d %p H=%s/%d t=%lu\r\n", esp_cpu_get_core_id(), pSH, tElap);
+			XP("SH Take %d %p H=%s/%d t=%lu\r\n", esp_cpu_get_core_id(), pSH, tElap);
 			#elif(rtosDEBUG_SEMA_RCVR > 0)
-			CP("SH Take %d %p R=%s/%d t=%lu\r\n", esp_cpu_get_core_id(), pSH, tElap);
+			XP("SH Take %d %p R=%s/%d t=%lu\r\n", esp_cpu_get_core_id(), pSH, tElap);
 			#else
-			CP("SH Take %d %p t=%lu\r\n", esp_cpu_get_core_id(), pSH, tElap);
+			XP("SH Take %d %p t=%lu\r\n", esp_cpu_get_core_id(), pSH, tElap);
 			#endif
 			// Decode return addresses [optional]
 			#if (rtosDEBUG_SEMA > 0)
 			esp_backtrace_print(rtosDEBUG_SEMA)
 			#else
-			CP(strCRLF);
+			XP(strCRLF);
 			#endif
 		}
 		if (btRV == pdTRUE) break;
@@ -595,13 +599,13 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 		#endif
 
 		#if (rtosDEBUG_SEMA_HLDR > 0) && (rtosDEBUG_SEMA_RCVR > 0)
-		CP("SH Give %d %p H=%s/%d R=%s/%d\r\n", esp_cpu_get_core_id(), pSH);
+		XP("SH Give %d %p H=%s/%d R=%s/%d\r\n", esp_cpu_get_core_id(), pSH);
 		#elif (rtosDEBUG_SEMA_HLDR > 0)
-		CP("SH Give %d %p H=%s/%d\r\n", esp_cpu_get_core_id(), pSH);
+		XP("SH Give %d %p H=%s/%d\r\n", esp_cpu_get_core_id(), pSH);
 		#elif(rtosDEBUG_SEMA_RCVR > 0)
-		CP("SH Give %d %p R=%s/%d\r\n", esp_cpu_get_core_id(), pSH);
+		XP("SH Give %d %p R=%s/%d\r\n", esp_cpu_get_core_id(), pSH);
 		#else
-		CP("SH Give %d %p\r\n", esp_cpu_get_core_id(), pSH);
+		XP("SH Give %d %p\r\n", esp_cpu_get_core_id(), pSH);
 		#endif
 	}
 	#endif
@@ -612,7 +616,7 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	if (*pSH) {
 		vSemaphoreDelete(*pSH);
 		#if (configPRODUCTION == 0 && rtosDEBUG_SEMA > -1)
-		IF_PX (anySYSFLAGS(sfTRACKER) || (pSHmatch && pSH == pSHmatch), "SH Delete %p\r\n", pSH);
+		IF_XP(anySYSFLAGS(sfTRACKER) || (pSHmatch && pSH == pSHmatch), "SH Delete %p\r\n", pSH);
 		#endif
 		*pSH = 0;
 	}
