@@ -224,15 +224,14 @@ next:
 
 	Units = Active.U64val / TotalAdj;	// Calculate & display total for "real" tasks utilization.
 	Fracts = ((Active.U64val * 100) / TotalAdj) % 100;
-
-	#if	(portNUM_PROCESSORS > 1)	// display 0, 1 & X core utilization
-		iRV += wprintfx(psR, "%u Tasks used=%lu.%02lu%% [", NumTasks, Units, Fracts);
+	#if	(portNUM_PROCESSORS > 1)
+		iRV += wprintfx(psR, "%u Tasks %lu.%02lu%% [", NumTasks, Units, Fracts);
     	for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
     		Units = Cores[i].U64val / TotalAdj;
     		Fracts = ((Cores[i].U64val * 100) / TotalAdj) % 100;
-    		iRV += wprintfx(psR, "%lu.%02lu%c", Units, Fracts, (i < portNUM_PROCESSORS) ? CHR_SPACE : CHR_R_SQUARE);
+    		iRV += wprintfx(psR, "%lu.%02lu%c", Units, Fracts, i < 2 ? ' ' : ']');
     	}
-    	iRV += wprintfx(psR, psR->sFM.bNL ? strCR2xLF : strCRLF);
+		iRV += wprintfx(psR, "%s", psR->sFM.bNL ? strCR2xLF : strCRLF);
 	#else
 		iRV += wprintfx(psR, "%u Tasks used=%lu.%02lu%%%s", NumTasks, Units, Fracts, psR->sFM.bNL ? strCR2xLF : strCRLF);
 	#endif
