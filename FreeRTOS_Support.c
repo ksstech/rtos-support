@@ -556,7 +556,7 @@ SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	if (halNVIC_CalledFromISR()) {
 		esp_backtrace_print(3);
-		*pSH = NULL;
+		*pSH = NULL;		// Why????
 		return pdTRUE;
 	}
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) return pdTRUE;
