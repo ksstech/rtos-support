@@ -399,16 +399,24 @@ TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
 
 int xRtosReportMemory(report_t * psR) {
 	int iRV = 0;
+	bool FirstHdr = 0;
 	printfx_lock(psR);
 	#if defined(ESP_PLATFORM)
-	if (psR->sFM.rmCAPS & MALLOC_CAP_32BIT) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_32BIT);
-	if (psR->sFM.rmCAPS & MALLOC_CAP_8BIT) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_8BIT);
-	if (psR->sFM.rmCAPS & MALLOC_CAP_DMA) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_DMA);
-	if (psR->sFM.rmCAPS & MALLOC_CAP_EXEC) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_EXEC);
-	if (psR->sFM.rmCAPS & MALLOC_CAP_IRAM_8BIT) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_IRAM_8BIT);
-		#ifdef CONFIG_SOC_SPIRAM_SUPPORTED
-		if (psR->sFM.rmCAPS & MALLOC_CAP_SPIRAM) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_SPIRAM);
+	for (u32_t Mask = MALLOC_CAP_EXEC; Mask <= MALLOC_CAP_TCM; Mask <<= 1) {
+		#ifdef CONFIG_SPIRAM 
+		if (Mask == MALLOC_CAP_SPIRAM) continue;
 		#endif
+	    if (FirstHdr == false && psR->sFM.rmHdr1) {
+			iRV += halMCU_ReportMemoryHeader(psR);
+			FirstHdr = true;
+		}
+		if (!psR->sFM.rmHdr1 && psR->sFM.rmHdr2) {
+			iRV += halMCU_ReportMemoryHeader(psR);
+		}
+		if (psR->sFM.rmCAPS & Mask) {
+			iRV += halMCU_ReportMemory(psR, Mask);
+		}
+	}
 	#endif
     if (psR->sFM.bColor)
 		iRV += wprintfx(psR, "%C", colourFG_CYAN);
