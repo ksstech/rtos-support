@@ -221,6 +221,7 @@ int	xRtosReportTasks(report_t * psR) {
 next:
 		TaskMask <<= 1;
 	}
+
 	Units = Active.U64val / TotalAdj;	// Calculate & display total for "real" tasks utilization.
 	Fracts = ((Active.U64val * 100) / TotalAdj) % 100;
 
@@ -410,11 +411,14 @@ int xRtosReportMemory(report_t * psR) {
 		if (psR->sFM.rmCAPS & MALLOC_CAP_SPIRAM) iRV += halMCU_ReportMemory(psR, MALLOC_CAP_SPIRAM);
 		#endif
 	#endif
-    if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", colourFG_CYAN);
-    iRV += wprintfx(psR, "FreeRTOS");
-    if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", attrRESET);
+    if (psR->sFM.bColor)
+		iRV += wprintfx(psR, "%C", colourFG_CYAN);
+    iRV += wprintfx(psR, "FreeRTOS: ");
+    if (psR->sFM.bColor)
+		iRV += wprintfx(psR, "%C", attrRESET);
 	iRV += wprintfx(psR, ":%#'u -> %#'u <- %#'u\r\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
-	if (psR->sFM.rmCompact) iRV += wprintfx(psR, strCRLF);
+	if (psR->sFM.rmCompact) 
+		iRV += wprintfx(psR, strCRLF);
 	printfx_unlock(psR);
 	return iRV;
 }
@@ -523,7 +527,9 @@ SemaphoreHandle_t * pSHmatch = NULL;
 SemaphoreHandle_t * IgnoreList[] = { };	// &RtosStatsMux, &printfxMux, &SL_VarMux, &SL_NetMux
 
 bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
-	for(int i = 0; i < NO_MEM(IgnoreList); ++i) if (IgnoreList[i] == pSH) return 1;
+	for(int i = 0; i < NO_MEM(IgnoreList); ++i) {
+		if (IgnoreList[i] == pSH) return 1;
+	}
 	return 0;
 }
 
