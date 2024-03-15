@@ -15,11 +15,20 @@
 extern "C" {
 #endif
 
-// #######################################  Build macros ###########################################
+// ########################################## Macros ###############################################
 
 #define configFR_MAX_TASKS	24
 
-// ##################################### MACRO definitions #########################################
+#define rtosDEBUG_SEMA			0			// -1=disable, 0=no return Address, >0=add return addresses
+#define rtosDEBUG_SEMA_HLDR		0
+#define rtosDEBUG_SEMA_RCVR		0
+
+#define	MALLOC_MARK()	u32_t y,x=xPortGetFreeHeapSize();
+#define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)\r\n",x,y,y-x);
+
+#define MESSAGE(mess,...)	if (debugTRACK && ioB1GET(ioUpDown)) PX(mess, ##__VA_ARGS__);
+#define TASK_START(name) 	MESSAGE("[%s] starting\r\n", name);
+#define TASK_STOP(name) 	MESSAGE("[%s] stopping\r\n", name);
 
 #if (tskKERNEL_VERSION_MAJOR >= 10) &&	\
 	(tskKERNEL_VERSION_MINOR >= 5) &&	\
@@ -31,26 +40,14 @@ extern "C" {
 	#define configRUNTIME_SIZE	4
 #endif
 
-
 #if defined(CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64) && (CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64 == 1)
 	#define configRUNTIME_SIZE	8
 #else
 	#define configRUNTIME_SIZE	4
 #endif
 
-#define	MALLOC_MARK()	u32_t y,x=xPortGetFreeHeapSize();
-#define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)\r\n",x,y,y-x);
-
-// ###################################### BUILD : CONFIG definitions ##############################
-
-#define rtosDEBUG_SEMA			0			// -1=disable, 0=no return Address, >0=add return addresses
-#define rtosDEBUG_SEMA_HLDR		0
-#define rtosDEBUG_SEMA_RCVR		0
-
-// ############################################ Enumerations #######################################
-
-
-// #################################### FreeRTOS global variables ##################################
+// ######################################## Enumerations ###########################################
+// ###################################### Global variables #########################################
 
 #if (configPRODUCTION == 0) && (rtosDEBUG_SEMA > -1)
 	extern SemaphoreHandle_t * pSHmatch;
