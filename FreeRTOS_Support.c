@@ -1,6 +1,6 @@
 //	FreeRTOS_Support.c - Copyright (c) 2015-24 Andre M. MAree / KSS Technologies (Pty) Ltd.
 
-#include "hal_config.h"
+#include "hal_platform.h"
 #include "FreeRTOS_Support.h"							// Must be before hal_nvic.h"
 #include "hal_options.h"
 #include "hal_mcu.h"									// halMCU_ReportMemory
