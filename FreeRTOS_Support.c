@@ -3,7 +3,7 @@
 #include "hal_platform.h"
 #include "FreeRTOS_Support.h"							// Must be before hal_nvic.h"
 #include "hal_options.h"
-#include "hal_mcu.h"									// halMCU_ReportMemory
+#include "hal_memory.h"
 #include "hal_nvic.h"
 #include "printfx.h"									// +x_definitions +stdarg +stdint +stdio
 #include "syslog.h"
@@ -18,7 +18,6 @@
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
 #define	debugPARAM					(debugFLAG_GLOBAL & debugFLAG & 0x4000)
 #define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
-
 
 #define XP							RP
 #define IF_XP						IF_RP
@@ -36,23 +35,23 @@ static u32_t g_HeapBegin;
  * low address to high address.
  */
 #if	 defined(cc3200) && defined( __TI_ARM__ )
-	extern	u32_t	__TI_static_base__, __HEAP_SIZE;
+	extern	u32_t __TI_static_base__, __HEAP_SIZE;
 	HeapRegion_t xHeapRegions[] = {
 		{ ( u8_t * ) SRAM_BASE,				SRAM1_SIZE 				},	// portion of memory used by bootloader
-		{ ( u8_t * )	&__TI_static_base__, 	(size_t) &__HEAP_SIZE	},
+		{ ( u8_t * ) &__TI_static_base__, 	(size_t) &__HEAP_SIZE	},
 		{ ( u8_t * ) NULL, 					0						},
 	};
 
 #elif defined(HW_P_PHOTON) && defined( __CC_ARM )
-	extern	u8_t		Image$$RW_IRAM1$$ZI$$Limit[];
-	extern	u8_t		Image$$ARM_LIB_STACK$$ZI$$Base[];
+	extern	u8_t Image$$RW_IRAM1$$ZI$$Limit[];
+	extern	u8_t Image$$ARM_LIB_STACK$$ZI$$Base[];
 	HeapRegion_t xHeapRegions[] = {
 		{ Image$$RW_IRAM1$$ZI$$Limit,	(size_t) Image$$ARM_LIB_STACK$$ZI$$Base } ,
 		{ NULL,							0 }
 	};
 
 #elif defined(HW_P_PHOTON) && defined( __GNUC__ )
-	extern	u8_t		__HEAP_BASE[], __HEAP_SIZE[];
+	extern	u8_t __HEAP_BASE[], __HEAP_SIZE[];
 	HeapRegion_t xHeapRegions[] = {
 		{ __HEAP_BASE,	(size_t) __HEAP_SIZE } ,
 		{ NULL,					0 }
@@ -61,10 +60,12 @@ static u32_t g_HeapBegin;
 
 void vRtosHeapSetup(void ) {
 	#if defined(HW_P_PHOTON ) && defined( __CC_ARM )
-	xHeapRegions[0].xSizeInBytes	-= (size_t) Image$$RW_IRAM1$$ZI$$Limit;
-	vPortDefineHeapRegions(xHeapRegions);
-	#elif defined( cc3200 ) && defined( __TI_ARM__ )
-	vPortDefineHeapRegions(xHeapRegions);
+		xHeapRegions[0].xSizeInBytes	-= (size_t) Image$$RW_IRAM1$$ZI$$Limit;
+		vPortDefineHeapRegions(xHeapRegions);
+	#elif defined(cc3200) && defined( __TI_ARM__ )
+		vPortDefineHeapRegions(xHeapRegions);
+	#elif defined(ESP_PLATFORM) && defined( __GNUC__ )
+		#warning "right options!!"
 	#endif
 	g_HeapBegin = xPortGetFreeHeapSize();
 }
