@@ -71,16 +71,17 @@ void vRtosHeapSetup(void ) {
 
 // ##################################### Malloc/free support #######################################
 
-void * pvRtosMalloc(size_t S) {
-	void * pV = malloc(S);
-	IF_myASSERT(debugRESULT, pV);
-	IF_XP(debugTRACK && ioB1GET(ioMemory), "malloc %p:%u\r\n", pV, S);
+void * __real_malloc(size_t S);
+void * __wrap_malloc(size_t S) {
+	void * pV = __real_malloc(S);
+	IF_XP(debugTRACK && ioB1GET(ioMemory), "malloc %p(%u)\r\n", pV, S);
 	return pV;
 }
 
-void vRtosFree(void * pV) {
+void __real_free(void * pV);
+void __wrap_free(void * pV) {
 	IF_XP(debugTRACK && ioB1GET(ioMemory), " free  %p\r\n", pV);
-	free(pV);
+	__real_free(pV);
 }
 
 // ################################### Task status reporting #######################################

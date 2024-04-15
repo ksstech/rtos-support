@@ -67,14 +67,7 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t *);
 void vRtosSemaphoreDelete(SemaphoreHandle_t *);
 
 // ##################################### Malloc/free support #######################################
-
-void * pvRtosMalloc(size_t S);
-void vRtosFree(void * pV);
-void vRtosHeapSetup(void);
-
 // ################################### Task status manipulation ####################################
-
-
 // ################################### Task status reporting #######################################
 
 bool bRtosStatsUpdateHook(void);
