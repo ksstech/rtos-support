@@ -405,29 +405,16 @@ int xRtosReportMemory(report_t * psR) {
 	printfx_lock(psR);
 	#if defined(ESP_PLATFORM)
 	for (u32_t Mask = MALLOC_CAP_EXEC; Mask <= MALLOC_CAP_TCM; Mask <<= 1) {
-		#ifdef CONFIG_SPIRAM 
-		if (Mask == MALLOC_CAP_SPIRAM) continue;
-		#endif
-	    if (FirstHdr == false && psR->sFM.rmHdr1) {
-			iRV += halMCU_ReportMemoryHeader(psR);
-			FirstHdr = true;
-		}
-		if (!psR->sFM.rmHdr1 && psR->sFM.rmHdr2) {
-			iRV += halMCU_ReportMemoryHeader(psR);
-		}
-		if (psR->sFM.rmCAPS & Mask) {
-			iRV += halMCU_ReportMemory(psR, Mask);
-		}
+	    if (FirstHdr == false && psR->sFM.rmHdr1) { iRV += halMEM_ReportMemoryHeader(psR); FirstHdr = true; }
+		if (!psR->sFM.rmHdr1 && psR->sFM.rmHdr2) iRV += halMEM_ReportMemoryHeader(psR);
+		if (psR->sFM.rmCAPS & Mask) iRV += halMEM_ReportMemory(psR, Mask);
 	}
 	#endif
-    if (psR->sFM.bColor)
-		iRV += wprintfx(psR, "%C", colourFG_CYAN);
-    iRV += wprintfx(psR, "FreeRTOS: ");
-    if (psR->sFM.bColor)
-		iRV += wprintfx(psR, "%C", attrRESET);
-	iRV += wprintfx(psR, ":%#'u -> %#'u <- %#'u\r\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
-	if (psR->sFM.rmCompact) 
-		iRV += wprintfx(psR, strCRLF);
+    if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", colourFG_CYAN);
+    iRV += wprintfx(psR, "FreeRTOS:");
+    if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", attrRESET);
+	iRV += wprintfx(psR, " %#'u -> %#'u <- %#'u\r\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
+	if (psR->sFM.rmCompact) iRV += wprintfx(psR, strCRLF);
 	printfx_unlock(psR);
 	return iRV;
 }
@@ -541,7 +528,6 @@ bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
 	}
 	return 0;
 }
-
 #endif
 
 SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
