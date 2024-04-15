@@ -231,7 +231,7 @@ next:
     	for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
     		Units = Cores[i].U64val / TotalAdj;
     		Fracts = ((Cores[i].U64val * 100) / TotalAdj) % 100;
-    		iRV += wprintfx(psR, "%lu.%02lu%c", Units, Fracts, i < 2 ? ' ' : ']');
+    		iRV += wprintfx(psR, "#c=%lu.%02lu%c", caMCU[i], Units, Fracts, i < 2 ? ' ' : ']');
     	}
 		iRV += wprintfx(psR, "%s", psR->sFM.bNL ? strCR2xLF : strCRLF);
 	#else
