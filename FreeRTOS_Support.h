@@ -55,6 +55,8 @@ extern "C" {
 
 // ##################################### global function prototypes ################################
 
+void vRtosHeapSetup(void);
+
 void myApplicationTickHook(void);
 void vApplicationStackOverflowHook(TaskHandle_t, char *);
 void vApplicationMallocFailedHook(void);
