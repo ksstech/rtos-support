@@ -58,14 +58,14 @@ static u32_t g_HeapBegin;
 	};
 #endif
 
-void vRtosHeapSetup(void ) {
+void vRtosHeapSetup(void) {
 	#if defined(HW_P_PHOTON ) && defined( __CC_ARM )
 		xHeapRegions[0].xSizeInBytes	-= (size_t) Image$$RW_IRAM1$$ZI$$Limit;
 		vPortDefineHeapRegions(xHeapRegions);
 	#elif defined(cc3200) && defined( __TI_ARM__ )
 		vPortDefineHeapRegions(xHeapRegions);
 	#elif defined(ESP_PLATFORM) && defined( __GNUC__ )
-		#warning "right options!!"
+//		#warning "right options!!"
 	#endif
 	g_HeapBegin = xPortGetFreeHeapSize();
 }
