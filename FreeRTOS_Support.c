@@ -70,21 +70,6 @@ void vRtosHeapSetup(void ) {
 	g_HeapBegin = xPortGetFreeHeapSize();
 }
 
-// ##################################### Malloc/free support #######################################
-
-void * __real_malloc(size_t S);
-void * __wrap_malloc(size_t S) {
-	void * pV = __real_malloc(S);
-	IF_XP(debugTRACK && ioB1GET(ioMemory), "malloc %p(%u)\r\n", pV, S);
-	return pV;
-}
-
-void __real_free(void * pV);
-void __wrap_free(void * pV) {
-	IF_XP(debugTRACK && ioB1GET(ioMemory), " free  %p\r\n", pV);
-	__real_free(pV);
-}
-
 // ################################### Task status reporting #######################################
 
 #if		(CONFIG_FREERTOS_MAX_TASK_NAME_LEN == 16)
@@ -401,20 +386,7 @@ TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
 
 int xRtosReportMemory(report_t * psR) {
 	int iRV = 0;
-	bool FirstHdr = 0;
 	printfx_lock(psR);
-	#if defined(ESP_PLATFORM)
-	for (u32_t Mask = MALLOC_CAP_EXEC; Mask <= MALLOC_CAP_TCM; Mask <<= 1) {
-	    if (FirstHdr == false && psR->sFM.rmHdr1) { iRV += halMEM_ReportMemoryHeader(psR); FirstHdr = true; }
-		if (!psR->sFM.rmHdr1 && psR->sFM.rmHdr2) iRV += halMEM_ReportMemoryHeader(psR);
-		if (psR->sFM.rmCAPS & Mask) iRV += halMEM_ReportMemory(psR, Mask);
-	}
-	#endif
-    if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", colourFG_CYAN);
-    iRV += wprintfx(psR, "FreeRTOS:");
-    if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", attrRESET);
-	iRV += wprintfx(psR, " %#'u -> %#'u <- %#'u\r\n", xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
-	if (psR->sFM.rmCompact) iRV += wprintfx(psR, strCRLF);
 	printfx_unlock(psR);
 	return iRV;
 }
