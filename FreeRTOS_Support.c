@@ -153,7 +153,7 @@ int	xRtosReportTasks(report_t * psR) {
 
 	int	iRV = 0;										// reset the character output counter
 	printfx_lock(psR);									// Display the column headers
-	if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", colourFG_CYAN);
+	iRV += wprintfx(psR, "%C", colourFG_CYAN);
 	if (psR->sFM.bTskNum) iRV += wprintfx(psR, "T# ");
 	if (psR->sFM.bPrioX) iRV += wprintfx(psR, "Pc/Pb ");
 	iRV += wprintfx(psR, configFREERTOS_TASKLIST_HDR_DETAIL);
@@ -162,8 +162,7 @@ int	xRtosReportTasks(report_t * psR) {
 	if (portNUM_PROCESSORS > 1 && psR->sFM.bCore) iRV += wprintfx(psR, "X ");
 	iRV += wprintfx(psR, " Util Ticks");
 	if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE) && psR->sFM.bXtras) iRV += wprintfx(psR, " Stack Base -Task TCB-");
-	if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", attrRESET);
-	iRV += wprintfx(psR, strCRLF);
+	iRV += wprintfx(psR, "%C\r\n", attrRESET);
 
 	u32_t Units, Fracts, TaskMask = 0x1;				// display individual task info
 	for (int a = 1; a <= MaxNum; ++a) {
@@ -301,7 +300,7 @@ int	xRtosReportTasks(report_t * psR) {
 	// Display the column headers
 	int	iRV = 0;					// reset the character output counter
 	printfx_lock(psR);
-	if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", colourFG_CYAN);
+	iRV += wprintfx(psR, "%C", colourFG_CYAN);
 	if (psR->sFM.bTskNum) iRV += wprintfx(psR, "T# ");
 	if (psR->sFM.bPrioX) iRV += wprintfx(psR, "Pc/Pb ");
 	iRV += wprintfx(psR, configFREERTOS_TASKLIST_HDR_DETAIL);
@@ -314,8 +313,7 @@ int	xRtosReportTasks(report_t * psR) {
 #if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE))
 	if (psR->sFM.bXtras) iRV += wprintfx(psR, " Stack Base -Task TCB-");
 #endif
-	if (psR->sFM.bColor) iRV += wprintfx(psR, "%C", attrRESET);
-	iRV += wprintfx(psR, strCRLF);
+	iRV += wprintfx(psR, "%C\r\n", attrRESET);
 
 	// display individual task info
 	u32_t TaskMask = 0x1, Units, Fract;
@@ -387,6 +385,8 @@ TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
 int xRtosReportMemory(report_t * psR) {
 	int iRV = 0;
 	printfx_lock(psR);
+	iRV += wprintfx(psR, "%CFreeRTOS:%C %#'u -> %#'u <- %#'u\r\n", colourFG_CYAN, attrRESET, xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
+	if (!psR->sFM.rmCompact) iRV += wprintfx(psR, strCRLF);
 	printfx_unlock(psR);
 	return iRV;
 }
