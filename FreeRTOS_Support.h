@@ -8,8 +8,8 @@
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "freertos/event_groups.h"
-
 #include "definitions.h"
+#include "esp_debug_helpers.h"
 
 #ifdef __cplusplus
 extern "C" {
