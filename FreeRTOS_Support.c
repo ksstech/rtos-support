@@ -158,7 +158,7 @@ int	xRtosReportTasks(report_t * psR) {
 	}
 
 	int	iRV = 0;										// reset the character output counter
-	printfx_lock(psR);									// Display the column headers
+	WPFX_LOCK(psR);										// before the first wprintfx()
 	iRV += wprintfx(psR, "%C", colourFG_CYAN);
 	if (psR->sFM.bTskNum)
 		iRV += wprintfx(psR, "T# ");
@@ -234,11 +234,11 @@ next:
     		Fracts = ((Cores[i].U64val * 100) / TotalAdj) % 100;
     		iRV += wprintfx(psR, "%c=%lu.%02lu%c", caMCU[i], Units, Fracts, i < 2 ? ' ' : ']');
     	}
-		iRV += wprintfx(psR, "%s", psR->sFM.bNL ? strCR2xLF : strCRLF);
 	#else
-		iRV += wprintfx(psR, "%u Tasks used=%lu.%02lu%%%s", NumTasks, Units, Fracts, psR->sFM.bNL ? strCR2xLF : strCRLF);
+		iRV += wprintfx(psR, "%u Tasks %lu.%02lu%%", NumTasks, Units, Fracts);
 	#endif
-	printfx_unlock(psR);
+	WPFX_UNLOCK(psR);								// before the last wprintfx()
+	iRV += wprintfx(psR, "%s", psR->sFM.bNL ? strCR2xLF : strCRLF);
 	return iRV;
 }
 
@@ -323,7 +323,6 @@ int	xRtosReportTasks(report_t * psR) {
 
 	// Display the column headers
 	int	iRV = 0;					// reset the character output counter
-	printfx_lock(psR);
 	iRV += wprintfx(psR, "%C", colourFG_CYAN);
 	if (psR->sFM.bTskNum) iRV += wprintfx(psR, "T# ");
 	if (psR->sFM.bPrioX) iRV += wprintfx(psR, "Pc/Pb ");
@@ -394,7 +393,6 @@ next:
     	}
 	#endif
     iRV += wprintfx(psR, psR->sFM.bNL ? "\r\n\n" : strCRLF);
-	printfx_unlock(psR);
 	return iRV;
 }
 
@@ -408,22 +406,32 @@ TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
 
 int xRtosReportMemory(report_t * psR) {
 	int iRV = 0;
-	printfx_lock(psR);
-	iRV += wprintfx(psR, "%CFreeRTOS:%C %#'u -> %#'u <- %#'u\r\n", colourFG_CYAN, attrRESET, xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
-	if (!psR->sFM.rmCompact) iRV += wprintfx(psR, strCRLF);
-	printfx_unlock(psR);
+	WPFX_LOCK(psR);										// before the first wprintfx()
+	iRV += wprintfx(psR, "%CFreeRTOS:%C %#'u -> %#'u <- %#'u", colourFG_CYAN, attrRESET, xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
+	WPFX_UNLOCK(psR);									// before the last wprintfx()
+	iRV += wprintfx(psR, psR->sFM.aNL ? strCR2xLF : strCRLF);
 	return iRV;
 }
 
+/**
+ * @brief	
+ * @note	does NOT lock the console UART !!!
+*/
 int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
-	if (!halCONFIG_inSRAM(thTmr))  return wprintfx(psR, "\t%p Invalid Timer handle", thTmr);
-	TickType_t tPer = xTimerGetPeriod(thTmr);
-	TickType_t tExp = xTimerGetExpiryTime(thTmr);
-	i32_t tRem = tExp - xTaskGetTickCount();
-	BaseType_t bActive = xTimerIsTimerActive(thTmr);
-	int iRV = wprintfx(psR, "\t%s: #=%lu Auto=%c Run=%s", pcTimerGetName(thTmr), uxTimerGetTimerNumber(thTmr),
-		uxTimerGetReloadMode(thTmr) ? CHR_Y : CHR_N, bActive ? "Y" : "N\r\n");
-	if (bActive) iRV += wprintfx(psR, " tPer=%lu tExp=%lu tRem=%ld\r\n", tPer, tExp, tRem);
+	int iRV;
+	if (halCONFIG_inSRAM(thTmr)) {
+		TickType_t tPer = xTimerGetPeriod(thTmr);
+		TickType_t tExp = xTimerGetExpiryTime(thTmr);
+		i32_t tRem = tExp - xTaskGetTickCount();
+		BaseType_t bActive = xTimerIsTimerActive(thTmr);
+		iRV = wprintfx(psR, "\t%s: #=%lu Auto=%c Run=%s", pcTimerGetName(thTmr), uxTimerGetTimerNumber(thTmr),
+			uxTimerGetReloadMode(thTmr) ? CHR_Y : CHR_N, bActive ? "Y" : "N");
+		if (bActive)
+			iRV += wprintfx(psR, " tPer=%lu tExp=%lu tRem=%ld", tPer, tExp, tRem);
+	} else {
+		iRV = wprintfx(psR, "\t%p Invalid Timer handle", thTmr);
+	}
+	iRV += wprintfx(psR, psR->sFM.aNL ? strCR2xLF : strCRLF);
 	return iRV;
 }
 
