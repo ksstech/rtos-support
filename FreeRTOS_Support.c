@@ -285,8 +285,9 @@ bool bRtosStatsUpdateHook(void) {
 		if (MaxNum < psTS->xTaskNumber)
 			MaxNum = psTS->xTaskNumber;
 		for (int b = 0; b <= configFR_MAX_TASKS; ++b) {
-			if (Handle[b] == psTS->xHandle) {		// known task, update RT
-				if (Tasks[b].LSW > psTS->ulRunTimeCounter) ++Tasks[b].MSW;
+			if (Handle[b] == psTS->xHandle) {			// known task, update RT
+				if (Tasks[b].LSW > psTS->ulRunTimeCounter)
+					++Tasks[b].MSW;
 				Tasks[b].LSW = psTS->ulRunTimeCounter;
 			} else if (Handle[b] == NULL) {				// empty entry so add ...
 				Handle[b] = psTS->xHandle;
