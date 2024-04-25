@@ -133,7 +133,9 @@ bool bRtosTaskIsIdleTask(TaskHandle_t xHandle) {
 #if (configRUNTIME_SIZE == 8)
 int	xRtosReportTasks(report_t * psR) {
 	if (NumTasks == 0) {								// first time once only
-		for (int i = 0; i < portNUM_PROCESSORS; ++i) IdleHandle[i] = xTaskGetIdleTaskHandleForCore(i);
+		for (int i = 0; i < portNUM_PROCESSORS; ++i) {
+			IdleHandle[i] = xTaskGetIdleTaskHandleForCore(i);
+		}
 	}
 
 	memset(sTS, 0, sizeof(sTS));
@@ -142,26 +144,36 @@ int	xRtosReportTasks(report_t * psR) {
 	NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &TotalAdj);
 	IF_myASSERT(debugPARAM, NumTasks <= configFR_MAX_TASKS);
 	TotalAdj /= (100ULL / portNUM_PROCESSORS);			// will be used to calc % for each task...
-	if (TotalAdj == 0ULL) return 0;
+	if (TotalAdj == 0ULL)
+		return 0;
 
 	Active.U64val = 0;									// reset overall active running total
-	if	(portNUM_PROCESSORS > 1) memset(&Cores[0], 0, sizeof(Cores));			// reset time/core running totals
+	if	(portNUM_PROCESSORS > 1)
+		memset(&Cores[0], 0, sizeof(Cores));			// reset time/core running totals
 	for (int a = 0; a < NumTasks; ++a) {				// determine value of highest numbered task
 		TaskStatus_t * psTS = &sTS[a];
-		if (psTS->xTaskNumber > MaxNum) MaxNum = psTS->xTaskNumber;
+		if (psTS->xTaskNumber > MaxNum) {
+			MaxNum = psTS->xTaskNumber;
+		}
 	}
 
 	int	iRV = 0;										// reset the character output counter
 	printfx_lock(psR);									// Display the column headers
 	iRV += wprintfx(psR, "%C", colourFG_CYAN);
-	if (psR->sFM.bTskNum) iRV += wprintfx(psR, "T# ");
-	if (psR->sFM.bPrioX) iRV += wprintfx(psR, "Pc/Pb ");
+	if (psR->sFM.bTskNum)
+		iRV += wprintfx(psR, "T# ");
+	if (psR->sFM.bPrioX) 
+		iRV += wprintfx(psR, "Pc/Pb ");
 	iRV += wprintfx(psR, configFREERTOS_TASKLIST_HDR_DETAIL);
-	if (psR->sFM.bState) iRV += wprintfx(psR, "S ");
-	if (psR->sFM.bStack) iRV += wprintfx(psR, "LowS ");
-	if (portNUM_PROCESSORS > 1 && psR->sFM.bCore) iRV += wprintfx(psR, "X ");
+	if (psR->sFM.bState)
+		iRV += wprintfx(psR, "S ");
+	if (psR->sFM.bStack)
+		iRV += wprintfx(psR, "LowS ");
+	if (portNUM_PROCESSORS > 1 && psR->sFM.bCore)
+		iRV += wprintfx(psR, "X ");
 	iRV += wprintfx(psR, " Util Ticks");
-	if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE) && psR->sFM.bXtras) iRV += wprintfx(psR, " Stack Base -Task TCB-");
+	if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE) && psR->sFM.bXtras)
+		iRV += wprintfx(psR, " Stack Base -Task TCB-");
 	iRV += wprintfx(psR, "%C\r\n", attrRESET);
 
 	u32_t Units, Fracts, TaskMask = 0x1;				// display individual task info
@@ -180,13 +192,18 @@ int	xRtosReportTasks(report_t * psR) {
 		#if	(portNUM_PROCESSORS > 1)
 			int c = (psTS->xCoreID == tskNO_AFFINITY) ? 2 : psTS->xCoreID;
 		#endif
-		if (psR->sFM.bTskNum) iRV += wprintfx(psR, "%2u ", psTS->xTaskNumber);
-		if (psR->sFM.bPrioX) iRV += wprintfx(psR, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
+		if (psR->sFM.bTskNum)
+			iRV += wprintfx(psR, "%2u ", psTS->xTaskNumber);
+		if (psR->sFM.bPrioX)
+			iRV += wprintfx(psR, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
 		iRV += wprintfx(psR, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
-		if (psR->sFM.bState) iRV += wprintfx(psR, "%c ", TaskState[psTS->eCurrentState]);
-		if (psR->sFM.bStack) iRV += wprintfx(psR, "%4u ", psTS->usStackHighWaterMark);
+		if (psR->sFM.bState)
+			iRV += wprintfx(psR, "%c ", TaskState[psTS->eCurrentState]);
+		if (psR->sFM.bStack)
+			iRV += wprintfx(psR, "%4u ", psTS->usStackHighWaterMark);
 		#if (portNUM_PROCESSORS > 1)
-			if (psR->sFM.bCore) iRV += wprintfx(psR, "%c ", caMCU[c]);
+			if (psR->sFM.bCore) 
+				iRV += wprintfx(psR, "%c ", caMCU[c]);
 		#endif
 		// Calculate & display individual task utilisation.
 		Units = psTS->ulRunTimeCounter / TotalAdj;
@@ -195,8 +212,8 @@ int	xRtosReportTasks(report_t * psR) {
 
 		if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && psR->sFM.bXtras)
 			iRV += wprintfx(psR, " %p %p", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
-		if (psR->sFM.bNL) iRV += wprintfx(psR, strCRLF);
-
+		if (psR->sFM.bNL)
+			iRV += wprintfx(psR, strCRLF);
 		// For idle task(s) we do not want to add RunTime % to the task or Core RunTime
 		if (!bRtosTaskIsIdleTask(psTS->xHandle)) {		// NOT an IDLE task
 			Active.U64val += psTS->ulRunTimeCounter;	// Update total active time
@@ -224,7 +241,9 @@ next:
 	printfx_unlock(psR);
 	return iRV;
 }
+
 #else
+
 static SemaphoreHandle_t RtosStatsMux;
 static u16_t Counter;
 static u64rt_t Total;									// Sum all tasks (incl IDLE)
@@ -239,9 +258,11 @@ u64_t xRtosStatsFindRuntime(TaskHandle_t xHandle) {
 }
 
 bool bRtosStatsUpdateHook(void) {
-	if (++Counter % CONFIG_FREERTOS_HZ) return 1;
+	if (++Counter % CONFIG_FREERTOS_HZ)
+		return 1;
 	if (NumTasks == 0) {							// Initial, once-off processing
-		for (int i = 0; i < portNUM_PROCESSORS; ++i) IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
+		for (int i = 0; i < portNUM_PROCESSORS; ++i)
+			IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
 		IF_SYSTIMER_INIT(debugTIMING, stRTOS, stMICROS, "FreeRTOS", 1200, 5000);
 	}
 	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
@@ -252,7 +273,8 @@ bool bRtosStatsUpdateHook(void) {
 	NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &NowTotal);
 	IF_myASSERT(debugPARAM, NumTasks < configFR_MAX_TASKS);
 
-	if (Total.U64val && Total.LSW > NowTotal) ++Total.MSW;		// Handle wrapped System counter
+	if (Total.U64val && Total.LSW > NowTotal)
+		++Total.MSW;									// Handle wrapped System counter
 	Total.LSW = NowTotal;
 	Active.U64val = 0;
 	#if	(portNUM_PROCESSORS > 1)
@@ -260,12 +282,13 @@ bool bRtosStatsUpdateHook(void) {
 	#endif
 	for (int a = 0; a < NumTasks; ++a) {
 		TaskStatus_t * psTS = &sTS[a];
-		if (MaxNum < psTS->xTaskNumber) MaxNum = psTS->xTaskNumber;
+		if (MaxNum < psTS->xTaskNumber)
+			MaxNum = psTS->xTaskNumber;
 		for (int b = 0; b <= configFR_MAX_TASKS; ++b) {
 			if (Handle[b] == psTS->xHandle) {		// known task, update RT
 				if (Tasks[b].LSW > psTS->ulRunTimeCounter) ++Tasks[b].MSW;
 				Tasks[b].LSW = psTS->ulRunTimeCounter;
-			} else if (Handle[b] == NULL) {			// empty entry so add ...
+			} else if (Handle[b] == NULL) {				// empty entry so add ...
 				Handle[b] = psTS->xHandle;
 				Tasks[b].LSW = psTS->ulRunTimeCounter;
 			} else {
@@ -275,13 +298,14 @@ bool bRtosStatsUpdateHook(void) {
 			// For idle task(s) we do not want to add RunTime %'s to the task's RunTime or Cores' RunTime
 			int c;
 			for (c = 0; c < portNUM_PROCESSORS; ++c) {
-				if (Handle[b] == IdleHandle[c]) break;	// IDLE task, skip and try the next...
+				if (Handle[b] == IdleHandle[c])
+					break;								// IDLE task, skip and try the next...
 			}
 			if (c == portNUM_PROCESSORS) {				// NOT an IDLE task
-				Active.U64val += Tasks[b].U64val;				// Update total active time
+				Active.U64val += Tasks[b].U64val;		// Update total active time
 				#if	(portNUM_PROCESSORS > 1)
 				c = (psTS->xCoreID != tskNO_AFFINITY) ? psTS->xCoreID : 2;
-				Cores[c].U64val += Tasks[b].U64val;			// Update specific core's active time
+				Cores[c].U64val += Tasks[b].U64val;		// Update specific core's active time
 				#endif
 			}
 			break;
@@ -519,8 +543,10 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 		*pSH = NULL;		// Why????
 		return pdTRUE;
 	}
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) return pdTRUE;
-	if (*pSH == NULL) xRtosSemaphoreInit(pSH);
+	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING)
+		return pdTRUE;
+	if (*pSH == NULL)
+		xRtosSemaphoreInit(pSH);
 
 	#if	(configPRODUCTION == 0  && rtosDEBUG_SEMA > -1)
 	TickType_t tStep = (tWait == portMAX_DELAY) ? pdMS_TO_TICKS(10000) : tWait / 10;
