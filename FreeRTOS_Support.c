@@ -659,8 +659,6 @@ void vTaskDumpStack(void * pTCB) {
 }
 
 //#include "freertos/task_snapshot.h"
-#include "esp_debug_helpers.h"
-
 // note for ESP32S3, you must alter esp_backtrace_print_from_frame to whitelist 0x400559DD
 // as a valid memory address. see: https://github.com/espressif/esp-idf/issues/11512#issuecomment-1566943121
 // Otherwise nearly all the backtraces will print as corrupt.
