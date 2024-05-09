@@ -134,6 +134,9 @@ bool bRtosTaskIsIdleTask(TaskHandle_t xHandle) {
 
 #if (configRUNTIME_SIZE == 8)
 int	xRtosReportTasks(report_t * psR) {
+	int	iRV = 0;										// reset the character output counter
+	if (psR == NULL || psR->sFM.u32Val == 0)
+		return iRV;
 	if (NumTasks == 0) {								// first time once only
 		for (int i = 0; i < portNUM_PROCESSORS; ++i) {
 			IdleHandle[i] = xTaskGetIdleTaskHandleForCore(i);
