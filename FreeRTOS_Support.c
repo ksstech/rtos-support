@@ -19,8 +19,8 @@
 #define	debugPARAM					(debugFLAG_GLOBAL & debugFLAG & 0x4000)
 #define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
 
-#define XP							RP
-#define IF_XP						IF_RP
+#define XP							PX
+#define IF_XP						IF_PX
 
 // #################################### FreeRTOS global variables ##################################
 
@@ -157,9 +157,7 @@ int	xRtosReportTasks(report_t * psR) {
 		}
 	}
 
-	int	iRV = 0;										// reset the character output counter
-	WPFX_LOCK(psR);										// before the first wprintfx()
-	iRV += wprintfx(psR, "%C", colourFG_CYAN);
+	iRV += wprintfx(psR, "%C", xpfSGR(0,0,colourFG_CYAN,0));
 	if (psR->sFM.bTskNum)
 		iRV += wprintfx(psR, "T# ");
 	if (psR->sFM.bPrioX) 
@@ -174,7 +172,7 @@ int	xRtosReportTasks(report_t * psR) {
 	iRV += wprintfx(psR, " Util Ticks");
 	if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE) && psR->sFM.bXtras)
 		iRV += wprintfx(psR, " Stack Base -Task TCB-");
-	iRV += wprintfx(psR, "%C\r\n", attrRESET);
+	iRV += wprintfx(psR, "%C\r\n", xpfSGR(0,0,attrRESET,0));
 
 	u32_t Units, Fracts, TaskMask = 0x1;				// display individual task info
 	for (int a = 1; a <= MaxNum; ++a) {
@@ -237,8 +235,7 @@ next:
 	#else
 		iRV += wprintfx(psR, "%u Tasks %lu.%02lu%%", NumTasks, Units, Fracts);
 	#endif
-	WPFX_UNLOCK(psR);								// before the last wprintfx()
-	iRV += wprintfx(psR, "%s", psR->sFM.bNL ? strCR2xLF : strCRLF);
+	iRV += wprintfx(psR, psR->sFM.bNL ? strCR2xLF : strCRLF);
 	return iRV;
 }
 
@@ -406,17 +403,16 @@ TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
 #endif
 
 int xRtosReportMemory(report_t * psR) {
-	int iRV = 0;
-	WPFX_LOCK(psR);										// before the first wprintfx()
-	iRV += wprintfx(psR, "%CFreeRTOS:%C %#'u -> %#'u <- %#'u", colourFG_CYAN, attrRESET, xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin);
-	WPFX_UNLOCK(psR);									// before the last wprintfx()
-	iRV += wprintfx(psR, psR->sFM.aNL ? strCR2xLF : strCRLF);
-	return iRV;
+	return wprintfx(psR, "%CFreeRTOS:%C %#'u -> %#'u <- %#'u%s", xpfSGR(0,0,colourFG_CYAN,0), xpfSGR(0,0,attrRESET,0),
+		xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin, repFORM_TST(psR,aNL) ? strCR2xLF : strCRLF);
 }
 
 /**
- * @brief	
- * @note	does NOT lock the console UART !!!
+ * @brief	report config & status of timer specified
+ * @param	psR pointer to report control structure
+ * @param	thTmr timer handle to be reported on
+ * @return	size of character output generated
+ * @note	DOES specifically lock/unlock console UART
 */
 int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 	int iRV;
@@ -425,14 +421,14 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 		TickType_t tExp = xTimerGetExpiryTime(thTmr);
 		i32_t tRem = tExp - xTaskGetTickCount();
 		BaseType_t bActive = xTimerIsTimerActive(thTmr);
-		iRV = wprintfx(psR, "\t%s: #=%lu Auto=%c Run=%s", pcTimerGetName(thTmr), uxTimerGetTimerNumber(thTmr),
-			uxTimerGetReloadMode(thTmr) ? CHR_Y : CHR_N, bActive ? "Y" : "N");
+		iRV = wprintfx(psR, "\t%s: #%lu Auto=%c Run=%c", pcTimerGetName(thTmr), uxTimerGetTimerNumber(thTmr),
+			uxTimerGetReloadMode(thTmr) ? CHR_Y : CHR_N, bActive ? CHR_Y : CHR_N);
 		if (bActive)
 			iRV += wprintfx(psR, " tPer=%lu tExp=%lu tRem=%ld", tPer, tExp, tRem);
 	} else {
 		iRV = wprintfx(psR, "\t%p Invalid Timer handle", thTmr);
 	}
-	iRV += wprintfx(psR, psR->sFM.aNL ? strCR2xLF : strCRLF);
+	iRV += wprintfx(psR, repFORM_TST(psR,aNL) ? strCR2xLF : strCRLF);
 	return iRV;
 }
 
@@ -670,10 +666,10 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
    	}
  */
 void vTaskDumpStack(void * pTCB) {
-	if (pTCB == NULL) pTCB = xTaskGetCurrentTaskHandle();
-	void * pxTOS	= (void *) * ((u32_t *) pTCB) ;
-	void * pxStack	= (void *) * ((u32_t *) pTCB + 12);		// 48 bytes / 4 = 12
-	printfx("Cur SP : %p - Stack HWM : %p\r\r\n", pxTOS,
+	if (pTCB == NULL)	pTCB = xTaskGetCurrentTaskHandle();
+	void * pxTOS = (void *) * ((u32_t *) pTCB) ;
+	void * pxStack = (void *) * ((u32_t *) pTCB + 12);		// 48 bytes / 4 = 12
+	wprintfx(NULL, "Cur SP : %p - Stack HWM : %p\r\r\n", pxTOS,
 			(u8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t)));
 }
 
