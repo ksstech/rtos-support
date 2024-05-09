@@ -5,10 +5,12 @@
 #include "hal_options.h"
 #include "hal_memory.h"
 #include "hal_nvic.h"
+#include "hal_stdio.h"
 #include "printfx.h"									// +x_definitions +stdarg +stdint +stdio
 #include "syslog.h"
 #include "systiming.h"
 #include "x_errors_events.h"
+#include "x_utilities.h"
 #include <string.h>
 
 // ########################################### Macros ##############################################
