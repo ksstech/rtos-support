@@ -19,9 +19,11 @@ extern "C" {
 
 #define configFR_MAX_TASKS	24
 
-#define rtosDEBUG_SEMA			0			// -1=disable, 0=no return Address, >0=add return addresses
-#define rtosDEBUG_SEMA_HLDR		0
-#define rtosDEBUG_SEMA_RCVR		0
+#if (configPRODUCTION == 1)			// -1 = disable
+	#define rtosDEBUG_SEMA			-1	
+#else								// -1=disable, 0=block only, >0=all incl return addresses
+	#define rtosDEBUG_SEMA			-1
+#endif
 
 #define	MALLOC_MARK()	u32_t y,x=xPortGetFreeHeapSize();
 #define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)\r\n",x,y,y-x);
