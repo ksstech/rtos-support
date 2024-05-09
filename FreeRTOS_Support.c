@@ -137,7 +137,6 @@ int	xRtosReportTasks(report_t * psR) {
 			IdleHandle[i] = xTaskGetIdleTaskHandleForCore(i);
 		}
 	}
-
 	memset(sTS, 0, sizeof(sTS));
 	u64_t TotalAdj;
 	// Get up-to-date task status
@@ -146,7 +145,6 @@ int	xRtosReportTasks(report_t * psR) {
 	TotalAdj /= (100ULL / portNUM_PROCESSORS);			// will be used to calc % for each task...
 	if (TotalAdj == 0ULL)
 		return 0;
-
 	Active.U64val = 0;									// reset overall active running total
 	if	(portNUM_PROCESSORS > 1)
 		memset(&Cores[0], 0, sizeof(Cores));			// reset time/core running totals
@@ -238,7 +236,6 @@ next:
 	iRV += wprintfx(psR, psR->sFM.bNL ? strCR2xLF : strCRLF);
 	return iRV;
 }
-
 #else
 
 static SemaphoreHandle_t RtosStatsMux;
@@ -317,22 +314,30 @@ bool bRtosStatsUpdateHook(void) {
 int	xRtosReportTasks(report_t * psR) {
 	// With 2 MCU's "effective" ticks is a multiple of the number of MCU's
 	u64_t TotalAdj = Total.U64val / (100ULL / portNUM_PROCESSORS);
-	if (TotalAdj == 0ULL) return 0;
-
+	if (TotalAdj == 0ULL)
+		return 0;
 	// Display the column headers
 	int	iRV = 0;					// reset the character output counter
 	iRV += wprintfx(psR, "%C", colourFG_CYAN);
-	if (psR->sFM.bTskNum) iRV += wprintfx(psR, "T# ");
-	if (psR->sFM.bPrioX) iRV += wprintfx(psR, "Pc/Pb ");
+	if (psR->sFM.bTskNum)
+		iRV += wprintfx(psR, "T# ");
+	if (psR->sFM.bPrioX)
+		iRV += wprintfx(psR, "Pc/Pb ");
 	iRV += wprintfx(psR, configFREERTOS_TASKLIST_HDR_DETAIL);
-	if (psR->sFM.bState) iRV += wprintfx(psR, "S ");
+	if (psR->sFM.bState)
+		iRV += wprintfx(psR, "S ");
 #if (portNUM_PROCESSORS > 1)
-	if (psR->sFM.bCore) iRV += wprintfx(psR, "X ");
+	if (psR->sFM.bCore) {
+		iRV += wprintfx(psR, "X ");
+	}
 #endif
-	if (psR->sFM.bStack) iRV += wprintfx(psR, "LowS ");
+	if (psR->sFM.bStack)
+		iRV += wprintfx(psR, "LowS ");
 	iRV += wprintfx(psR, " Util Ticks");
 #if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE))
-	if (psR->sFM.bXtras) iRV += wprintfx(psR, " Stack Base -Task TCB-");
+	if (psR->sFM.bXtras) {
+		iRV += wprintfx(psR, " Stack Base -Task TCB-");
+	}
 #endif
 	iRV += wprintfx(psR, "%C\r\n", attrRESET);
 
