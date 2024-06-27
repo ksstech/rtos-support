@@ -208,7 +208,7 @@ int	xRtosReportTasks(report_t * psR) {
 		#endif
 		// Calculate & display individual task utilisation.
 		Units = psTS->ulRunTimeCounter / TotalAdj;
-    	Fracts = ((psTS->ulRunTimeCounter * 100) / TotalAdj) % 100;
+		Fracts = ((psTS->ulRunTimeCounter * 100) / TotalAdj) % 100;
 		iRV += wprintfx(psR, "%2lu.%02lu %#'5llu", Units, Fracts, psTS->ulRunTimeCounter);
 
 		if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && psR->sFM.bXtras)
@@ -230,11 +230,11 @@ next:
 	Fracts = ((Active.U64val * 100) / TotalAdj) % 100;
 	#if	(portNUM_PROCESSORS > 1)
 		iRV += wprintfx(psR, "%u Tasks %lu.%02lu%% [", NumTasks, Units, Fracts);
-    	for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
-    		Units = Cores[i].U64val / TotalAdj;
-    		Fracts = ((Cores[i].U64val * 100) / TotalAdj) % 100;
-    		iRV += wprintfx(psR, "%c=%lu.%02lu%c", caMCU[i], Units, Fracts, i < 2 ? ' ' : ']');
-    	}
+		for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
+			Units = Cores[i].U64val / TotalAdj;
+			Fracts = ((Cores[i].U64val * 100) / TotalAdj) % 100;
+			iRV += wprintfx(psR, "%c=%lu.%02lu%c", caMCU[i], Units, Fracts, i < 2 ? ' ' : ']');
+		}
 	#else
 		iRV += wprintfx(psR, "%u Tasks %lu.%02lu%%", NumTasks, Units, Fracts);
 	#endif
@@ -367,8 +367,8 @@ int	xRtosReportTasks(report_t * psR) {
 		if (psR->sFM.bStack) iRV += wprintfx(psR, "%4u ", psTS->usStackHighWaterMark);
 		// Calculate & display individual task utilisation.
 		u64_t u64RunTime = xRtosStatsFindRuntime(psTS->xHandle);
-    	Units = u64RunTime / TotalAdj;
-    	Fract = ((u64RunTime * 100) / TotalAdj) % 100;
+		Units = u64RunTime / TotalAdj;
+		Fract = ((u64RunTime * 100) / TotalAdj) % 100;
 		iRV += wprintfx(psR, "%2lu.%02lu %#'5llu", Units, Fract, u64RunTime);
 
 		if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && psR->sFM.bXtras)
@@ -394,13 +394,13 @@ next:
 
 	#if	(portNUM_PROCESSORS > 1)
 		// calculate & display individual core's utilization
-    	for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
-    		Units = Cores[i].U64val / TotalAdj;
-    		Fract = ((Cores[i].U64val * 100) / TotalAdj) % 100;
-    		iRV += wprintfx(psR, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
-    	}
+		for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
+			Units = Cores[i].U64val / TotalAdj;
+			Fract = ((Cores[i].U64val * 100) / TotalAdj) % 100;
+			iRV += wprintfx(psR, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
+		}
 	#endif
-    iRV += wprintfx(psR, psR->sFM.bNL ? "\r\n\n" : strCRLF);
+	iRV += wprintfx(psR, psR->sFM.bNL ? "\r\n\n" : strCRLF);
 	return iRV;
 }
 
@@ -465,7 +465,7 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName,
 	const u32_t usStackDepth, void * const pvParameters,
 	UBaseType_t uxPriority, StackType_t * const pxStackBuffer,
-    StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID)
+	StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID)
 {
 	TASK_START(pcName);
 	#ifdef CONFIG_FREERTOS_UNICORE
@@ -491,11 +491,12 @@ void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
  * @param	Handle of task to be terminated (NULL = calling task)
  */
 void vRtosTaskDelete(TaskHandle_t xHandle) {
-	if (xHandle == NULL) xHandle = xTaskGetCurrentTaskHandle();
-	#if (debugTRACK)
+	if (xHandle == NULL)
+		xHandle = xTaskGetCurrentTaskHandle();
+#if (debugTRACK)
 	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN+1];
 	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
-	#endif
+#endif
 	EventBits_t ebX = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
 	if (ebX) {						// Clear the RUN & DELETE task flags
 		xRtosClearTaskRUN(ebX);
@@ -503,7 +504,7 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 		MESSAGE("[%s] RUN/DELETE flags cleared\r\n", caName);
 	}
 
-	#if (configRUNTIME_SIZE == 4)	// 32bit tick counters, clear runtime stats collected.
+#if (configRUNTIME_SIZE == 4)	// 32bit tick counters, clear runtime stats collected.
 	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
 	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
 		if (Handle[i] == xHandle) {	// Clear dynamic runtime info
@@ -519,7 +520,7 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 		MESSAGE("[%s] static task info cleared\r\n", caName);
 	}
 	xRtosSemaphoreGive(&RtosStatsMux);
-	#endif
+#endif
 
 	TASK_STOP(caName);
 	vTaskDelete(xHandle);
@@ -688,32 +689,32 @@ void vTaskDumpStack(void * pTCB) {
 // as a valid memory address. see: https://github.com/espressif/esp-idf/issues/11512#issuecomment-1566943121
 // Otherwise nearly all the backtraces will print as corrupt.
 //
-//    //Check if first frame is valid
-//    bool corrupted = !(esp_stack_ptr_is_sane(stk_frame.sp) &&
-//                       (esp_ptr_executable((void *)esp_cpu_process_stack_pc(stk_frame.pc)) ||
-//         /*whitelist*/  esp_cpu_process_stack_pc(stk_frame.pc) == 0x400559DD ||
-//                        /* Ignore the first corrupted PC in case of InstrFetchProhibited */
-//                       (stk_frame.exc_frame && ((XtExcFrame *)stk_frame.exc_frame)->exccause == EXCCAUSE_INSTR_PROHIBITED)));
+//	//Check if first frame is valid
+//	bool corrupted = !(esp_stack_ptr_is_sane(stk_frame.sp) &&
+//					   (esp_ptr_executable((void *)esp_cpu_process_stack_pc(stk_frame.pc)) ||
+//		 /*whitelist*/  esp_cpu_process_stack_pc(stk_frame.pc) == 0x400559DD ||
+//						/* Ignore the first corrupted PC in case of InstrFetchProhibited */
+//					   (stk_frame.exc_frame && ((XtExcFrame *)stk_frame.exc_frame)->exccause == EXCCAUSE_INSTR_PROHIBITED)));
 /*
 esp_err_t IRAM_ATTR esp_backtrace_print_all_tasks(int depth, bool panic) {
-    u32_t task_count = uxTaskGetNumberOfTasks();
-    TaskSnapshot_t* snapshots = (TaskSnapshot_t*) calloc(task_count * sizeof(TaskSnapshot_t), 1);
-    // get snapshots
-    UBaseType_t tcb_size = 0;
-    u32_t got = uxTaskGetSnapshotAll(snapshots, task_count, &tcb_size);
-    u32_t len = got < task_count ? got : task_count;
-    print_str("printing all tasks:\n\n", panic);
-    esp_err_t err = ESP_OK;
-    for (u32_t i = 0; i < len; i++) {
-        TaskHandle_t handle = (TaskHandle_t) snapshots[i].pxTCB;
-        char* name = pcTaskGetName(handle);
-        print_str(name ? name : "No Name", panic);
-        XtExcFrame* xtf = (XtExcFrame*)snapshots[i].pxTopOfStack;
-        esp_backtrace_frame_t frame = { .pc = xtf->pc, .sp = xtf->a1, .next_pc = xtf->a0, .exc_frame = xtf };
-        esp_err_t nerr = esp_backtrace_print_from_frame(depth, &frame, panic);
-        if (nerr != ESP_OK) err = nerr;
-    }
-    free(snapshots);
-    return err;
+	u32_t task_count = uxTaskGetNumberOfTasks();
+	TaskSnapshot_t* snapshots = (TaskSnapshot_t*) calloc(task_count * sizeof(TaskSnapshot_t), 1);
+	// get snapshots
+	UBaseType_t tcb_size = 0;
+	u32_t got = uxTaskGetSnapshotAll(snapshots, task_count, &tcb_size);
+	u32_t len = got < task_count ? got : task_count;
+	print_str("printing all tasks:\n\n", panic);
+	esp_err_t err = ESP_OK;
+	for (u32_t i = 0; i < len; i++) {
+		TaskHandle_t handle = (TaskHandle_t) snapshots[i].pxTCB;
+		char* name = pcTaskGetName(handle);
+		print_str(name ? name : "No Name", panic);
+		XtExcFrame* xtf = (XtExcFrame*)snapshots[i].pxTopOfStack;
+		esp_backtrace_frame_t frame = { .pc = xtf->pc, .sp = xtf->a1, .next_pc = xtf->a0, .exc_frame = xtf };
+		esp_err_t nerr = esp_backtrace_print_from_frame(depth, &frame, panic);
+		if (nerr != ESP_OK) err = nerr;
+	}
+	free(snapshots);
+	return err;
 }
 */
