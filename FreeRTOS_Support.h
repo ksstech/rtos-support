@@ -28,9 +28,9 @@ extern "C" {
 #define	MALLOC_MARK()	u32_t y,x=xPortGetFreeHeapSize();
 #define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)\r\n",x,y,y-x);
 
-#define MESSAGE(mess,...)	if (debugTRACK && ioB1GET(ioUpDown)) PX(mess, ##__VA_ARGS__);
-#define TASK_START(name) 	MESSAGE("[%s] starting\r\n", name);
-#define TASK_STOP(name) 	MESSAGE("[%s] stopping\r\n", name);
+#define MESSAGE(mess,...)	IF_PX(debugTRACK && ioB1GET(ioUpDown), mess, ##__VA_ARGS__)
+#define TASK_START(name) 	MESSAGE("[%s] starting\r\n", name)
+#define TASK_STOP(name) 	MESSAGE("[%s] stopping\r\n", name)
 
 #if (tskKERNEL_VERSION_MAJOR >= 10) &&	\
 	(tskKERNEL_VERSION_MINOR >= 5) &&	\
