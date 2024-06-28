@@ -504,7 +504,7 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 		MESSAGE("[%s] RUN/DELETE flags cleared\r\n", caName);
 	}
 
-#if (configRUNTIME_SIZE == 4)	// 32bit tick counters, clear runtime stats collected.
+#if (configRUNTIME_SIZE == 4)		// 32bit tick counters, clear runtime stats collected.
 	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
 	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
 		if (Handle[i] == xHandle) {	// Clear dynamic runtime info
