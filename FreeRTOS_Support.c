@@ -119,6 +119,8 @@ static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 #endif
 
 TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
+	IF_myASSERT(debugPARAM, xTaskNumber != 0);
+	IF_myASSERT(debugPARAM, xTaskNumber <= configFR_MAX_TASKS);
 	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
 		if (sTS[i].xTaskNumber == xTaskNumber) return &sTS[i];
 	}
