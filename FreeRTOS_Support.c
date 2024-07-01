@@ -122,7 +122,9 @@ TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 	IF_myASSERT(debugPARAM, xTaskNumber != 0);
 	IF_myASSERT(debugPARAM, xTaskNumber <= configFR_MAX_TASKS);
 	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
-		if (sTS[i].xTaskNumber == xTaskNumber) return &sTS[i];
+		if (sTS[i].xTaskNumber == xTaskNumber) {
+			return &sTS[i];
+		}
 	}
 	return NULL;
 }
@@ -220,9 +222,9 @@ int	xRtosReportTasks(report_t * psR) {
 		// For idle task(s) we do not want to add RunTime % to the task or Core RunTime
 		if (!bRtosTaskIsIdleTask(psTS->xHandle)) {		// NOT an IDLE task
 			Active.U64val += psTS->ulRunTimeCounter;	// Update total active time
-			#if	(portNUM_PROCESSORS > 1)
-				Cores[c].U64val += psTS->ulRunTimeCounter;	// Update core active time
-			#endif
+		#if	(portNUM_PROCESSORS > 1)
+			Cores[c].U64val += psTS->ulRunTimeCounter;	// Update core active time
+		#endif
 		}
 next:
 		TaskMask <<= 1;
@@ -243,8 +245,7 @@ next:
 	iRV += wprintfx(psR, psR->sFM.bNL ? strCR2xLF : strCRLF);
 	return iRV;
 }
-#else
-
+#else			// Start of version for 32bit TickType_t !!!!!!!!!!!!!
 static SemaphoreHandle_t RtosStatsMux;
 static u16_t Counter;
 static u64rt_t Total;									// Sum all tasks (incl IDLE)
