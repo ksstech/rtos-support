@@ -191,7 +191,7 @@ int	xRtosReportTasks(report_t * psR) {
 			(psTS->uxBasePriority >= configMAX_PRIORITIES))
 			goto next;
 		if ((psTS->xCoreID != tskNO_AFFINITY) && !INRANGE(0, psTS->xCoreID, portNUM_PROCESSORS-1)) {
-			iRV += wprintfx(psR, "Skipped #%d = %d !!!\r\n", a, psTS->xCoreID);
+			iRV += wprintfx(psR, "%d CoreID=%d skipped !!!\r\n", a, psTS->xCoreID);
 			goto next;
 		}
 		if (psR->sFM.bTskNum)
