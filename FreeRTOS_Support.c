@@ -190,6 +190,7 @@ int	xRtosReportTasks(report_t * psR) {
 			(psTS->uxCurrentPriority >= (UBaseType_t) configMAX_PRIORITIES) ||
 			(psTS->uxBasePriority >= configMAX_PRIORITIES))
 			goto next;
+		// Check for invalid Core ID, often happens in process of shutting down tasks.
 		if ((psTS->xCoreID != tskNO_AFFINITY) && !INRANGE(0, psTS->xCoreID, portNUM_PROCESSORS-1)) {
 			iRV += wprintfx(psR, "%d CoreID=%d skipped !!!\r\n", a, psTS->xCoreID);
 			goto next;
