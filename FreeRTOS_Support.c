@@ -150,7 +150,8 @@ int	xRtosReportTasks(report_t * psR) {
 	u64_t TotalAdj;
 	// Get up-to-date task status
 	NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &TotalAdj);
-	IF_myASSERT(debugPARAM, NumTasks <= configFR_MAX_TASKS);
+	IF_myASSERT(debugPARAM, INRANGE(1, NumTasks, configFR_MAX_TASKS));
+
 	TotalAdj /= (100ULL / portNUM_PROCESSORS);			// will be used to calc % for each task...
 	if (TotalAdj == 0ULL)
 		return 0;
