@@ -194,9 +194,6 @@ int	xRtosReportTasks(report_t * psR) {
 			iRV += wprintfx(psR, "Skipped #%d = %d !!!\r\n", a, psTS->xCoreID);
 			goto next;
 		}
-		#if	(portNUM_PROCESSORS > 1)
-			int c = (psTS->xCoreID == tskNO_AFFINITY) ? 2 : psTS->xCoreID;
-		#endif
 		if (psR->sFM.bTskNum)
 			iRV += wprintfx(psR, "%2u ", psTS->xTaskNumber);
 		if (psR->sFM.bPrioX)
@@ -206,10 +203,11 @@ int	xRtosReportTasks(report_t * psR) {
 			iRV += wprintfx(psR, "%c ", TaskState[psTS->eCurrentState]);
 		if (psR->sFM.bStack)
 			iRV += wprintfx(psR, "%4u ", psTS->usStackHighWaterMark);
-		#if (portNUM_PROCESSORS > 1)
-			if (psR->sFM.bCore) 
-				iRV += wprintfx(psR, "%c ", caMCU[c]);
-		#endif
+	#if (portNUM_PROCESSORS > 1)
+		int c = (psTS->xCoreID == tskNO_AFFINITY) ? 2 : psTS->xCoreID;
+		if (psR->sFM.bCore) 
+			iRV += wprintfx(psR, "%c ", caMCU[c]);
+	#endif
 		// Calculate & display individual task utilisation.
 		Units = psTS->ulRunTimeCounter / TotalAdj;
 		Fracts = ((psTS->ulRunTimeCounter * 100) / TotalAdj) % 100;
