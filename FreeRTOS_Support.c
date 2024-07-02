@@ -504,7 +504,9 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 	if (ebX) {						// Clear the RUN & DELETE task flags
 		xRtosClearTaskRUN(ebX);
 		xRtosClearTaskDELETE(ebX);
-		MESSAGE("[%s] RUN/DELETE flags cleared\r\n", caName);
+		#if (debugTRACK)
+			MESSAGE("[%s] RUN/DELETE flags cleared\r\n", caName);
+		#endif
 	}
 
 #if (configRUNTIME_SIZE == 4)		// 32bit tick counters, clear runtime stats collected.
@@ -525,7 +527,9 @@ void vRtosTaskDelete(TaskHandle_t xHandle) {
 	xRtosSemaphoreGive(&RtosStatsMux);
 #endif
 
+#if (debugTRACK)
 	TASK_STOP(caName);
+#endif
 	vTaskDelete(xHandle);
 }
 
