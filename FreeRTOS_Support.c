@@ -193,7 +193,7 @@ int	xRtosReportTasks(report_t * psR) {
 	iRV += wprintfx(psR, " Util Ticks");
 	if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE) && psR->sFM.bXtras)
 		iRV += wprintfx(psR, " Stack Base -Task TCB-");
-	iRV += wprintfx(psR, "%C\r\n", xpfSGR(0,0,attrRESET,0));
+	iRV += wprintfx(psR, "%C" strNL, xpfSGR(0,0,attrRESET,0));
 
 	u32_t Units, Fracts, TaskMask = 0x1;				// display individual task info
 	for (int a = 1; a <= MaxNum; ++a) {
