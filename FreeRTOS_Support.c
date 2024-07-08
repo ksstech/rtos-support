@@ -166,8 +166,9 @@ int	xRtosReportTasks(report_t * psR) {
 	if (TotalAdj == 0ULL)
 		return 0;
 	Active.U64val = 0;									// reset overall active running total
-	if	(portNUM_PROCESSORS > 1)
-		memset(&Cores[0], 0, sizeof(Cores));			// reset time/core running totals
+	#if (portNUM_PROCESSORS > 1)
+	memset(&Cores[0], 0, sizeof(Cores));			// reset time/core running totals
+	#endif
 	for (int a = 0; a < NumTasks; ++a) {				// determine value of highest numbered task
 		TaskStatus_t * psTS = &sTS[a];
 		if (psTS->xTaskNumber > MaxNum) {
@@ -185,8 +186,10 @@ int	xRtosReportTasks(report_t * psR) {
 		iRV += wprintfx(psR, "S ");
 	if (psR->sFM.bStack)
 		iRV += wprintfx(psR, "LowS ");
-	if (portNUM_PROCESSORS > 1 && psR->sFM.bCore)
+	#if (portNUM_PROCESSORS > 1)
+	if (psR->sFM.bCore)
 		iRV += wprintfx(psR, "X ");
+	#endif
 	iRV += wprintfx(psR, " Util Ticks");
 	if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE) && psR->sFM.bXtras)
 		iRV += wprintfx(psR, " Stack Base -Task TCB-");
