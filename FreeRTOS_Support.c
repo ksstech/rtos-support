@@ -115,6 +115,7 @@ static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 #if	(portNUM_PROCESSORS > 1)
 	static const char caMCU[3] = { '0', '1', 'X' };
 	static u64rt_t Cores[portNUM_PROCESSORS+1];			// Sum of non-IDLE task runtime/core
+	static SemaphoreHandle_t shTaskInfo;
 #endif
 
 TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
@@ -150,8 +151,16 @@ int	xRtosReportTasks(report_t * psR) {
 	memset(sTS, 0, sizeof(sTS));
 	u64_t TotalAdj;
 	// Get up-to-date task status
+	#if (portNUM_PROCESSORS > 1)
+	xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+	#endif
+
 	NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &TotalAdj);
 	IF_myASSERT(debugPARAM, INRANGE(1, NumTasks, configFR_MAX_TASKS));
+
+	#if (portNUM_PROCESSORS > 1)
+	xRtosSemaphoreGive(&shTaskInfo);
+	#endif
 
 	TotalAdj /= (100ULL / portNUM_PROCESSORS);			// will be used to calc % for each task...
 	if (TotalAdj == 0ULL)
@@ -247,7 +256,6 @@ next:
 	return iRV;
 }
 #else			// Start of version for 32bit TickType_t !!!!!!!!!!!!!
-static SemaphoreHandle_t RtosStatsMux;
 static u16_t Counter;
 static u64rt_t Total;									// Sum all tasks (incl IDLE)
 static u64rt_t Tasks[configFR_MAX_TASKS];				// Task info, hook updated with wrap handling
@@ -270,7 +278,7 @@ bool bRtosStatsUpdateHook(void) {
 			IdleHandle[i] = xTaskGetIdleTaskHandleForCPU(i);
 		IF_SYSTIMER_INIT(debugTIMING, stRTOS, stMICROS, "FreeRTOS", 1200, 5000);
 	}
-	xRtosSemaphoreTake(&RtosStatsMux, portMAX_DELAY);
+	xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 	IF_SYSTIMER_START(debugTIMING, stRTOS);
 	u32_t NowTotal;
 	memset(sTS, 0, sizeof(sTS));
@@ -318,7 +326,7 @@ bool bRtosStatsUpdateHook(void) {
 		}
 	}
 	IF_SYSTIMER_STOP(debugTIMING, stRTOS);
-	xRtosSemaphoreGive(&RtosStatsMux);
+	xRtosSemaphoreGive(&shTaskInfo);
 	return 1;
 }
 
@@ -466,10 +474,16 @@ int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
 {
 	TASK_START(pcName);
 	int iRV = pdFAIL;
+	#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
+	xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+	#endif
 	#ifdef CONFIG_FREERTOS_UNICORE
 	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
 	#else
 	iRV = xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
+	#endif
+	#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
+	xRtosSemaphoreGive(&shTaskInfo);
 	#endif
 	IF_myASSERT(debugRESULT, iRV == pdPASS);
 	return iRV;
@@ -481,10 +495,16 @@ TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const
 	StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID)
 {
 	TASK_START(pcName);
+	#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
+	xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+	#endif
 	#ifdef CONFIG_FREERTOS_UNICORE
 	TaskHandle_t thRV = xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
 	#else
 	TaskHandle_t thRV = xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
+	#endif
+	#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
+	xRtosSemaphoreGive(&shTaskInfo);
 	#endif
 	IF_myASSERT(debugRESULT, thRV != 0);
 	return thRV;
@@ -504,6 +524,9 @@ void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
  * @param	Handle of task to be terminated (NULL = calling task)
  */
 void vRtosTaskDelete(TaskHandle_t xHandle) {
+	#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
+	xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+	#endif
 	if (xHandle == NULL)
 		xHandle = xTaskGetCurrentTaskHandle();
 	#if (debugTRACK)
