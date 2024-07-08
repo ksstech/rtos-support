@@ -194,7 +194,7 @@ int	xRtosReportTasks(report_t * psR) {
 			goto next;
 		// Check for invalid Core ID, often happens in process of shutting down tasks.
 		if ((psTS->xCoreID != tskNO_AFFINITY) && !INRANGE(0, psTS->xCoreID, portNUM_PROCESSORS-1)) {
-			iRV += wprintfx(psR, "%d CoreID=%d skipped !!!\r\n", a, psTS->xCoreID);
+			iRV += wprintfx(psR, "%d CoreID=%d skipped !!!" strNL, a, psTS->xCoreID);
 			goto next;
 		}
 		if (psR->sFM.bTskNum)
@@ -219,7 +219,7 @@ int	xRtosReportTasks(report_t * psR) {
 		if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && psR->sFM.bXtras)
 			iRV += wprintfx(psR, " %p %p", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
 		if (psR->sFM.bNL)
-			iRV += wprintfx(psR, strCRLF);
+			iRV += wprintfx(psR, strNL);
 		// For idle task(s) we do not want to add RunTime % to the task or Core RunTime
 		if (!bRtosTaskIsIdleTask(psTS->xHandle)) {		// NOT an IDLE task
 			Active.U64val += psTS->ulRunTimeCounter;	// Update total active time
@@ -243,7 +243,7 @@ next:
 	#else
 	iRV += wprintfx(psR, "%u Tasks %lu.%02lu%%", NumTasks, Units, Fracts);
 	#endif
-	iRV += wprintfx(psR, psR->sFM.bNL ? strCR2xLF : strCRLF);
+	iRV += wprintfx(psR, psR->sFM.bNL ? strNLx2 : strNL);
 	return iRV;
 }
 #else			// Start of version for 32bit TickType_t !!!!!!!!!!!!!
@@ -349,8 +349,8 @@ int	xRtosReportTasks(report_t * psR) {
 	if (psR->sFM.bXtras) {
 		iRV += wprintfx(psR, " Stack Base -Task TCB-");
 	}
-	iRV += wprintfx(psR, "%C\r\n", attrRESET);
 	#endif
+	iRV += wprintfx(psR, "%C" strNL, attrRESET);
 
 	// display individual task info
 	u32_t TaskMask = 0x1, Units, Fract;
@@ -413,7 +413,7 @@ next:
 		iRV += wprintfx(psR, "  %c=%lu.%02lu", caMCU[i], Units, Fract);
 	}
 	#endif
-	iRV += wprintfx(psR, psR->sFM.bNL ? "\r\n\n" : strCRLF);
+	iRV += wprintfx(psR, psR->sFM.bNL ? "\r\n\n" : strNL);
 	return iRV;
 }
 
@@ -427,7 +427,7 @@ TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
 
 int xRtosReportMemory(report_t * psR) {
 	return wprintfx(psR, "%CFreeRTOS:%C %#'u -> %#'u <- %#'u%s", xpfSGR(0,0,colourFG_CYAN,0), xpfSGR(0,0,attrRESET,0),
-		xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin, repFORM_TST(psR,aNL) ? strCR2xLF : strCRLF);
+		xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin, repFORM_TST(psR,aNL) ? strNLx2 : strNL);
 }
 
 /**
@@ -451,7 +451,7 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 	} else {
 		iRV = wprintfx(psR, "\t%p Invalid Timer handle", thTmr);
 	}
-	iRV += wprintfx(psR, repFORM_TST(psR,aNL) ? strCR2xLF : strCRLF);
+	iRV += wprintfx(psR, repFORM_TST(psR,aNL) ? strNLx2 : strNL);
 	return iRV;
 }
 
@@ -581,7 +581,7 @@ void vRtosSemaphoreReport(SemaphoreHandle_t * pSH, const char * pcMess, TickType
 		(xRtosSemaphoreCheck(pSH) == 1)) {		// address found in the list; then report
 		char *pcHldr = pcTaskGetName(xSemaphoreGetMutexHolder(*pSH));
 		char *pcRcvr = pcTaskGetName(xTaskGetCurrentTaskHandle());
-		XP("SH %s %d %p H=%s R=%s (%lu)\r\n", pcMess, esp_cpu_get_core_id(), pSH, pcHldr, pcRcvr, tElap);
+		XP("SH %s %d %p H=%s R=%s (%lu)" strNL, pcMess, esp_cpu_get_core_id(), pSH, pcHldr, pcRcvr, tElap);
 	}
 }
 #endif
@@ -592,7 +592,7 @@ SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 	if ((pSHmatch && pSH == pSHmatch) ||		// Specific match address; or
 		(anySYSFLAGS(sfTRACKER) == 1) || 		// general tracking flag enabled; or
 		(xRtosSemaphoreCheck(pSH) == 1)) {		// address found in the list; then
-		XP("SH Init %p=%p\r\n", pSH, *pSH);		// report the event
+		XP("SH Init %p=%p" strNL, pSH, *pSH);		// report the event
 	}
 	#endif
 	IF_myASSERT(debugRESULT, *pSH != 0);
@@ -666,7 +666,7 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	if ((pSHmatch && (pSH == pSHmatch)) ||		// Specific match address; or
 		(anySYSFLAGS(sfTRACKER) == 1) ||		// general tracking flag enabled; then
 		(xRtosSemaphoreCheck(pSH) == 1)) {		// address found in the list; or
-		XP("SH Delete %p\r\n", pSH);			// report the event
+		XP("SH Delete %p" strNL, pSH);			// report the event
 	}
 	#endif
 	*pSH = 0;
@@ -697,7 +697,7 @@ void vTaskDumpStack(void * pTCB) {
 		pTCB = xTaskGetCurrentTaskHandle();
 	void * pxTOS = (void *) * ((u32_t *) pTCB) ;
 	void * pxStack = (void *) * ((u32_t *) pTCB + 12);		// 48 bytes / 4 = 12
-	wprintfx(NULL, "Cur SP : %p - Stack HWM : %p\r\r\n", pxTOS,
+	wprintfx(NULL, "Cur SP : %p - Stack HWM : %p" strNL, pxTOS,
 		(u8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t)));
 }
 
