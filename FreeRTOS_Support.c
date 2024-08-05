@@ -449,7 +449,7 @@ int xRtosReportMemory(report_t * psR) {
 */
 int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 	int iRV;
-	if (halCONFIG_inSRAM(thTmr)) {
+	if (halMemorySRAM(thTmr)) {
 		TickType_t tPer = xTimerGetPeriod(thTmr);
 		TickType_t tExp = xTimerGetExpiryTime(thTmr);
 		i32_t tRem = tExp - xTaskGetTickCount();
