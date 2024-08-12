@@ -32,20 +32,10 @@ extern "C" {
 #define TASK_START(name) 	MESSAGE("[%s] starting\r\n", name)
 #define TASK_STOP(name) 	MESSAGE("[%s] stopping\r\n", name)
 
-#if (tskKERNEL_VERSION_MAJOR >= 10) &&	\
-	(tskKERNEL_VERSION_MINOR >= 5) &&	\
-	(tskKERNEL_VERSION_BUILD >= 0) && 	\
-	defined(CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64) && \
-	(CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64 == 1)
-	#define configRUNTIME_SIZE	8
-#else
-	#define configRUNTIME_SIZE	4
-#endif
-
 #if defined(CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64) && (CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64 == 1)
 	#define configRUNTIME_SIZE	8
 #else
-	#define configRUNTIME_SIZE	4
+	#error "Must be built with 64bit Runtime Counter, support for 32bit removed !!!"
 #endif
 
 // ######################################## Enumerations ###########################################
