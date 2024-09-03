@@ -39,6 +39,7 @@ extern "C" {
 #endif
 
 // ######################################## Enumerations ###########################################
+
 // ###################################### Global variables #########################################
 
 #if (configPRODUCTION == 0) && (rtosDEBUG_SEMA > -1)
@@ -60,8 +61,71 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t *, TickType_t);
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t *);
 void vRtosSemaphoreDelete(SemaphoreHandle_t *);
 
-// ##################################### Malloc/free support #######################################
 // ################################### Task status manipulation ####################################
+
+#define _EGset(EG,ebX)					xEventGroupSetBits(EG,ebX)
+#define _EGclear(EG,ebX)				xEventGroupClearBits(EG,ebX)
+#define _EGget(EG,ebX)					(xEventGroupGetBits(EG) & (ebX))
+#define _EGcheck(EG,ebX)				((xEventGroupGetBits(EG) & (ebX)) == (ebX))
+#define _EGwait(EG,ebX, ttW)			((xEventGroupWaitBits(EG,(ebX),pdFALSE,pdTRUE,ttW) & (ebX)) == (ebX))
+
+/**
+ * @brief
+ * @return
+ */
+#define xRtosSetStatus(ebX)				_EGset(xEventStatus,ebX)
+/**
+ * @brief
+ * @return	selected bitmask from EventStatus as at time of call
+ */
+#define xRtosGetStatus(ebX)				_EGget(xEventStatus,ebX)
+/**
+ * @brief
+ * @return	selected bitmask from EventStatus BEFORE bits were cleared
+ */
+#define xRtosClearStatus(ebX)			_EGclear(xEventStatus,ebX)
+/**
+ * @brief
+ * @return	1/true if ALL the bits set in ebX are all also set in EventStatus at calling time
+ */
+#define xRtosCheckStatus(ebX)			_EGcheck(xEventStatus,ebX)
+/**
+ * @brief	wait for specified period of time for ALL bits set in ebX to become set in EventStatus
+ * @return	1/true if ALL the bits set in ebX are all also set in EventStatus prior to timeout
+ */
+#define xRtosWaitStatus(ebX, ttW)		_EGwait(xEventStatus,ebX,ttW)
+
+#define xRtosSetDevice(ebX)				_EGset(EventDevices,ebX)
+#define xRtosClearDevice(ebX)			_EGclear(EventDevices,ebX)
+#define xRtosCheckDevice(ebX)			_EGcheck(EventDevices,ebX)
+#define xRtosWaitDevice(ebX, ttW)		_EGwait(EventDevices,ebX,ttW)
+
+#define xRtosSetTaskRUN(ebX)			_EGset(TaskRunState,ebX)
+#define xRtosClearTaskRUN(ebX)			_EGclear(TaskRunState,ebX)
+#define xRtosCheckTaskRUN(ebX)			_EGcheck(TaskRunState,ebX)
+#define xRtosWaitTaskRUN(ebX, ttW)		_EGwait(TaskRunState,ebX,ttW)
+
+#define xRtosSetTaskDELETE(ebX)			_EGset(TaskDeleteState,ebX)
+#define xRtosClearTaskDELETE(ebX)		_EGclear(TaskDeleteState,ebX)
+/**
+ * @brief	Check if task set to DELETE, return 1 if so else 0
+ */
+#define xRtosCheckTaskDELETE(ebX)		_EGcheck(TaskDeleteState,ebX)
+#define xRtosWaitTaskDELETE(ebX, ttW)	_EGwait(TaskDeleteState,ebX,ttW)
+
+// Combined RUN & DELETE checks
+#define bRtosTaskCheckOK(ebX)			((xRtosCheckTaskDELETE(ebX) || !xRtosCheckTaskRUN(ebX)) ? 0 : 1)
+
+/**
+ * @brief	check if a task should a) terminate or b) run
+ *			if, at entry, set to terminate immediately return result
+ * 			if not, wait (possibly 0 ticks) for run status
+ *			Before returning, again check if set to terminate.
+ * @param	uxTaskMask - specific task bitmap
+ * @return	0 if task should delete, 1 if it should run...
+ */
+bool bRtosTaskWaitOK(const u32_t ebX, u32_t ttW);
+
 // ################################### Task status reporting #######################################
 
 bool bRtosStatsUpdateHook(void);
