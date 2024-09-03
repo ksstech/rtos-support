@@ -26,11 +26,11 @@ extern "C" {
 #endif
 
 #define	MALLOC_MARK()	u32_t y,x=xPortGetFreeHeapSize();
-#define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)\r\n",x,y,y-x);
+#define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)" strNL,x,y,y-x);
 
 #define MESSAGE(mess,...)	IF_PX(debugTRACK && ioB1GET(ioUpDown), mess, ##__VA_ARGS__)
-#define TASK_START(name) 	MESSAGE("[%s] starting\r\n", name)
-#define TASK_STOP(name) 	MESSAGE("[%s] stopping\r\n", name)
+#define TASK_START(name) 	MESSAGE("[%s] starting" strNL, name)
+#define TASK_STOP(name) 	MESSAGE("[%s] stopping" strNL, name)
 
 #if defined(CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64) && (CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64 == 1)
 	#define configRUNTIME_SIZE	8
