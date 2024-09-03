@@ -72,16 +72,7 @@ int xRtosReportTimer(struct report_t * psRprt, TimerHandle_t thTimer);
 
 // ################################## Task creation/deletion #######################################
 
-int	xRtosTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName,
-					const u32_t usStackDepth, void * const pvParameters,
-					UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask,
-					const BaseType_t xCoreID);
-TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName,
-					const u32_t usStackDepth, void * const pvParameters,
-					UBaseType_t uxPriority, StackType_t * const pxStackBuffer,
-					StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID);
-void vRtosTaskTerminate(const EventBits_t uxTaskMask);
-void vRtosTaskDelete(TaskHandle_t TH);
+void vTaskSetTerminateFlags(const EventBits_t uxTaskMask);
 
 // ####################################### Debug support ###########################################
 

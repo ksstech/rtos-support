@@ -467,113 +467,117 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 
 // ################################## Task creation/deletion #######################################
 
-int	xRtosTaskCreate(TaskFunction_t pxTaskCode,
-	const char * const pcName, const u32_t usStackDepth,
-	void * pvParameters,
-	UBaseType_t uxPriority,
-	TaskHandle_t * pxCreatedTask,
-	const BaseType_t xCoreID)
-{
+BaseType_t __real_xTaskCreate(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *);
+BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask) {
 	TASK_START(pcName);
-	int iRV = pdFAIL;
-	#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
-	xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
-	#endif
-	#ifdef CONFIG_FREERTOS_UNICORE
-	iRV = xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
-	#else
-	iRV = xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
-	#endif
-	#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
-	xRtosSemaphoreGive(&shTaskInfo);
-	#endif
-	IF_myASSERT(debugRESULT, iRV == pdPASS);
-	return iRV;
+#if (configRUNTIME_SIZE == 4)
+	BaseType_t btRVsema = pfFALSE;
+	if (allSYSFLAGS(sfAPPSTAGE)) btRVsema = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+#endif
+	BaseType_t btRV = __real_xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
+#if (configRUNTIME_SIZE == 4)
+	if (allSYSFLAGS(sfAPPSTAGE) && btRVsema	== pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
+#endif
+	IF_myASSERT(debugRESULT, btRV == pdPASS);
+	return btRV;
 }
 
-TaskHandle_t xRtosTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName,
-	const u32_t usStackDepth, void * const pvParameters,
-	UBaseType_t uxPriority, StackType_t * const pxStackBuffer,
-	StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID)
-{
+BaseType_t __real_xTaskCreatePinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *, const BaseType_t);
+BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
 	TASK_START(pcName);
-	#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
-	xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
-	#endif
-	#ifdef CONFIG_FREERTOS_UNICORE
-	TaskHandle_t thRV = xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
-	#else
-	TaskHandle_t thRV = xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
-	#endif
-	#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
-	xRtosSemaphoreGive(&shTaskInfo);
-	#endif
+#if (configRUNTIME_SIZE == 4)
+	BaseType_t btRVsema = pfFALSE;
+	if (allSYSFLAGS(sfAPPSTAGE)) btRVsema = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+#endif
+	BaseType_t btRV = __real_xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
+#if (configRUNTIME_SIZE == 4)
+	if (allSYSFLAGS(sfAPPSTAGE) && btRVsema	== pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
+#endif
+	IF_myASSERT(debugRESULT, btRV == pdPASS);
+	return btRV;
+}
+
+TaskHandle_t __real_xTaskCreateStatic(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const);
+TaskHandle_t __wrap_xTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer) {
+	TASK_START(pcName);
+#if (configRUNTIME_SIZE == 4)
+	BaseType_t btRV = pdFALSE;
+	if (allSYSFLAGS(sfAPPSTAGE)) btRVsema = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+#endif
+	TaskHandle_t thRV = __real_xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
+#if (configRUNTIME_SIZE == 4)
+	if (allSYSFLAGS(sfAPPSTAGE) && btRVsema	== pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
+#endif
 	IF_myASSERT(debugRESULT, thRV != 0);
 	return thRV;
 }
 
-/**
- * @brief	Set/clear all flags to force task[s] to initiate an organised shutdown
- * @param	mask indicating the task[s] to terminate
- */
-void vRtosTaskTerminate(const EventBits_t uxTaskMask) {
-	xRtosSetTaskDELETE(uxTaskMask);
-	xRtosSetTaskRUN(uxTaskMask);						// must enable run to trigger delete
+TaskHandle_t __real_xTaskCreateStaticPinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const, const BaseType_t);
+TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID) {
+	TASK_START(pcName);
+#if (configRUNTIME_SIZE == 4)
+	BaseType_t btRV = pdFALSE;
+	if (allSYSFLAGS(sfAPPSTAGE)) btRVsema = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+#endif
+	TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
+#if (configRUNTIME_SIZE == 4)
+	if (allSYSFLAGS(sfAPPSTAGE) && btRVsema	== pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
+#endif
+	IF_myASSERT(debugRESULT, thRV != 0);
+	return thRV;
 }
 
 /**
  * @brief	Clear task runtime and static statistics data then delete the task
  * @param	Handle of task to be terminated (NULL = calling task)
  */
-void vRtosTaskDelete(TaskHandle_t xHandle) {
-	#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
-	xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
-	#endif
+void __real_vTaskDelete(TaskHandle_t xHandle);
+void __wrap_vTaskDelete(TaskHandle_t xHandle) {
+#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
+	BaseType_t btRVsema = pdFALSE;
+	if (allSYSFLAGS(sfAPPSTAGE)) btRVsema = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+#endif
 	if (xHandle == NULL)
 		xHandle = xTaskGetCurrentTaskHandle();
-	#if (debugTRACK)
+#if (debugTRACK)
 	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN+1];
 	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
-	#endif
+#endif
 	EventBits_t ebX = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
-	if (ebX) {						// Clear the RUN & DELETE task flags
+	if (ebX) {							// Clear the RUN & DELETE task flags
 		xRtosClearTaskRUN(ebX);
 		xRtosClearTaskDELETE(ebX);
-		#if (debugTRACK)
+	#if (debugTRACK)
 		MESSAGE("[%s] RUN/DELETE flags cleared" strNL, caName);
-		#endif
+	#endif
 	}
 
-	#if (configRUNTIME_SIZE == 4)		// 32bit tick counters, clear runtime stats collected.
+#if (configRUNTIME_SIZE == 4)		// 32bit tick counters, clear runtime stats collected.
 	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
 		if (Handle[i] == xHandle) {	// Clear dynamic runtime info
 			Tasks[i].U64val = 0ULL;
 			Handle[i] = NULL;
-			#if (debugTRACK)
+		#if (debugTRACK)
 			MESSAGE("[%s] dynamic stats removed" strNL, caName);
-			#endif
+		#endif
 			break;
 		}
 	}
 	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
 	if (psTS) {						// Clear "static" task info
 		memset(psTS, 0, sizeof(TaskStatus_t));
-		#if (debugTRACK)
+	#if (debugTRACK)
 		MESSAGE("[%s] static task info cleared" strNL, caName);
 		#endif
 	}
-	#endif
+#endif
 
-	#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
-	xRtosSemaphoreGive(&shTaskInfo);
-	#endif
+#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
+	if (allSYSFLAGS(sfAPPSTAGE) && btRVsema	== pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
+#endif
 
-	#if (debugTRACK)
+#if (debugTRACK)
 	TASK_STOP(caName);
-	#endif
-	vTaskDelete(xHandle);
-}
-
 // ##################################### Semaphore support #########################################
 
 #if	(rtosDEBUG_SEMA > -1)
@@ -622,6 +626,7 @@ SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 	#endif
 	IF_myASSERT(debugRESULT, *pSH != 0);
 	return *pSH;
+	__real_vTaskDelete(xHandle);
 }
 
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
@@ -657,6 +662,14 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	} else {
 		btRV = xSemaphoreTake(*pSH, tWait);
 	}
+/**
+ * @brief	Set/clear all flags to force task[s] to initiate an organised shutdown
+ * @param	mask indicating the task[s] to terminate
+ */
+void vTaskSetTerminateFlags(const EventBits_t uxTaskMask) {
+#if (buildPLTFRM == HW_DK41 || buildPLTFRM == HW_BOX) && (buildGUI == 4)
+	esp_err_t lvgl_port_deinit(void);
+	if (uxTaskMask & taskGUI_MASK) lvgl_port_deinit();
 #endif
 	if (btHPTwoken == pdTRUE) {
 		portYIELD_FROM_ISR(); 
@@ -695,6 +708,8 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	}
 	#endif
 	*pSH = 0;
+	xRtosSetTaskDELETE(uxTaskMask);
+	xRtosSetTaskRUN(uxTaskMask);						// must enable run to trigger delete
 }
 
 // ####################################### Debug support ###########################################
