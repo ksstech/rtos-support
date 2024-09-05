@@ -714,7 +714,7 @@ void __wrap_vTaskDelete(TaskHandle_t xHandle) {
  * @param	mask indicating the task[s] to terminate
  */
 void vTaskSetTerminateFlags(const EventBits_t uxTaskMask) {
-#if (buildPLTFRM == HW_DK41 || buildPLTFRM == HW_BOX) && (buildGUI == 4)
+#if (halUSE_BSP == 1 && buildGUI == 4)
 	esp_err_t lvgl_port_deinit(void);
 	if (uxTaskMask & taskGUI_MASK) lvgl_port_deinit();
 #endif
