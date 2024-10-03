@@ -15,6 +15,10 @@
 #include "esp_debug_helpers.h"
 #include <string.h>
 
+#if (buildGUI > 0)
+	#include "gui_main.hpp"
+#endif
+
 // ########################################### Macros ##############################################
 
 #define	debugFLAG					0xF000
@@ -716,8 +720,7 @@ void __wrap_vTaskDelete(TaskHandle_t xHandle) {
  */
 void vTaskSetTerminateFlags(const EventBits_t uxTaskMask) {
 #if (halUSE_BSP == 1 && buildGUI == 4)
-	esp_err_t lvgl_port_deinit(void);
-	if (uxTaskMask & taskGUI_MASK) lvgl_port_deinit();
+	if (uxTaskMask & taskGUI_MASK) 	vGuiDeInit();
 #endif
 	xRtosSetTaskDELETE(uxTaskMask);
 	xRtosSetTaskRUN(uxTaskMask);						// must enable run to trigger delete
