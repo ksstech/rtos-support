@@ -301,8 +301,8 @@ int	xRtosReportTasks(report_t * psR) {
 			MaxNum = psTS->xTaskNumber;
 		}
 	}
-
-	iRV += wprintfx(psR, "%C", xpfSGR(0,0,attrRESET,colourFG_CYAN));
+	xPrintFxSaveLock(psR);
+	iRV += wprintfx(psR, "%C", xpfCOL(colourFG_CYAN,0));
 	if (psR->sFM.bTskNum)
 		iRV += wprintfx(psR, "T# ");
 	if (psR->sFM.bPrioX) 
@@ -319,7 +319,7 @@ int	xRtosReportTasks(report_t * psR) {
 	iRV += wprintfx(psR, " Util Ticks");
 	if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE) && psR->sFM.bXtras)
 		iRV += wprintfx(psR, " Stack Base -Task TCB-");
-	iRV += wprintfx(psR, "%C" strNL, xpfSGR(0,0,attrRESET,0));
+	iRV += wprintfx(psR, "%C" strNL, xpfCOL(attrRESET,0));
 
 	u32_t Units, Fracts, TaskMask = 0x1;				// display individual task info
 	for (int a = 1; a <= MaxNum; ++a) {
@@ -382,6 +382,7 @@ next:
 	iRV += wprintfx(psR, "%u Tasks %lu.%02lu%%", NumTasks, Units, Fracts);
 	#endif
 	iRV += wprintfx(psR, psR->sFM.bNL ? strNLx2 : strNL);
+	xPrintFxRestoreUnLock(psR);
 	return iRV;
 }
 #else			// Start of version for 32bit TickType_t !!!!!!!!!!!!!
@@ -563,7 +564,7 @@ TaskStatus_t * psRtosStatsFindWithHandle(TaskHandle_t xHandle) {
 #endif
 
 int xRtosReportMemory(report_t * psR) {
-	return wprintfx(psR, "%CFreeRTOS:%C %#'u -> %#'u <- %#'u%s", xpfSGR(0,0,colourFG_CYAN,0), xpfSGR(0,0,attrRESET,0),
+	return wprintfx(psR, "%CFreeRTOS:%C %#'u -> %#'u <- %#'u%s", xpfCOL(colourFG_CYAN,0), xpfCOL(attrRESET,0),
 		xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin, repFORM_TST(psR,aNL) ? strNLx2 : strNL);
 }
 
