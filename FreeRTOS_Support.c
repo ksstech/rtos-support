@@ -88,9 +88,7 @@ SemaphoreHandle_t * IgnoreList[] = { &shUARTmux, /* &shTaskInfo &SL_VarMux &SL_N
 */
 bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
 	for(int i = 0; i < NO_MEM(IgnoreList); ++i) {
-		if (IgnoreList[i] == pSH) {
-			return 1;
-		}
+		if (IgnoreList[i] == pSH) return 1;
 	}	
 	return 0;
 }
