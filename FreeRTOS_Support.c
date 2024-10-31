@@ -129,10 +129,8 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 		*pSH = NULL;
 		return pdTRUE;
 	} */
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING)
-		return pdTRUE;
-	if (*pSH == NULL)
-		xRtosSemaphoreInit(pSH);
+	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) return pdTRUE;
+	if (*pSH == NULL) xRtosSemaphoreInit(pSH);
 	bool FromISR = halNVIC_CalledFromISR();
 	BaseType_t btRV, btHPTwoken = pdFALSE;
 #if	(rtosDEBUG_SEMA > -1)
@@ -147,11 +145,9 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 		}
 		IF_EXEC_3(rtosDEBUG_SEMA > 0, vRtosSemaphoreReport, pSH, "TAKE", tElap);
 		IF_EXEC_1(rtosDEBUG_SEMA > 0, esp_backtrace_print, rtosDEBUG_SEMA); // Decode return addresses [optional]
-		if (btRV == pdTRUE)
-			break;
+		if (btRV == pdTRUE) break;
 		IF_EXEC_3(rtosDEBUG_SEMA == 0, vRtosSemaphoreReport, pSH, "TAKE", tElap);
-		if (tWait != portMAX_DELAY)
-			tWait -= tStep;
+		if (tWait != portMAX_DELAY) tWait -= tStep;
 		tElap += tStep;
 	} while (tWait > tStep);
 #else
@@ -161,9 +157,7 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 		btRV = xSemaphoreTake(*pSH, tWait);
 	}
 #endif
-	if (btHPTwoken == pdTRUE) {
-		portYIELD_FROM_ISR(); 
-	}
+	if (btHPTwoken == pdTRUE) portYIELD_FROM_ISR();
 	return btRV;
 }
 
