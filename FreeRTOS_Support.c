@@ -9,8 +9,8 @@
 #include "printfx.h"									// +x_definitions +stdarg +stdint +stdio
 #include "syslog.h"
 #include "systiming.h"
-#include "x_errors_events.h"
-#include "x_utilities.h"
+#include "errors_events.h"
+#include "utilitiesX.h"
 
 #include "esp_debug_helpers.h"
 #include <string.h>
