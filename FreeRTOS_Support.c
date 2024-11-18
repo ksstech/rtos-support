@@ -27,8 +27,8 @@
 #define	debugPARAM					(debugFLAG_GLOBAL & debugFLAG & 0x4000)
 #define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
 
-#define XP							PX
-#define IF_XP						IF_PX
+#define P							PX
+#define IF_P						IF_PX
 
 // #################################### FreeRTOS global variables ##################################
 
@@ -105,7 +105,7 @@ void vRtosSemaphoreReport(SemaphoreHandle_t * pSH, const char * pcMess, TickType
 		(xRtosSemaphoreCheck(pSH) == 1)) {		// address found in the list; then report
 		char *pcHldr = pcTaskGetName(xSemaphoreGetMutexHolder(*pSH));
 		char *pcRcvr = pcTaskGetName(xTaskGetCurrentTaskHandle());
-		XP("SH %s %d %p H=%s R=%s (%lu)" strNL, pcMess, esp_cpu_get_core_id(), pSH, pcHldr, pcRcvr, tElap);
+		P("SH %s %d %p H=%s R=%s (%lu)" strNL, pcMess, esp_cpu_get_core_id(), pSH, pcHldr, pcRcvr, tElap);
 	}
 }
 #endif
@@ -116,7 +116,7 @@ SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 	if ((pSHmatch && pSH == pSHmatch) ||		// Specific match address; or
 		(anySYSFLAGS(sfTRACKER) == 1) || 		// general tracking flag enabled; or
 		(xRtosSemaphoreCheck(pSH) == 1)) {		// address found in the list; then
-		XP("SH Init %p=%p" strNL, pSH, *pSH);		// report the event
+		P("SH Init %p=%p" strNL, pSH, *pSH);		// report the event
 	}
 	#endif
 	IF_myASSERT(debugRESULT, *pSH != 0);
@@ -188,7 +188,7 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	if ((pSHmatch && (pSH == pSHmatch)) ||		// Specific match address; or
 		(anySYSFLAGS(sfTRACKER) == 1) ||		// general tracking flag enabled; then
 		(xRtosSemaphoreCheck(pSH) == 1)) {		// address found in the list; or
-		XP("SH Delete %p" strNL, pSH);			// report the event
+		P("SH Delete %p" strNL, pSH);			// report the event
 	}
 	#endif
 	*pSH = 0;
