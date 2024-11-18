@@ -530,14 +530,14 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 		TickType_t tPer = xTimerGetPeriod(thTmr);
 		TickType_t tExp = xTimerGetExpiryTime(thTmr);
 		i32_t tRem = tExp - xTaskGetTickCount();
-		iRV = wprintfx(psR, "\t%s: #%lu Auto=%c Run=%c", pcTimerGetName(thTmr), uxTimerGetTimerNumber(thTmr),
-			uxTimerGetReloadMode(thTmr) ? CHR_Y : CHR_N, bActive ? CHR_Y : CHR_N);
 		BaseType_t bActive = xTimerIsTimerActive(thTmr); 
+		iRV = wprintfx(psR, "%C%s%C\t#%lu  Auto=%c  Run=%c", xpfCOL(colourFG_CYAN,0), pcTimerGetName(thTmr), xpfCOL(attrRESET,0),
+			uxTimerGetTimerNumber(thTmr), uxTimerGetReloadMode(thTmr) ? CHR_Y : CHR_N, bActive ? CHR_Y : CHR_N);
 		if (bActive) iRV += wprintfx(psR, "  tPeriod=%#'lu  tExpiry=%#'lu  tRemain=%#'ld", tPer, tExp, tRem);
 	} else {
 		iRV = wprintfx(psR, "\t%p Invalid Timer handle", thTmr);
 	}
-	iRV += wprintfx(psR, repFORM_TST(psR,aNL) ? strNLx2 : strNL);
+	if (repFORM_TST(psR,aNL)) iRV += wprintfx(psR, strNL);
 	return iRV;
 }
 
