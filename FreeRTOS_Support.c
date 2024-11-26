@@ -329,7 +329,7 @@ int	xRtosReportTasks(report_t * psR) {
 		if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && psR->sFM.bXtras) iRV += wprintfx(psR, " %p %p", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
 		if (psR->sFM.bNL)			iRV += wprintfx(psR, strNL);
 		// For idle task(s) we do not want to add RunTime % to the task or Core RunTime
-		if (!bRtosTaskIsIdleTask(psTS->xHandle)) {		// NOT an IDLE task
+		if (bRtosTaskIsIdleTask(psTS->xHandle) == 0) {	// NOT an IDLE task
 			Active.U64val += psTS->ulRunTimeCounter;	// Update total active time
 		#if (portNUM_PROCESSORS > 1)
 			Cores[c].U64val += psTS->ulRunTimeCounter;	// Update core active time
