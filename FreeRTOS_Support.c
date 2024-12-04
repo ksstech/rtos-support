@@ -639,11 +639,10 @@ void __wrap_vTaskDelete(TaskHandle_t xHandle) {
 		}
 	}
 	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
-	if (psTS) {						// Clear "static" task info
-		memset(psTS, 0, sizeof(TaskStatus_t));
+	if (psTS) memset(psTS, 0, sizeof(TaskStatus_t));	// Clear "static" task info
 	#if (debugTRACK)
 		MESSAGE("[%s] static task info cleared" strNL, caName);
-		#endif
+	#endif
 	}
 #endif
 
