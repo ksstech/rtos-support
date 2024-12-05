@@ -12,7 +12,6 @@
 #include "errors_events.h"
 #include "utilitiesX.h"
 
-#include "esp_debug_helpers.h"
 #include <string.h>
 
 #if (buildGUI > 0)
