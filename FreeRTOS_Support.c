@@ -350,59 +350,76 @@ BaseType_t __real_xTaskCreatePinnedToCore(TaskFunction_t, const char * const, co
 TaskHandle_t __real_xTaskCreateStatic(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const);
 TaskHandle_t __real_xTaskCreateStaticPinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const, const BaseType_t);
 void __real_vTaskDelete(TaskHandle_t xHandle);
+
+#if 0
+#define buildMAX_TASKS		(sizeof(u32_t) * BITS_IN_BYTE)
+static u32_t TaskTracker = 0;
+
 BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask) {
 	TASK_START(pcName);
-#if (configRUNTIME_SIZE == 4)
-	BaseType_t btRVsema = pfFALSE;
-	if (allSYSFLAGS(sfAPPSTAGE)) btRVsema = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+#if	(portNUM_PROCESSORS > 1)
+	BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 #endif
 	BaseType_t btRV = __real_xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
-#if (configRUNTIME_SIZE == 4)
-	if (allSYSFLAGS(sfAPPSTAGE) && btRVsema	== pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
-#endif
 	IF_myASSERT(debugRESULT, btRV == pdPASS);
+	int i; for (i = 0; i < buildMAX_TASKS && TaskTracker & (1UL << i); ++i);
+	IF_myASSERT(debugTRACK, i < buildMAX_TASKS);
+	TaskTracker |= 1UL << i;
+	vTaskSetThreadLocalStoragePointer(*pxCreatedTask, buildFRTLSP_EVT_MASK, (void *)(1UL << i));
+#if	(portNUM_PROCESSORS > 1)
+	if (btSR == pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
+#endif
 	return btRV;
 }
 
 BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
 	TASK_START(pcName);
-#if (configRUNTIME_SIZE == 4)
-	BaseType_t btRVsema = pfFALSE;
-	if (allSYSFLAGS(sfAPPSTAGE)) btRVsema = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+#if	(portNUM_PROCESSORS > 1)
+	BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 #endif
 	BaseType_t btRV = __real_xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
-#if (configRUNTIME_SIZE == 4)
-	if (allSYSFLAGS(sfAPPSTAGE) && btRVsema	== pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
-#endif
 	IF_myASSERT(debugRESULT, btRV == pdPASS);
+	int i; for (i = 0; i < buildMAX_TASKS && TaskTracker & (1UL << i); ++i);
+	IF_myASSERT(debugTRACK, i < buildMAX_TASKS);
+	TaskTracker |= 1UL << i;
+	vTaskSetThreadLocalStoragePointer(*pxCreatedTask, buildFRTLSP_EVT_MASK, (void *)(1UL << i));
+#if	(portNUM_PROCESSORS > 1)
+	if (btSR == pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
+#endif
 	return btRV;
 }
 
 TaskHandle_t __wrap_xTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer) {
 	TASK_START(pcName);
-#if (configRUNTIME_SIZE == 4)
-	BaseType_t btRV = pdFALSE;
-	if (allSYSFLAGS(sfAPPSTAGE)) btRVsema = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+#if	(portNUM_PROCESSORS > 1)
+	BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 #endif
 	TaskHandle_t thRV = __real_xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
-#if (configRUNTIME_SIZE == 4)
-	if (allSYSFLAGS(sfAPPSTAGE) && btRVsema	== pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
-#endif
 	IF_myASSERT(debugRESULT, thRV != 0);
+	int i; for (i = 0; i < buildMAX_TASKS && TaskTracker & (1UL << i); ++i);
+	IF_myASSERT(debugTRACK, i < buildMAX_TASKS);
+	TaskTracker |= 1UL << i;
+	vTaskSetThreadLocalStoragePointer(thRV, buildFRTLSP_EVT_MASK, (void *)(1UL << i));
+#if	(portNUM_PROCESSORS > 1)
+	if (btSR == pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
+#endif
 	return thRV;
 }
 
 TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID) {
 	TASK_START(pcName);
-#if (configRUNTIME_SIZE == 4)
-	BaseType_t btRV = pdFALSE;
-	if (allSYSFLAGS(sfAPPSTAGE)) btRVsema = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+#if	(portNUM_PROCESSORS > 1)
+	BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 #endif
 	TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
-#if (configRUNTIME_SIZE == 4)
-	if (allSYSFLAGS(sfAPPSTAGE) && btRVsema	== pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
-#endif
 	IF_myASSERT(debugRESULT, thRV != 0);
+	int i; for (i = 0; i < buildMAX_TASKS && TaskTracker & (1UL << i); ++i);
+	IF_myASSERT(debugTRACK, i < buildMAX_TASKS);
+	TaskTracker |= 1UL << i;
+	vTaskSetThreadLocalStoragePointer(thRV, buildFRTLSP_EVT_MASK, (void *)(1UL << i));
+#if	(portNUM_PROCESSORS > 1)
+	if (btSR == pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
+#endif
 	return thRV;
 }
 
@@ -411,28 +428,24 @@ TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, con
  * @param	Handle of task to be terminated (NULL = calling task)
  */
 void __wrap_vTaskDelete(TaskHandle_t xHandle) {
-#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
-	BaseType_t btRVsema = pdFALSE;
-	if (allSYSFLAGS(sfAPPSTAGE)) btRVsema = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
-#endif
-	if (xHandle == NULL) xHandle = xTaskGetCurrentTaskHandle();
 #if (debugTRACK)
 	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN+1];
 	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
 #endif
+	if (xHandle == NULL) xHandle = xTaskGetCurrentTaskHandle();
 	EventBits_t ebX = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
-	if (ebX) {							// Clear the RUN & DELETE task flags
-		xRtosClearTaskRUN(ebX);
-		xRtosClearTaskDELETE(ebX);
-	#if (debugTRACK)
+	if (ebX) {
+		TaskTracker &= ~(ebX);							// clear task mask
+		xRtosClearTaskRUN(ebX);							// clear RUN and
+		xRtosClearTaskDELETE(ebX);						// DELete flags
 		MESSAGE("[%s] RUN/DELETE flags cleared" strNL, caName);
-	#endif
 	}
+	__real_vTaskDelete(xHandle);
+	TASK_STOP(caName);
+}
 
+#else
 
-#if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
-	if (allSYSFLAGS(sfAPPSTAGE) && btRVsema	== pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
-#endif
 BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask) {
 	TASK_START(pcName);
 	BaseType_t btRV = __real_xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
@@ -480,6 +493,7 @@ void __wrap_vTaskDelete(TaskHandle_t xHandle) {
 	__real_vTaskDelete(xHandle);
 	TASK_STOP(caName);
 }
+#endif
 
 /**
  * @brief	Set/clear all flags to force task[s] to initiate an organised shutdown
