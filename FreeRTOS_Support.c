@@ -30,51 +30,6 @@
 #define P							PX
 #define IF_P						IF_PX
 
-// #################################### FreeRTOS global variables ##################################
-
-static u32_t g_HeapBegin;
-
-// ################################# FreeRTOS heap & stack  ########################################
-// Required to handle FreeRTOS heap_5.c implementation
-// The array is terminated using a NULL zero sized region definition, and the
-// memory regions defined in the array ***must*** appear in address order from
-// low address to high address.
-#if	 defined(cc3200) && defined( __TI_ARM__ )
-	extern	u32_t __TI_static_base__, __HEAP_SIZE;
-	HeapRegion_t xHeapRegions[] = {
-		{ ( u8_t * ) SRAM_BASE,				SRAM1_SIZE 				},	// portion of memory used by bootloader
-		{ ( u8_t * ) &__TI_static_base__, 	(size_t) &__HEAP_SIZE	},
-		{ ( u8_t * ) NULL, 					0						},
-	};
-
-#elif defined(HW_P_PHOTON) && defined( __CC_ARM )
-	extern	u8_t Image$$RW_IRAM1$$ZI$$Limit[];
-	extern	u8_t Image$$ARM_LIB_STACK$$ZI$$Base[];
-	HeapRegion_t xHeapRegions[] = {
-		{ Image$$RW_IRAM1$$ZI$$Limit,	(size_t) Image$$ARM_LIB_STACK$$ZI$$Base } ,
-		{ NULL,							0 }
-	};
-
-#elif defined(HW_P_PHOTON) && defined( __GNUC__ )
-	extern	u8_t __HEAP_BASE[], __HEAP_SIZE[];
-	HeapRegion_t xHeapRegions[] = {
-		{ __HEAP_BASE,	(size_t) __HEAP_SIZE } ,
-		{ NULL,					0 }
-	};
-#endif
-
-void vRtosHeapSetup(void) {
-	#if defined(HW_P_PHOTON ) && defined( __CC_ARM )
-		xHeapRegions[0].xSizeInBytes	-= (size_t) Image$$RW_IRAM1$$ZI$$Limit;
-		vPortDefineHeapRegions(xHeapRegions);
-	#elif defined(cc3200) && defined( __TI_ARM__ )
-		vPortDefineHeapRegions(xHeapRegions);
-	#elif defined(ESP_PLATFORM) && defined( __GNUC__ )
-//		#warning "right options!!"
-	#endif
-	g_HeapBegin = xPortGetFreeHeapSize();
-}
-
 // ##################################### Semaphore support #########################################
 
 #if	(rtosDEBUG_SEMA > -1)
@@ -355,7 +310,9 @@ next:
 	return iRV;
 }
 
+static u32_t g_HeapBegin;
 
+void vRtosHeapSetup(void) { g_HeapBegin = xPortGetFreeHeapSize(); }
 
 int xRtosReportMemory(report_t * psR) {
 	return wprintfx(psR, "%CFreeRTOS:%C %#'u -> %#'u <- %#'u%s", xpfCOL(colourFG_CYAN,0), xpfCOL(attrRESET,0),
