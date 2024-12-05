@@ -433,11 +433,52 @@ void __wrap_vTaskDelete(TaskHandle_t xHandle) {
 #if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
 	if (allSYSFLAGS(sfAPPSTAGE) && btRVsema	== pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
 #endif
+BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask) {
+	TASK_START(pcName);
+	BaseType_t btRV = __real_xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
+	IF_myASSERT(debugRESULT, btRV == pdPASS);
+	return btRV;
+}
 
+BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
+	TASK_START(pcName);
+	BaseType_t btRV = __real_xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
+	IF_myASSERT(debugRESULT, btRV == pdPASS);
+	return btRV;
+}
+
+TaskHandle_t __wrap_xTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer) {
+	TASK_START(pcName);
+	TaskHandle_t thRV = __real_xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
+	IF_myASSERT(debugRESULT, thRV != 0);
+	return thRV;
+}
+
+TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID) {
+	TASK_START(pcName);
+	TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
+	IF_myASSERT(debugRESULT, thRV != 0);
+	return thRV;
+}
+
+/**
+ * @brief	Clear task runtime and static statistics data then delete the task
+ * @param	Handle of task to be terminated (NULL = calling task)
+ */
+void __wrap_vTaskDelete(TaskHandle_t xHandle) {
 #if (debugTRACK)
-	TASK_STOP(caName);
+	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN+1];
+	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
 #endif
+	if (xHandle == NULL) xHandle = xTaskGetCurrentTaskHandle();
+	EventBits_t ebX = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
+	if (ebX) {
+		xRtosClearTaskRUN(ebX);							// clear RUN and
+		xRtosClearTaskDELETE(ebX);						// DELete flags
+		MESSAGE("[%s] RUN/DELETE flags cleared" strNL, caName);
+	}
 	__real_vTaskDelete(xHandle);
+	TASK_STOP(caName);
 }
 
 /**
