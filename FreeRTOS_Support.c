@@ -389,6 +389,10 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 // ################################## Task creation/deletion #######################################
 
 BaseType_t __real_xTaskCreate(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *);
+BaseType_t __real_xTaskCreatePinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *, const BaseType_t);
+TaskHandle_t __real_xTaskCreateStatic(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const);
+TaskHandle_t __real_xTaskCreateStaticPinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const, const BaseType_t);
+void __real_vTaskDelete(TaskHandle_t xHandle);
 BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask) {
 	TASK_START(pcName);
 #if (configRUNTIME_SIZE == 4)
@@ -403,7 +407,6 @@ BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcNa
 	return btRV;
 }
 
-BaseType_t __real_xTaskCreatePinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *, const BaseType_t);
 BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
 	TASK_START(pcName);
 #if (configRUNTIME_SIZE == 4)
@@ -418,7 +421,6 @@ BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char 
 	return btRV;
 }
 
-TaskHandle_t __real_xTaskCreateStatic(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const);
 TaskHandle_t __wrap_xTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer) {
 	TASK_START(pcName);
 #if (configRUNTIME_SIZE == 4)
@@ -433,7 +435,6 @@ TaskHandle_t __wrap_xTaskCreateStatic(TaskFunction_t pxTaskCode, const char * co
 	return thRV;
 }
 
-TaskHandle_t __real_xTaskCreateStaticPinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const, const BaseType_t);
 TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID) {
 	TASK_START(pcName);
 #if (configRUNTIME_SIZE == 4)
@@ -452,7 +453,6 @@ TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, con
  * @brief	Clear task runtime and static statistics data then delete the task
  * @param	Handle of task to be terminated (NULL = calling task)
  */
-void __real_vTaskDelete(TaskHandle_t xHandle);
 void __wrap_vTaskDelete(TaskHandle_t xHandle) {
 #if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
 	BaseType_t btRVsema = pdFALSE;
