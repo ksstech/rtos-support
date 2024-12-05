@@ -32,9 +32,7 @@ extern "C" {
 #define TASK_START(name) 	MESSAGE("[%s] starting" strNL, name)
 #define TASK_STOP(name) 	MESSAGE("[%s] stopping" strNL, name)
 
-#if defined(CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64) && (CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64 == 1)
-	#define configRUNTIME_SIZE	8
-#else
+#ifndef CONFIG_FREERTOS_RUN_TIME_COUNTER_TYPE_U64
 	#error "Must be built with 64bit Runtime Counter, support for 32bit removed !!!"
 #endif
 
