@@ -429,24 +429,6 @@ void __wrap_vTaskDelete(TaskHandle_t xHandle) {
 	#endif
 	}
 
-#if (configRUNTIME_SIZE == 4)		// 32bit tick counters, clear runtime stats collected.
-	for (int i = 0; i <= configFR_MAX_TASKS; ++i) {
-		if (Handle[i] == xHandle) {	// Clear dynamic runtime info
-			Tasks[i].U64val = 0ULL;
-			Handle[i] = NULL;
-		#if (debugTRACK)
-			MESSAGE("[%s] dynamic stats removed" strNL, caName);
-		#endif
-			break;
-		}
-	}
-	TaskStatus_t * psTS = psRtosStatsFindWithHandle(xHandle);
-	if (psTS) memset(psTS, 0, sizeof(TaskStatus_t));	// Clear "static" task info
-	#if (debugTRACK)
-		MESSAGE("[%s] static task info cleared" strNL, caName);
-	#endif
-	}
-#endif
 
 #if (portNUM_PROCESSORS > 1) || (configRUNTIME_SIZE == 4)
 	if (allSYSFLAGS(sfAPPSTAGE) && btRVsema	== pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
