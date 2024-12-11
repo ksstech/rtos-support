@@ -127,13 +127,15 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 
 // ############################### Task Run/Delete status support ##################################
 
-bool bRtosTaskWaitOK(const EventBits_t xEB, TickType_t ttW) {
+bool bRtosTaskWaitOK(u32_t TaskMask, TickType_t ttW) {
+	if (TaskMask == 0UL) TaskMask = (u32_t) pvTaskGetThreadLocalStoragePointer(NULL, buildFRTLSP_EVT_MASK);
+	IF_myASSERT(debugTRACK, __builtin_popcountl(TaskMask) == 1);
 	// step 1: check if task is meant to delete/terminate, if true return 0
-	if (xRtosCheckTaskDELETE(xEB)) return 0;
+	if (xRtosCheckTaskDELETE(TaskMask))				return 0;
 	// step 2: check if enabled to run again, or wait for period...
-	if (xRtosWaitTaskRUN(xEB, ttW) == 0) return 0;
+	if (xRtosWaitTaskRUN(TaskMask, ttW) == 0)		return 0;
 	// step 3: since now definitely enabled to run, check for delete state again
-	return xRtosCheckTaskDELETE(xEB) ? 0 : 1;
+	return xRtosCheckTaskDELETE(TaskMask) ? 0 : 1;
 }
 
 // ################################### Task status reporting #######################################

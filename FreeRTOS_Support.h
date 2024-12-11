@@ -122,7 +122,7 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t *);
  * @param	uxTaskMask - specific task bitmap
  * @return	0 if task should delete, 1 if it should run...
  */
-bool bRtosTaskWaitOK(const EventBits_t ebX, TickType_t ttW);
+bool bRtosTaskWaitOK(u32_t TaskMask, TickType_t ttW);
 
 // ################################### Task status reporting #######################################
 
