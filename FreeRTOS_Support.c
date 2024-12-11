@@ -1,12 +1,12 @@
 //	FreeRTOS_Support.c - Copyright (c) 2015-24 Andre M. MAree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
-#include "FreeRTOS_Support.h"							// Must be before hal_nvic.h"
+#include "FreeRTOS_Support.h"
 #include "hal_options.h"
 #include "hal_memory.h"
 #include "hal_nvic.h"
 #include "hal_stdio.h"
-#include "printfx.h"									// +x_definitions +stdarg +stdint +stdio
+#include "printfx.h"
 #include "syslog.h"
 #include "systiming.h"
 #include "errors_events.h"
@@ -21,12 +21,13 @@
 // ########################################### Macros ##############################################
 
 #define	debugFLAG					0xF000
+#define debugTASKS					(debugFLAG & 0x0001)
 #define	debugTIMING					(debugFLAG_GLOBAL & debugFLAG & 0x1000)
 #define	debugTRACK					(debugFLAG_GLOBAL & debugFLAG & 0x2000)
 #define	debugPARAM					(debugFLAG_GLOBAL & debugFLAG & 0x4000)
 #define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
 
-#define P							PX
+#define P							RP
 #define IF_P						IF_PX
 
 // ##################################### Semaphore support #########################################
@@ -231,7 +232,7 @@ int	xRtosReportTasks(report_t * psR) {
 	if (TotalAdj == 0ULL)			return 0;
 	Active.U64val = 0;									// reset overall active running total
 #if (portNUM_PROCESSORS > 1)
-	memset(&Cores[0], 0, sizeof(Cores));			// reset time/core running totals
+	memset(&Cores[0], 0, sizeof(Cores));				// reset time/core running totals
 #endif
 	for (int a = 0; a < NumTasks; ++a) {				// determine value of highest numbered task
 		TaskStatus_t * psTS = &sTS[a];
@@ -251,17 +252,17 @@ int	xRtosReportTasks(report_t * psR) {
 	if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE) && psR->sFM.bXtras) iRV += wprintfx(psR, " Stack Base -Task TCB-");
 	iRV += wprintfx(psR, "%C" strNL, xpfCOL(attrRESET,0));
 
-	u32_t Units, Fracts, TaskMask = 0x1;				// display individual task info
+	u32_t Units, Fracts, TaskMask = 0x1;
+	// display individual task info
 	for (int a = 1; a <= MaxNum; ++a) {
 		TaskStatus_t * psTS = psRtosStatsFindWithNumber(a);
-		if ((psTS == NULL) ||
-			(psTS->eCurrentState >= eInvalid) ||
-			(psR->sFM.uCount & TaskMask) == 0 ||
-			(psTS->uxCurrentPriority >= (UBaseType_t) configMAX_PRIORITIES) ||
-			(psTS->uxBasePriority >= configMAX_PRIORITIES))
+		if ((psTS == NULL) || (psTS->eCurrentState >= eInvalid) || ((psR->sFM.uCount & TaskMask) == 0) ||
+			(psTS->uxCurrentPriority >= (UBaseType_t) configMAX_PRIORITIES) || (psTS->uxBasePriority >= configMAX_PRIORITIES)) {
 			goto next;
+		}
 		// Check for invalid Core ID, often happens in process of shutting down tasks.
-		if ((psTS->xCoreID != tskNO_AFFINITY) && !INRANGE(0, psTS->xCoreID, portNUM_PROCESSORS-1)) {
+		if ((psTS->xCoreID != tskNO_AFFINITY) &&
+			INRANGE(0, psTS->xCoreID, portNUM_PROCESSORS-1) == 0) {
 			iRV += wprintfx(psR, "%d CoreID=%d skipped !!!" strNL, a, psTS->xCoreID);
 			goto next;
 		}
@@ -270,10 +271,10 @@ int	xRtosReportTasks(report_t * psR) {
 		iRV += wprintfx(psR, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
 		if (psR->sFM.bState)		iRV += wprintfx(psR, "%c ", TaskState[psTS->eCurrentState]);
 		if (psR->sFM.bStack)		iRV += wprintfx(psR, "%4u ", psTS->usStackHighWaterMark);
-	#if (portNUM_PROCESSORS > 1)
-		int c = (psTS->xCoreID == tskNO_AFFINITY) ? 2 : psTS->xCoreID;
-		if (psR->sFM.bCore)			iRV += wprintfx(psR, "%c ", caMCU[c]);
-	#endif
+		#if (portNUM_PROCESSORS > 1)
+			int c = (psTS->xCoreID == tskNO_AFFINITY) ? 2 : psTS->xCoreID;
+			if (psR->sFM.bCore)		iRV += wprintfx(psR, "%c ", caMCU[c]);
+		#endif
 		// Calculate & display individual task utilisation.
 		Units = psTS->ulRunTimeCounter / TotalAdj;
 		Fracts = ((psTS->ulRunTimeCounter * 100) / TotalAdj) % 100;
@@ -284,9 +285,9 @@ int	xRtosReportTasks(report_t * psR) {
 		// For idle task(s) we do not want to add RunTime % to the task or Core RunTime
 		if (bRtosTaskIsIdleTask(psTS->xHandle) == 0) {	// NOT an IDLE task
 			Active.U64val += psTS->ulRunTimeCounter;	// Update total active time
-		#if (portNUM_PROCESSORS > 1)
-			Cores[c].U64val += psTS->ulRunTimeCounter;	// Update core active time
-		#endif
+			#if (portNUM_PROCESSORS > 1)
+				Cores[c].U64val += psTS->ulRunTimeCounter;	// Update core active time
+			#endif
 		}
 next:
 		TaskMask <<= 1;
