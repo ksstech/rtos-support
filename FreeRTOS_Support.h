@@ -141,10 +141,10 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t *);
 #define xRtosWaitTaskRUN(ebX, ttW)		_EGwait(TaskRunState,ebX,ttW)
 #define xRtosWaitTaskDELETE(ebX, ttW)	_EGwait(TaskDeleteState,ebX,ttW)
 
-#define bRtosTaskCheckOK(ebX)			((xRtosCheckTaskDELETE(ebX) || !xRtosCheckTaskRUN(ebX)) ? 0 : 1)
 /**
  * @brief	Check if task set to RUN AND NOT set to DELETE, return 1 (task set to run but not delete) else 0
  */
+#define bRtosTaskCheckOK(ebX)			((xRtosCheckTaskDELETE(ebX) && xRtosCheckTaskRUN(ebX)) ? 0 : 1)
 
 /**
  * @brief	check if a task should a) terminate or b) run
