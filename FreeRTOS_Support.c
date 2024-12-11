@@ -32,17 +32,16 @@
 
 // ##################################### Semaphore support #########################################
 
-#if	(rtosDEBUG_SEMA > -1)
 SemaphoreHandle_t * pSHmatch = NULL;
-SemaphoreHandle_t * IgnoreList[] = { &shUARTmux, /* &shTaskInfo &SL_VarMux &SL_NetMux */ };
+SemaphoreHandle_t * MonitorList[] = { &shUARTmux, /* &shTaskInfo &SL_VarMux &SL_NetMux */ };
 
 /**
  * @brief	match semaphore address provided against list entries
  * @param	pSH	pointer to semaphore handle
  * @return	1 if found in list else 0
 */
-bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
-	for(int i = 0; i < NO_MEM(IgnoreList); ++i) if (IgnoreList[i] == pSH) return 1;
+bool xRtosSemaphoreCheckList(SemaphoreHandle_t * pSH) {
+	for(int i = 0; i < NO_MEM(MonitorList); ++i) if (MonitorList[i] == pSH) return 1;
 	return 0;
 }
 
@@ -53,85 +52,76 @@ bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
  * @param	tElap elapsed time (ticks)
 */
 void vRtosSemaphoreReport(SemaphoreHandle_t * pSH, const char * pcMess, TickType_t tElap) {
-	if ((pSHmatch && (pSH == pSHmatch)) ||		// Specific match address; or
-		(anySYSFLAGS(sfTRACKER) == 1) ||		// general tracking flag enabled; or
-		(xRtosSemaphoreCheck(pSH) == 1)) {		// address found in the list; then report
-		char *pcHldr = pcTaskGetName(xSemaphoreGetMutexHolder(*pSH));
-		char *pcRcvr = pcTaskGetName(xTaskGetCurrentTaskHandle());
-		P("SH %s %d %p H=%s R=%s (%lu)" strNL, pcMess, esp_cpu_get_core_id(), pSH, pcHldr, pcRcvr, tElap);
-	}
+	char *pcHldr = pcTaskGetName(xSemaphoreGetMutexHolder(*pSH));
+	char *pcRcvr = pcTaskGetName(NULL);
+	P("sh%s %d %p H=%s R=%s (%lu)" strNL, pcMess, esp_cpu_get_core_id(), pSH, pcHldr, pcRcvr, tElap);
+	IF_EXEC_1(rtosDEBUG_SEMA > 0 && (tElap == 0), esp_backtrace_print, rtosDEBUG_SEMA);
 }
-#endif
+
+bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
+	// Specific match address; or // address found in the list; then report; or general tracking flag enabled
+	return (pSHmatch && (pSH == pSHmatch)) ||
+			xRtosSemaphoreCheckList(pSH) ||
+			sSysFlags.track ? 1 : 0;
+}
 
 SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 	*pSH = xSemaphoreCreateMutex();
-#if (rtosDEBUG_SEMA > 0)
-	if ((pSHmatch && pSH == pSHmatch) ||		// Specific match address; or
-		(anySYSFLAGS(sfTRACKER) == 1) || 		// general tracking flag enabled; or
-		(xRtosSemaphoreCheck(pSH) == 1)) {		// address found in the list; then
-		P("SH Init %p=%p" strNL, pSH, *pSH);		// report the event
-	}
-#endif
+	IF_EXEC_3(rtosDEBUG_SEMA > 0 && xRtosSemaphoreCheck(pSH), P, "shINIT %p=%p" strNL, pSH, *pSH);			// report the event
 	IF_myASSERT(debugRESULT, *pSH != 0);
 	return *pSH;
 }
 
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
-/*	if (halNVIC_CalledFromISR()) {
-		esp_backtrace_print(3); 
-		*pSH = NULL;
-		return pdTRUE;
-	} */
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) return pdTRUE;
+	// if scheduler not (yet) running, make it...
+	if (sSysFlags.stage0 == 0 || xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) {
+		IF_EXEC_3(rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH), vRtosSemaphoreReport, pSH, "E_GIVE", 0);
+		return pdFALSE;// pdTRUE;
+	}
+	// if semaphore not initialized, do so now... 
 	if (*pSH == NULL) xRtosSemaphoreInit(pSH);
-	bool FromISR = halNVIC_CalledFromISR();
-	BaseType_t btRV, btHPTwoken = pdFALSE;
+	BaseType_t btSR, btHPTwoken = pdFALSE;
 #if	(rtosDEBUG_SEMA > -1)
-	tWait = u32RoundUP(tWait,10);
-	TickType_t tStep = (tWait == portMAX_DELAY) ? pdMS_TO_TICKS(10000) : tWait / 10;
-	TickType_t tElap = 0;
+	TickType_t tStep, tElap = 0;
+	if (tWait != portMAX_DELAY) {
+		tWait = u32RoundUP(tWait, 10);
+		tStep = tWait / 10;
+	} else {
+		tStep = pdMS_TO_TICKS(10000);
+	}
+	IF_EXEC_3(rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH), vRtosSemaphoreReport, pSH, "TAKE", tElap);
 	do {
-		if (FromISR) btRV = xSemaphoreTakeFromISR(*pSH, &btHPTwoken);
-		else btRV = xSemaphoreTake(*pSH, tStep);
-		IF_EXEC_3(rtosDEBUG_SEMA > 0, vRtosSemaphoreReport, pSH, "TAKE", tElap);
-		IF_EXEC_1(rtosDEBUG_SEMA > 0, esp_backtrace_print, rtosDEBUG_SEMA); // Decode return addresses [optional]
-		if (btRV == pdTRUE) break;
-		IF_EXEC_3(rtosDEBUG_SEMA == 0, vRtosSemaphoreReport, pSH, "TAKE", tElap);
+		// try taking the semaphore
+		btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tStep);
+		// if successful, all OK....
+		if (btSR == pdTRUE) break;
+		// if NOT successful, report status and adjust elapsed time
+		IF_EXEC_3(rtosDEBUG_SEMA > -1, vRtosSemaphoreReport, pSH, "TAKE", tElap);
 		if (tWait != portMAX_DELAY) tWait -= tStep;
 		tElap += tStep;
 	} while (tWait > tStep);
 #else
-	if (FromISR) btRV = xSemaphoreTakeFromISR(*pSH, &btHPTwoken);
-	else btRV = xSemaphoreTake(*pSH, tWait);
+	btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tWait);
 #endif
 	if (btHPTwoken == pdTRUE) portYIELD_FROM_ISR();
-	return btRV;
+	return btSR;
 }
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
-//	if (halNVIC_CalledFromISR()) { esp_backtrace_print(3); return pdTRUE; }
-	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSH == 0)
-		return pdTRUE;
-	bool FromISR = halNVIC_CalledFromISR();
-	BaseType_t btRV, btHPTwoken = pdFALSE;
-	if (FromISR) btRV = xSemaphoreGiveFromISR(*pSH, &btHPTwoken);
-	else btRV = xSemaphoreGive(*pSH);
-#if (rtosDEBUG_SEMA > 0)
-	vRtosSemaphoreReport(pSH, "GIVE", 0);
-#endif
+	if (sSysFlags.stage0 == 0 || xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSH == 0) {
+		IF_EXEC_3(rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH), vRtosSemaphoreReport, pSH, "E_TAKE", 0);
+		return pdFALSE;// pdTRUE;
+	}
+	BaseType_t btHPTwoken = pdFALSE;
+	BaseType_t btSR = halNVIC_CalledFromISR() ? xSemaphoreGiveFromISR(*pSH, &btHPTwoken) : xSemaphoreGive(*pSH);
+	IF_EXEC_3(rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH), vRtosSemaphoreReport, pSH, "GIVE", 0);
 	if (btHPTwoken == pdTRUE) portYIELD_FROM_ISR(); 
-	return btRV;
+	return btSR;
 }
 
 void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	if (*pSH) vSemaphoreDelete(*pSH);
-#if (rtosDEBUG_SEMA > 0)
-	if ((pSHmatch && (pSH == pSHmatch)) ||		// Specific match address; or
-		(anySYSFLAGS(sfTRACKER) == 1) ||		// general tracking flag enabled; then
-		(xRtosSemaphoreCheck(pSH) == 1)) {		// address found in the list; or
-		P("SH Delete %p" strNL, pSH);			// report the event
-	}
-#endif
+	IF_EXEC_2(rtosDEBUG_SEMA > 0 && xRtosSemaphoreCheck(pSH), P, "shDEL %p" strNL, pSH);
 	*pSH = 0;
 }
 

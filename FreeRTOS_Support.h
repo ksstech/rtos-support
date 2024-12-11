@@ -134,6 +134,8 @@ int xRtosReportTimer(struct report_t * psRprt, TimerHandle_t thTimer);
 
 // ################################## Task creation/deletion #######################################
 
+TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara);
+
 void vTaskSetTerminateFlags(const EventBits_t uxTaskMask);
 
 // ####################################### Debug support ###########################################
