@@ -38,6 +38,19 @@ extern "C" {
 
 // ######################################## Enumerations ###########################################
 
+// ######################################### Structures ############################################
+
+typedef const struct {
+	TaskFunction_t pxTaskCode;
+	const char * const pcName;
+	const u32_t usStackDepth;
+	UBaseType_t uxPriority;
+	StackType_t * const pxStackBuffer;
+	StaticTask_t * const pxTaskBuffer;
+	const BaseType_t xCoreID;
+	u32_t const xMask;
+} task_param_t;
+
 // ###################################### Global variables #########################################
 
 #if (configPRODUCTION == 0) && (rtosDEBUG_SEMA > -1)

@@ -409,9 +409,18 @@ TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, con
 	return thRV;
 }
 
+TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara) {
+	// check that single bit set in mask and that bit not already set in task tracking mask
+	IF_myASSERT(debugTRACK, __builtin_popcountl(psTP->xMask) == 1);
+	IF_myASSERT(debugTRACK, (TaskTracker & psTP->xMask) == 0);
+	TASK_START(psTP->pcName);
+	TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(psTP->pxTaskCode, psTP->pcName, psTP->usStackDepth, pvPara, psTP->uxPriority, psTP->pxStackBuffer, psTP->pxTaskBuffer, psTP->xCoreID);
+	IF_myASSERT(debugTRACK, thRV != 0);
 #if	(portNUM_PROCESSORS > 1)
 	BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 #endif
+	TaskTracker |= psTP->xMask;
+	vTaskSetThreadLocalStoragePointer(thRV, buildFRTLSP_EVT_MASK, (void *)psTP->xMask);
 #if	(portNUM_PROCESSORS > 1)
 	if (btSR == pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
 #endif
