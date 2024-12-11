@@ -456,8 +456,8 @@ void vTaskSetTerminateFlags(const EventBits_t uxTaskMask) {
 #if (halUSE_BSP == 1 && buildGUI == 4)
 	if (uxTaskMask & taskGUI_MASK) 	vGuiDeInit();
 #endif
-	xRtosSetTaskDELETE(uxTaskMask);
-	xRtosSetTaskRUN(uxTaskMask);						// must enable run to trigger delete
+	halEventUpdateDeleteTasks(uxTaskMask, 1);			// first set the delete flag
+	halEventUpdateRunTasks(uxTaskMask, 1);				// then enable to run to start the  delete
 }
 
 // ####################################### Debug support ###########################################
