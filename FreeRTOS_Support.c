@@ -341,78 +341,77 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 
 // ################################## Task creation/deletion #######################################
 
+
+/* Need mechanism to dynamically build the bitmapped task mask used for signalling one or more tasks
+ *	to block in I2C Queue or be flagged for running or deletion. Currently a static mask 
+ *	is allocated to each APP task so building a combined mask is possible at compile time
+ *
+ * In order to accomodate library created tasks (LVGL?) that makes calls to the I2C subsystem we
+ *	need to be able to dynamically allocate equivalent unique masks to these tasks, on the fly. However, for
+ *	these "external" tasks the unique mask will only be used to un/block the task, not for run/delete control.
+ *
+ * Options for solving this scenario are...
+ *	a) Allocate masks dynamically at creation, find mechanism for building run/delete mask for PH1, PH2 and individual tasks
+ *	b) Static masks for APP tasks use 0->x, dynamic allocated x<-23, how do we specify static vs dynamic at creation?
+ *
+ * So, the crucial challenge is to be able to 
+ */
+static u32_t TaskTracker = 0xFF000000;					// reserve top 8 bits, 
+
+void vTaskAllocateMask(TaskHandle_t xHandle) {
+#if	(portNUM_PROCESSORS > 1)
+	BaseType_t btSR = sSysFlags.stage0 ? xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY) : pdFALSE;
+#endif
+	// Find next empty slot, mark as allocated, set as "LSP" in new task TCB
+	u32_t Mask = 0x80000000 >> __builtin_clzl(~TaskTracker);
+	TaskTracker |= Mask;
+	vTaskSetThreadLocalStoragePointer(xHandle, buildFRTLSP_EVT_MASK, (void *)Mask);
+#if	(portNUM_PROCESSORS > 1)
+	if (btSR == pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
+#endif
+}
+
 BaseType_t __real_xTaskCreate(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *);
-BaseType_t __real_xTaskCreatePinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *, const BaseType_t);
-TaskHandle_t __real_xTaskCreateStatic(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const);
-TaskHandle_t __real_xTaskCreateStaticPinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const, const BaseType_t);
-void __real_vTaskDelete(TaskHandle_t xHandle);
-
-#if 0
-#define buildMAX_TASKS		(sizeof(u32_t) * BITS_IN_BYTE)
-static u32_t TaskTracker = 0;
-
 BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask) {
-	TASK_START(pcName);
-#if	(portNUM_PROCESSORS > 1)
-	BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
-#endif
+	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
 	BaseType_t btRV = __real_xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
-	IF_myASSERT(debugRESULT, btRV == pdPASS);
-	int i; for (i = 0; i < buildMAX_TASKS && TaskTracker & (1UL << i); ++i);
-	IF_myASSERT(debugTRACK, i < buildMAX_TASKS);
-	TaskTracker |= 1UL << i;
-	vTaskSetThreadLocalStoragePointer(*pxCreatedTask, buildFRTLSP_EVT_MASK, (void *)(1UL << i));
-#if	(portNUM_PROCESSORS > 1)
-	if (btSR == pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
-#endif
+	IF_myASSERT(debugTRACK, btRV == pdPASS);
+	vTaskAllocateMask(*pxCreatedTask);
 	return btRV;
 }
 
+BaseType_t __real_xTaskCreatePinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *, const BaseType_t);
 BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
-	TASK_START(pcName);
-#if	(portNUM_PROCESSORS > 1)
-	BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
-#endif
+	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
 	BaseType_t btRV = __real_xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
-	IF_myASSERT(debugRESULT, btRV == pdPASS);
-	int i; for (i = 0; i < buildMAX_TASKS && TaskTracker & (1UL << i); ++i);
-	IF_myASSERT(debugTRACK, i < buildMAX_TASKS);
-	TaskTracker |= 1UL << i;
-	vTaskSetThreadLocalStoragePointer(*pxCreatedTask, buildFRTLSP_EVT_MASK, (void *)(1UL << i));
-#if	(portNUM_PROCESSORS > 1)
-	if (btSR == pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
-#endif
+	IF_myASSERT(debugTRACK, btRV == pdPASS);
+	// AMM Crash at this point ONLY with "main", possibly because of stack, crash if vTaskSetThreadLocalStoragePointer() called
+	// workaround move vTaskSetThreadLocalStoragePointer() to app_main
+	if (strcmp(pcName, "main") == 0) TaskTracker |= taskCONSOLE_MASK; else vTaskAllocateMask(*pxCreatedTask);
 	return btRV;
 }
 
+TaskHandle_t __real_xTaskCreateStatic(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const);
 TaskHandle_t __wrap_xTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer) {
-	TASK_START(pcName);
-#if	(portNUM_PROCESSORS > 1)
-	BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
-#endif
+	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
 	TaskHandle_t thRV = __real_xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
-	IF_myASSERT(debugRESULT, thRV != 0);
-	int i; for (i = 0; i < buildMAX_TASKS && TaskTracker & (1UL << i); ++i);
-	IF_myASSERT(debugTRACK, i < buildMAX_TASKS);
-	TaskTracker |= 1UL << i;
-	vTaskSetThreadLocalStoragePointer(thRV, buildFRTLSP_EVT_MASK, (void *)(1UL << i));
-#if	(portNUM_PROCESSORS > 1)
-	if (btSR == pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
-#endif
+	IF_myASSERT(debugTRACK, thRV != 0);
+	vTaskAllocateMask(thRV);
 	return thRV;
 }
 
+TaskHandle_t __real_xTaskCreateStaticPinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const, const BaseType_t);
 TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID) {
-	TASK_START(pcName);
+	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
+	TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
+	IF_myASSERT(debugTRACK, thRV != 0);
+	vTaskAllocateMask(thRV);
+	return thRV;
+}
+
 #if	(portNUM_PROCESSORS > 1)
 	BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 #endif
-	TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
-	IF_myASSERT(debugRESULT, thRV != 0);
-	int i; for (i = 0; i < buildMAX_TASKS && TaskTracker & (1UL << i); ++i);
-	IF_myASSERT(debugTRACK, i < buildMAX_TASKS);
-	TaskTracker |= 1UL << i;
-	vTaskSetThreadLocalStoragePointer(thRV, buildFRTLSP_EVT_MASK, (void *)(1UL << i));
 #if	(portNUM_PROCESSORS > 1)
 	if (btSR == pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
 #endif
@@ -423,73 +422,22 @@ TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, con
  * @brief	Clear task runtime and static statistics data then delete the task
  * @param	Handle of task to be terminated (NULL = calling task)
  */
+void __real_vTaskDelete(TaskHandle_t xHandle);
 void __wrap_vTaskDelete(TaskHandle_t xHandle) {
 #if (debugTRACK)
 	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN+1];
 	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
 #endif
-	if (xHandle == NULL) xHandle = xTaskGetCurrentTaskHandle();
-	EventBits_t ebX = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
+	EventBits_t ebX = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, buildFRTLSP_EVT_MASK);
 	if (ebX) {
 		TaskTracker &= ~(ebX);							// clear task mask
-		xRtosClearTaskRUN(ebX);							// clear RUN and
-		xRtosClearTaskDELETE(ebX);						// DELete flags
+		halEventUpdateRunTasks(ebX, 0);					// clear RUN and
+		halEventUpdateDeleteTasks(ebX, 0);				// DELete flags
 		MESSAGE("[%s] RUN/DELETE flags cleared" strNL, caName);
 	}
-	__real_vTaskDelete(xHandle);
 	TASK_STOP(caName);
-}
-
-#else
-
-BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask) {
-	TASK_START(pcName);
-	BaseType_t btRV = __real_xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
-	IF_myASSERT(debugRESULT, btRV == pdPASS);
-	return btRV;
-}
-
-BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
-	TASK_START(pcName);
-	BaseType_t btRV = __real_xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
-	IF_myASSERT(debugRESULT, btRV == pdPASS);
-	return btRV;
-}
-
-TaskHandle_t __wrap_xTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer) {
-	TASK_START(pcName);
-	TaskHandle_t thRV = __real_xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
-	IF_myASSERT(debugRESULT, thRV != 0);
-	return thRV;
-}
-
-TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID) {
-	TASK_START(pcName);
-	TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
-	IF_myASSERT(debugRESULT, thRV != 0);
-	return thRV;
-}
-
-/**
- * @brief	Clear task runtime and static statistics data then delete the task
- * @param	Handle of task to be terminated (NULL = calling task)
- */
-void __wrap_vTaskDelete(TaskHandle_t xHandle) {
-#if (debugTRACK)
-	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN+1];
-	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
-#endif
-	if (xHandle == NULL) xHandle = xTaskGetCurrentTaskHandle();
-	EventBits_t ebX = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, 1);
-	if (ebX) {
-		xRtosClearTaskRUN(ebX);							// clear RUN and
-		xRtosClearTaskDELETE(ebX);						// DELete flags
-		MESSAGE("[%s] RUN/DELETE flags cleared" strNL, caName);
-	}
 	__real_vTaskDelete(xHandle);
-	TASK_STOP(caName);
 }
-#endif
 
 /**
  * @brief	Set/clear all flags to force task[s] to initiate an organised shutdown
