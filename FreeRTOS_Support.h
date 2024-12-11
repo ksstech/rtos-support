@@ -151,6 +151,7 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t *);
  *			if, at entry, set to terminate immediately return result
  * 			if not, wait (possibly 0 ticks) for run status
  *			Before returning, again check if set to terminate.
+ * @param	uxTaskMask - specific task bitmap, if NULL will get current mask from task LSP0
  * @return	0 if task should delete, 1 if it should run...
  */
 bool bRtosTaskWaitOK(u32_t TaskMask, TickType_t ttW);
