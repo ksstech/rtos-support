@@ -453,6 +453,7 @@ void __wrap_vTaskDelete(TaskHandle_t xHandle) {
  * @param	mask indicating the task[s] to terminate
  */
 void vTaskSetTerminateFlags(const EventBits_t uxTaskMask) {
+	IF_myASSERT(debugTRACK, __builtin_popcountl(uxTaskMask) > 0);
 #if (halUSE_BSP == 1 && buildGUI == 4)
 	if (uxTaskMask & taskGUI_MASK) vGuiDeInit();
 #endif
