@@ -241,7 +241,7 @@ int	xRtosReportTasks(report_t * psR) {
 	if (psR->sFM.bCore)				iRV += wprintfx(psR, "X ");
 #endif
 	iRV += wprintfx(psR, " Util Ticks");
-	if (debugTRACK && (SL_LEV_DEF > SL_SEV_NOTICE) && psR->sFM.bXtras) iRV += wprintfx(psR, " Stack Base -Task TCB-");
+	if (debugTRACK && psR->sFM.bXtras) iRV += wprintfx(psR, "|Stack Base|-Task TCB-|   LSP    |");
 	iRV += wprintfx(psR, "%C" strNL, xpfCOL(attrRESET,0));
 
 	u32_t Units, Fracts, TaskMask = 0x1;
@@ -271,8 +271,12 @@ int	xRtosReportTasks(report_t * psR) {
 		Units = psTS->ulRunTimeCounter / TotalAdj;
 		Fracts = ((psTS->ulRunTimeCounter * 100) / TotalAdj) % 100;
 		iRV += wprintfx(psR, "%2lu.%02lu %#'5llu", Units, Fracts, psTS->ulRunTimeCounter);
-
-		if (debugTRACK && (SL_LEV_DEF >= SL_SEV_INFO) && psR->sFM.bXtras) iRV += wprintfx(psR, " %p %p", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
+		#if (debugTRACK)
+		if (debugTRACK && psR->sFM.bXtras) {
+			iRV += wprintfx(psR, " %p %p", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
+			iRV += wprintfx(psR, " %p", pvTaskGetThreadLocalStoragePointer(psTS->xHandle, 1));
+		}
+		#endif
 		if (psR->sFM.bNL)			iRV += wprintfx(psR, strNL);
 		// For idle task(s) we do not want to add RunTime % to the task or Core RunTime
 		if (bRtosTaskIsIdleTask(psTS->xHandle) == 0) {	// NOT an IDLE task
