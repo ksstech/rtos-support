@@ -338,10 +338,9 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
  * Options for solving this scenario are...
  *	a) Allocate masks dynamically at creation, find mechanism for building run/delete mask for PH1, PH2 and individual tasks
  *	b) Static masks for APP tasks use 0->x, dynamic allocated x<-23, how do we specify static vs dynamic at creation?
- *
- * So, the crucial challenge is to be able to 
  */
-static u32_t TaskTracker = 0xFF000000;					// reserve top 8 bits, 
+
+static u32_t TaskTracker = 0xFF000000;					// reserve top 8 bits, used internally in FreeRTOS.
 
 void vTaskAllocateMask(TaskHandle_t xHandle) {
 #if	(portNUM_PROCESSORS > 1)
@@ -368,11 +367,10 @@ BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcNa
 BaseType_t __real_xTaskCreatePinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *, const BaseType_t);
 BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
 	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
-	BaseType_t btRV = __real_xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask, xCoreID);
-	IF_myASSERT(debugTRACK, btRV == pdPASS);
-	// AMM Crash at this point ONLY with "main", possibly because of stack, crash if vTaskSetThreadLocalStoragePointer() called
-	// workaround move vTaskSetThreadLocalStoragePointer() to app_main
-	if (strcmp(pcName, "main") == 0) TaskTracker |= taskCONSOLE_MASK; else vTaskAllocateMask(*pxCreatedTask);
+	TaskHandle_t TempHandle;
+	BaseType_t btRV = __real_xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, &TempHandle, xCoreID);
+	vTaskAllocateMask(TempHandle);
+	if (pxCreatedTask) *pxCreatedTask = TempHandle;
 	return btRV;
 }
 
@@ -395,20 +393,19 @@ TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, con
 }
 
 TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara) {
-	// check that single bit set in mask and that bit not already set in task tracking mask
-	IF_myASSERT(debugTRACK, __builtin_popcountl(psTP->xMask) == 1);
-	IF_myASSERT(debugTRACK, (TaskTracker & psTP->xMask) == 0);
 	TASK_START(psTP->pcName);
-	TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(psTP->pxTaskCode, psTP->pcName, psTP->usStackDepth, pvPara, psTP->uxPriority, psTP->pxStackBuffer, psTP->pxTaskBuffer, psTP->xCoreID);
-	IF_myASSERT(debugTRACK, thRV != 0);
+	IF_myASSERT(debugTRACK, __builtin_popcountl(psTP->xMask) == 1);	// single bit set in mask ?
 #if	(portNUM_PROCESSORS > 1)
 	BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 #endif
+	IF_myASSERT(debugTRACK, (TaskTracker & psTP->xMask) == 0);		// Same bit not already set ?
 	TaskTracker |= psTP->xMask;
+	TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(psTP->pxTaskCode, psTP->pcName, psTP->usStackDepth, pvPara, psTP->uxPriority, psTP->pxStackBuffer, psTP->pxTaskBuffer, psTP->xCoreID);
 	vTaskSetThreadLocalStoragePointer(thRV, buildFRTLSP_EVT_MASK, (void *)psTP->xMask);
 #if	(portNUM_PROCESSORS > 1)
 	if (btSR == pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
 #endif
+	MESSAGE("TH=%p  TT=x%08X  TM=x%08X" strNL, thRV, TaskTracker, pvTaskGetThreadLocalStoragePointer(thRV, buildFRTLSP_EVT_MASK));
 	return thRV;
 }
 
