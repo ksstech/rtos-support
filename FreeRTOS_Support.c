@@ -11,12 +11,10 @@
 #include "systiming.h"
 #include "errors_events.h"
 #include "utilitiesX.h"
-
-#include <string.h>
-
-#if (buildGUI > 0)
-	#include "gui_main.hpp"
+#if (halUSE_BSP == 1 && buildGUI == 4)
+    #include "gui_main.hpp"
 #endif
+#include <string.h>
 
 // ########################################### Macros ##############################################
 
