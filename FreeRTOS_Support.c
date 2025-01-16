@@ -123,19 +123,6 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	*pSH = 0;
 }
 
-// ############################### Task Run/Delete status support ##################################
-
-bool bRtosTaskWaitOK(u32_t TaskMask, TickType_t ttW) {
-	if (TaskMask == 0UL) TaskMask = (u32_t) pvTaskGetThreadLocalStoragePointer(NULL, buildFRTLSP_EVT_MASK);
-	IF_myASSERT(debugTRACK, __builtin_popcountl(TaskMask) == 1);
-	// step 1: check if task is meant to delete/terminate, if true return 0
-	if (xRtosCheckTaskDELETE(TaskMask))				return 0;
-	// step 2: check if enabled to run again, or wait for period...
-	if (xRtosWaitTaskRUN(TaskMask, ttW) == 0)		return 0;
-	// step 3: since now definitely enabled to run, check for delete state again
-	return xRtosCheckTaskDELETE(TaskMask) ? 0 : 1;
-}
-
 // ################################### Task status reporting #######################################
 
 #if		(CONFIG_FREERTOS_MAX_TASK_NAME_LEN == 16)
@@ -451,7 +438,7 @@ void __wrap_vTaskDelete(TaskHandle_t xHandle) {
  * @param	mask indicating the task[s] to terminate
  */
 void vTaskSetTerminateFlags(const EventBits_t uxTaskMask) {
-	IF_myASSERT(debugTRACK, __builtin_popcountl(uxTaskMask) > 0);
+	if (uxTaskMask == 0) (EventBits_t) pvTaskGetThreadLocalStoragePointer(NULL, buildFRTLSP_EVT_MASK);
 #if (halUSE_BSP == 1 && buildGUI == 4)
 	if (uxTaskMask & taskGUI_MASK) vGuiDeInit();
 #endif
