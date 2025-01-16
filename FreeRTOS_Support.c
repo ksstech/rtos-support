@@ -1,4 +1,4 @@
-//	FreeRTOS_Support.c - Copyright (c) 2015-24 Andre M. MAree / KSS Technologies (Pty) Ltd.
+//	FreeRTOS_Support.c - Copyright (c) 2015-25 Andre M. MAree / KSS Technologies (Pty) Ltd.
 
 #include "hal_platform.h"
 #include "FreeRTOS_Support.h"
