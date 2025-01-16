@@ -83,26 +83,6 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t *);
 
 /**
  * @brief
- * @return
- */
-#define xRtosSetStat0(ebX)				_EGset(xEventStat0,ebX)
-#define xRtosSetStat1(ebX)				_EGset(xEventStat1,ebX)
-#define xRtosSetDevice(ebX)				_EGset(xEventDevices,ebX)
-#define xRtosSetTaskRUN(ebX)			_EGset(TaskRunState,ebX)
-#define xRtosSetTaskDELETE(ebX)			_EGset(TaskDeleteState,ebX)
-
-/**
- * @brief
- * @return	selected bitmask from EventStatus BEFORE bits were cleared
- */
-#define xRtosClearStat0(ebX)			_EGclear(xEventStat0,ebX)
-#define xRtosClearStat1(ebX)			_EGclear(xEventStat1,ebX)
-#define xRtosClearDevice(ebX)			_EGclear(xEventDevices,ebX)
-#define xRtosClearTaskRUN(ebX)			_EGclear(TaskRunState,ebX)
-#define xRtosClearTaskDELETE(ebX)		_EGclear(TaskDeleteState,ebX)
-
-/**
- * @brief
  * @return	selected bitmask from EventStatus as at time of call
  */
 #define xRtosGetStat0(ebX)				_EGget(xEventStat0,ebX)
@@ -140,21 +120,6 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t *);
  */
 #define xRtosWaitTaskRUN(ebX, ttW)		_EGwait(TaskRunState,ebX,ttW)
 #define xRtosWaitTaskDELETE(ebX, ttW)	_EGwait(TaskDeleteState,ebX,ttW)
-
-/**
- * @brief	Check if task set to RUN AND NOT set to DELETE, return 1 (task set to run but not delete) else 0
- */
-#define bRtosTaskCheckOK(ebX)			((xRtosCheckTaskDELETE(ebX) && xRtosCheckTaskRUN(ebX)) ? 0 : 1)
-
-/**
- * @brief	check if a task should a) terminate or b) run
- *			if, at entry, set to terminate immediately return result
- * 			if not, wait (possibly 0 ticks) for run status
- *			Before returning, again check if set to terminate.
- * @param	uxTaskMask - specific task bitmap, if NULL will get current mask from task LSP0
- * @return	0 if task should delete, 1 if it should run...
- */
-bool bRtosTaskWaitOK(u32_t TaskMask, TickType_t ttW);
 
 // ################################### Task status reporting #######################################
 
