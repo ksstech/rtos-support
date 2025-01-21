@@ -324,10 +324,8 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 	return iRV;
 }
 
-// ################################## Task creation/deletion #######################################
-
-
-/* Need mechanism to dynamically build the bitmapped task mask used for signalling one or more tasks
+/* ################################## Task creation/deletion #######################################
+ * Need mechanism to dynamically build the bitmapped task mask used for signalling one or more tasks
  *	to block in I2C Queue or be flagged for running or deletion. Currently a static mask 
  *	is allocated to each APP task so building a combined mask is possible at compile time
  *
@@ -459,8 +457,7 @@ void vTaskSetTerminateFlags(const EventBits_t uxTaskMask) {
    	}
  */
 void vTaskDumpStack(void * pTCB) {
-	if (pTCB == NULL)
-		pTCB = xTaskGetCurrentTaskHandle();
+	if (pTCB == NULL) pTCB = xTaskGetCurrentTaskHandle();
 	void * pxTOS = (void *) * ((u32_t *) pTCB) ;
 	void * pxStack = (void *) * ((u32_t *) pTCB + 12);		// 48 bytes / 4 = 12
 	wprintfx(NULL, "Cur SP : %p - Stack HWM : %p" strNL, pxTOS,
