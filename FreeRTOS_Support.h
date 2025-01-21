@@ -81,46 +81,6 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t *);
 #define _EGcheck(EG,ebX)				((xEventGroupGetBits(EG) & (ebX)) == (ebX) ? 1 : 0)	// ALL must match
 #define _EGwait(EG,ebX, ttW)			((xEventGroupWaitBits(EG,(ebX),pdFALSE,pdTRUE,ttW) & (ebX)) == (ebX))
 
-/**
- * @brief
- * @return	selected bitmask from EventStatus as at time of call
- */
-#define xRtosGetStat0(ebX)				_EGget(xEventStat0,ebX)
-#define xRtosGetStat1(ebX)				_EGget(xEventStat1,ebX)
-#define xRtosGetDevice(ebX)				_EGget(xEventDevices,ebX)
-#define xRtosGetTaskRUN(ebX)			_EGget(TaskRunState,ebX)
-#define xRtosGetTaskDELETE(ebX)			_EGget(TaskDeleteState,ebX)
-
-/**
- * @brief
- * @return	1/true if ALL the bits set in ebX are all also set in EventStatus at calling time
- */
-#define xRtosCheckStat0(ebX)			_EGcheck(xEventStat0,ebX)
-#define xRtosCheckStat1(ebX)			_EGcheck(xEventStat1,ebX)
-#define xRtosCheckAnyStat1(ebX)			_EGcheckAny(xEventStat1,ebX)
-#define xRtosCheckDevice(ebX)			_EGcheck(xEventDevices,ebX)
-
-/**
- * @brief	Check if task set to RUN/DELETE
- * @return	1 if so else 0
- */
-#define xRtosCheckTaskRUN(ebX)			_EGcheck(TaskRunState,ebX)
-#define xRtosCheckTaskDELETE(ebX)		_EGcheck(TaskDeleteState,ebX)
-
-/**
- * @brief	wait for specified period of time for ALL bits set in ebX to become set in EventStatus
- * @return	1/true if ALL the bits set in ebX are all also set in EventStatus prior to timeout
- */
-#define xRtosWaitStat0(ebX, ttW)		_EGwait(xEventStat0,ebX,ttW)
-#define xRtosWaitStat1(ebX, ttW)		_EGwait(xEventStat1,ebX,ttW)
-#define xRtosWaitDevice(ebX, ttW)		_EGwait(xEventDevices,ebX,ttW)
-
-/**
- * @brief	Wait (for period) till task set to DELETE, return 1 (DELETE bit set before timeout) else 0
- */
-#define xRtosWaitTaskRUN(ebX, ttW)		_EGwait(TaskRunState,ebX,ttW)
-#define xRtosWaitTaskDELETE(ebX, ttW)	_EGwait(TaskDeleteState,ebX,ttW)
-
 // ################################### Task status reporting #######################################
 
 bool bRtosStatsUpdateHook(void);
