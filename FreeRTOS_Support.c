@@ -355,7 +355,6 @@ void vTaskAllocateMask(TaskHandle_t xHandle) {
 #endif
 }
 
-BaseType_t __real_xTaskCreate(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *);
 BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask) {
 	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
 	BaseType_t btRV = __real_xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
@@ -364,7 +363,6 @@ BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcNa
 	return btRV;
 }
 
-BaseType_t __real_xTaskCreatePinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *, const BaseType_t);
 BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
 	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
 	TaskHandle_t TempHandle;
@@ -374,7 +372,6 @@ BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char 
 	return btRV;
 }
 
-TaskHandle_t __real_xTaskCreateStatic(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const);
 TaskHandle_t __wrap_xTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer) {
 	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
 	TaskHandle_t thRV = __real_xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
@@ -383,7 +380,6 @@ TaskHandle_t __wrap_xTaskCreateStatic(TaskFunction_t pxTaskCode, const char * co
 	return thRV;
 }
 
-TaskHandle_t __real_xTaskCreateStaticPinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const, const BaseType_t);
 TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID) {
 	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
 	TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
@@ -413,7 +409,6 @@ TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara)
  * @brief	Clear task runtime and static statistics data then delete the task
  * @param	Handle of task to be terminated (NULL = calling task)
  */
-void __real_vTaskDelete(TaskHandle_t xHandle);
 void __wrap_vTaskDelete(TaskHandle_t xHandle) {
 #if (debugTRACK)
 	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN+1];
