@@ -19,12 +19,6 @@ extern "C" {
 
 #define configFR_MAX_TASKS	24
 
-#if (configPRODUCTION == 1)			// -1 = disable
-	#define rtosDEBUG_SEMA			-1	
-#else								// -1=disable, 0=block only, >0=all incl return addresses
-	#define rtosDEBUG_SEMA			-1
-#endif
-
 #define	MALLOC_MARK()	u32_t y,x=xPortGetFreeHeapSize();
 #define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)" strNL,x,y,y-x);
 
@@ -67,6 +61,12 @@ void vApplicationMallocFailedHook(void);
 
 // ##################################### Semaphore support #########################################
 
+#if (configPRODUCTION == 1)			/* -1=disable, 0=block only, >0=all incl return addresses */
+	#define rtosDEBUG_SEMA			-1	
+#else
+	#define rtosDEBUG_SEMA			-1
+#endif
+
 /**
  * @brief
  * @param[in]
@@ -78,9 +78,29 @@ void xRtosSemaphoreSetTrack(bool State);
  * @param[in]
  */
 void xRtosSemaphoreSetMatch(SemaphoreHandle_t * Match);
+
+/**
+ * @brief
+ * @param[in]
+ */
 SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t *);
+
+/**
+ * @brief
+ * @param[in]
+ */
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t *, TickType_t);
+
+/**
+ * @brief
+ * @param[in]
+ */
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t *);
+
+/**
+ * @brief
+ * @param[in]
+ */
 void vRtosSemaphoreDelete(SemaphoreHandle_t *);
 
 // ################################### Task status manipulation ####################################
