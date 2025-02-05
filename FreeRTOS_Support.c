@@ -115,7 +115,7 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSH == 0) {
 		IF_EXEC_3(rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH), vRtosSemaphoreReport, pSH, "E_TAKE", 0);
-		return pdFALSE;// pdTRUE;
+		return pdFALSE;
 	}
 	BaseType_t btHPTwoken = pdFALSE;
 	BaseType_t btSR = halNVIC_CalledFromISR() ? xSemaphoreGiveFromISR(*pSH, &btHPTwoken) : xSemaphoreGive(*pSH);
