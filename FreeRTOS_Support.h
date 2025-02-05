@@ -67,6 +67,17 @@ void vApplicationMallocFailedHook(void);
 
 // ##################################### Semaphore support #########################################
 
+/**
+ * @brief
+ * @param[in]
+ */
+void xRtosSemaphoreSetTrack(bool State);
+
+/**
+ * @brief
+ * @param[in]
+ */
+void xRtosSemaphoreSetMatch(SemaphoreHandle_t * Match);
 SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t *);
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t *, TickType_t);
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t *);

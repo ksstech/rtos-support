@@ -32,6 +32,7 @@
 
 SemaphoreHandle_t * pSHmatch = NULL;
 SemaphoreHandle_t * MonitorList[] = { &shUARTmux, /* &shTaskInfo &SL_VarMux &SL_NetMux */ };
+static bool SemaphoreTrack = 0;
 
 /**
  * @brief	match semaphore address provided against list entries
@@ -62,6 +63,10 @@ bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
 			xRtosSemaphoreCheckList(pSH) ||
 			sSysFlags.track ? 1 : 0;
 }
+
+void xRtosSemaphoreSetTrack(bool State) { SemaphoreTrack = State; }
+
+void xRtosSemaphoreSetMatch(SemaphoreHandle_t * Match) { pSHmatch = Match; }
 
 SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 	*pSH = xSemaphoreCreateMutex();
