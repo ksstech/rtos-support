@@ -69,39 +69,43 @@ void vApplicationMallocFailedHook(void);
 
 /**
  * @brief
- * @param[in]
+ * @param[in]	State 0/1 to dis/enable tracking
  */
 void xRtosSemaphoreSetTrack(bool State);
 
 /**
  * @brief
- * @param[in]
+ * @param[in]	pSH pointer to semaphore handle
  */
 void xRtosSemaphoreSetMatch(SemaphoreHandle_t * Match);
 
 /**
  * @brief
- * @param[in]
+ * @param[in]	pSH pointer to semaphore handle
+ * @return		newly initialized semaphore handle
  */
-SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t *);
+SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH);
 
 /**
  * @brief
- * @param[in]
+ * @param[in]	pSH pointer to semaphore handle
+ * @param[in]	tW number of ticks to wait
+ * @return		pdTRUE is taken else pdFALSE
  */
-BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t *, TickType_t);
+BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tW);
 
 /**
  * @brief
- * @param[in]
+ * @param[in]	pSH pointer to semaphore handle
+ * @return		pdTRUE is released else pdFALSE
  */
-BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t *);
+BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH);
 
 /**
  * @brief
- * @param[in]
+ * @param[in]	pSH pointer to semaphore handle
  */
-void vRtosSemaphoreDelete(SemaphoreHandle_t *);
+void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH);
 
 // ################################### Task status manipulation ####################################
 
