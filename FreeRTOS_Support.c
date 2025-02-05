@@ -95,16 +95,16 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 		tStep = pdMS_TO_TICKS(10000);
 	}
 	IF_EXEC_3(rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH), vRtosSemaphoreReport, pSH, "TAKE", tElap);
-	do {
-		// try taking the semaphore
+	do {	// loop here trying to take the semaphore
 		btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tStep);
-		// if successful, all OK....
-		if (btSR == pdTRUE) break;
-		// if NOT successful, report status and adjust elapsed time
+		if (btSR == pdTRUE)								// if successful
+			break;										// break out & return status
+		// report status
 		IF_EXEC_3(rtosDEBUG_SEMA > -1, vRtosSemaphoreReport, pSH, "TAKE", tElap);
-		if (tWait != portMAX_DELAY) tWait -= tStep;
-		tElap += tStep;
-	} while (tWait > tStep);
+		if (tWait != portMAX_DELAY)						// if not indefinite wait
+			tWait -= tStep;								// adjust remaining time
+		tElap += tStep;									// update elapsed time
+	} while (tWait > tStep);							// and try again....
 #else
 	btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tWait);
 #endif
