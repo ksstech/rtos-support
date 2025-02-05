@@ -57,16 +57,13 @@ static void vRtosSemaphoreReport(SemaphoreHandle_t * pSH, const char * pcMess, T
 	IF_EXEC_1(rtosDEBUG_SEMA > 0 && (tElap == 0), esp_backtrace_print, rtosDEBUG_SEMA);
 }
 
-	// Specific match address; or // address found in the list; then report; or general tracking flag enabled
-	return (pSHmatch && (pSH == pSHmatch)) ||
-			xRtosSemaphoreCheckList(pSH) ||
-			sSysFlags.track ? 1 : 0;
 /**
  * @brief		check whether semaphore activity should be tracked based on various criteria
  * @param[in]	pSH - pointer to (address of) SemaphoreHandle_t to be checked
  * @return		1 if a match or specified in table or tracking enabled, else 0
  */
 static bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
+	return (SemaphoreTrack || (pSHmatch && (pSH == pSHmatch)) || xRtosSemaphoreCheckList(pSH)) ? 1 : 0;
 }
 
 void xRtosSemaphoreSetTrack(bool State) { SemaphoreTrack = State; }
@@ -82,7 +79,7 @@ SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	// if scheduler not (yet) running, make it...
-	if (sSysFlags.stage0 == 0 || xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) {
+	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) {
 		IF_EXEC_3(rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH), vRtosSemaphoreReport, pSH, "E_GIVE", 0);
 		return pdFALSE;// pdTRUE;
 	}
@@ -116,7 +113,7 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 }
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
-	if (sSysFlags.stage0 == 0 || xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSH == 0) {
+	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSH == 0) {
 		IF_EXEC_3(rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH), vRtosSemaphoreReport, pSH, "E_TAKE", 0);
 		return pdFALSE;// pdTRUE;
 	}
@@ -352,7 +349,7 @@ static u32_t TaskTracker = 0xFF000000;					// reserve top 8 bits, used internall
 
 void vTaskAllocateMask(TaskHandle_t xHandle) {
 #if	(portNUM_PROCESSORS > 1)
-	BaseType_t btSR = sSysFlags.stage0 ? xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY) : pdFALSE;
+	BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 #endif
 	// Find next empty slot, mark as allocated, set as "LSP" in new task TCB
 	u32_t Mask = 0x80000000 >> __builtin_clzl(~TaskTracker);
