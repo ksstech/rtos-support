@@ -39,7 +39,7 @@ static bool SemaphoreTrack = 0;
  * @param	pSH	pointer to semaphore handle
  * @return	1 if found in list else 0
 */
-bool xRtosSemaphoreCheckList(SemaphoreHandle_t * pSH) {
+static bool xRtosSemaphoreCheckList(SemaphoreHandle_t * pSH) {
 	for(int i = 0; i < NO_MEM(MonitorList); ++i) if (MonitorList[i] == pSH) return 1;
 	return 0;
 }
@@ -50,18 +50,23 @@ bool xRtosSemaphoreCheckList(SemaphoreHandle_t * pSH) {
  * @param	pcMess string indicating type of event
  * @param	tElap elapsed time (ticks)
 */
-void vRtosSemaphoreReport(SemaphoreHandle_t * pSH, const char * pcMess, TickType_t tElap) {
+static void vRtosSemaphoreReport(SemaphoreHandle_t * pSH, const char * pcMess, TickType_t tElap) {
 	char *pcHldr = pcTaskGetName(xSemaphoreGetMutexHolder(*pSH));
 	char *pcRcvr = pcTaskGetName(NULL);
 	P("sh%s %d %p H=%s R=%s (%lu)" strNL, pcMess, esp_cpu_get_core_id(), pSH, pcHldr, pcRcvr, tElap);
 	IF_EXEC_1(rtosDEBUG_SEMA > 0 && (tElap == 0), esp_backtrace_print, rtosDEBUG_SEMA);
 }
 
-bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
 	// Specific match address; or // address found in the list; then report; or general tracking flag enabled
 	return (pSHmatch && (pSH == pSHmatch)) ||
 			xRtosSemaphoreCheckList(pSH) ||
 			sSysFlags.track ? 1 : 0;
+/**
+ * @brief		check whether semaphore activity should be tracked based on various criteria
+ * @param[in]	pSH - pointer to (address of) SemaphoreHandle_t to be checked
+ * @return		1 if a match or specified in table or tracking enabled, else 0
+ */
+static bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
 }
 
 void xRtosSemaphoreSetTrack(bool State) { SemaphoreTrack = State; }
