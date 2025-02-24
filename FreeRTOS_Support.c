@@ -26,7 +26,7 @@
 #define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
 
 #define P							RP
-#define IF_P						IF_PX
+#define IF_P						IF_RP
 
 // ##################################### Semaphore support #########################################
 
@@ -421,7 +421,6 @@ TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, con
 
 void __real_vTaskDelete(TaskHandle_t xHandle);
 void __wrap_vTaskDelete(TaskHandle_t xHandle) {
-#if (debugTRACK)
 	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN+1];
 	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
 	EventBits_t ebX = (EventBits_t) pvTaskGetThreadLocalStoragePointer(xHandle, appFRTLSP_EVT_MASK);
