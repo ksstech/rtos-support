@@ -57,7 +57,7 @@ void vApplicationMallocFailedHook(void);
 
 // ##################################### Semaphore support #########################################
 
-#if (configPRODUCTION == 1)			/* -1=disable, 0=block only, >0=all incl return addresses */
+#if (appPRODUCTION > 0)			/* -1=disable, 0=block only, >0=all incl return addresses */
 	#define rtosDEBUG_SEMA			-1	
 #else
 	#define rtosDEBUG_SEMA			-1
