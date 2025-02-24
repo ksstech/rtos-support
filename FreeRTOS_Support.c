@@ -324,7 +324,7 @@ void vRtosHeapSetup(void) { g_HeapBegin = xPortGetFreeHeapSize(); }
 
 int xRtosReportMemory(report_t * psR) {
 	return wprintfx(psR, "%CFreeRTOS:%C %#'u -> %#'u <- %#'u%s", xpfCOL(colourFG_CYAN,0), xpfCOL(attrRESET,0),
-		xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin, repFORM_TST(psR,aNL) ? strNLx2 : strNL);
+		xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin, fmTST(aNL) ? strNLx2 : strNL);
 }
 
 /**
@@ -347,7 +347,8 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 	} else {
 		iRV = wprintfx(psR, "\t%p Invalid Timer handle", thTmr);
 	}
-	if (repFORM_TST(psR,aNL)) iRV += wprintfx(psR, strNL);
+	if (fmTST(aNL))
+		iRV += wprintfx(psR, strNL);
 	return iRV;
 }
 
