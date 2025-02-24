@@ -11,7 +11,7 @@
 #include "systiming.h"
 #include "errors_events.h"
 #include "utilitiesX.h"
-#if (halUSE_BSP == 1 && buildGUI == 4)
+#if (halUSE_BSP == 1 && appGUI == 4)
     #include "gui_main.hpp"
 #endif
 #include <string.h>
@@ -368,6 +368,7 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 
 static u32_t TaskTracker = 0xFF000000;					// reserve top 8 bits, used internally in FreeRTOS.
 
+#if (appWRAP_TASKS == 1)
 void vTaskAllocateMask(TaskHandle_t xHandle) {
 #if	(portNUM_PROCESSORS > 1)
 	BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
@@ -415,7 +416,6 @@ void vTaskSetTerminateFlags(const EventBits_t uxTaskMask) {
 	halEventUpdateRunTasks(uxTaskMask, 1);				// then enable to run to start the  delete
 }
 
-#if (buildWRAP_TASKS == 1)
 BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask) {
 	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
 	BaseType_t btRV = __real_xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
