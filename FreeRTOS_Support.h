@@ -47,10 +47,6 @@ typedef const struct {
 
 // ###################################### Global variables #########################################
 
-#if (configPRODUCTION == 0) && (rtosDEBUG_SEMA > -1)
-	extern SemaphoreHandle_t * pSHmatch;
-#endif
-
 // ##################################### global function prototypes ################################
 
 void vRtosHeapSetup(void);
@@ -65,6 +61,9 @@ void vApplicationMallocFailedHook(void);
 	#define rtosDEBUG_SEMA			-1	
 #else
 	#define rtosDEBUG_SEMA			-1
+	#if (rtosDEBUG_SEMA > -1)
+		extern SemaphoreHandle_t * pSHmatch;
+	#endif
 #endif
 
 /**
