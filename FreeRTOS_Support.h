@@ -130,14 +130,6 @@ TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara)
 
 void vTaskSetTerminateFlags(const EventBits_t uxTaskMask);
 
-#if (buildWRAP_TASKS == 1)
-BaseType_t __real_xTaskCreate(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *);
-BaseType_t __real_xTaskCreatePinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *, const BaseType_t);
-TaskHandle_t __real_xTaskCreateStatic(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const);
-TaskHandle_t __real_xTaskCreateStaticPinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const, const BaseType_t);
-void __real_vTaskDelete(TaskHandle_t xHandle);
-#endif
-
 // ####################################### Debug support ###########################################
 
 void vTaskDumpStack(void *);
