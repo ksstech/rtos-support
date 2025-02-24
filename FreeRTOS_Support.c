@@ -40,7 +40,10 @@ static bool SemaphoreTrack = 0;
  * @return	1 if found in list else 0
 */
 static bool xRtosSemaphoreCheckList(SemaphoreHandle_t * pSH) {
-	for(int i = 0; i < NO_MEM(MonitorList); ++i) if (MonitorList[i] == pSH) return 1;
+	for(int i = 0; i < NO_MEM(MonitorList); ++i) {
+		if (MonitorList[i] == pSH)
+			return 1;
+	}
 	return 0;
 }
 
@@ -52,9 +55,9 @@ static bool xRtosSemaphoreCheckList(SemaphoreHandle_t * pSH) {
 */
 static void vRtosSemaphoreReport(SemaphoreHandle_t * pSH, const char * pcMess, TickType_t tElap) {
 	char *pcHldr = pcTaskGetName(xSemaphoreGetMutexHolder(*pSH));
-	char *pcRcvr = pcTaskGetName(NULL);
-	P("sh%s %d %p H=%s R=%s (%lu)" strNL, pcMess, esp_cpu_get_core_id(), pSH, pcHldr, pcRcvr, tElap);
-	IF_EXEC_1(rtosDEBUG_SEMA > 0 && (tElap == 0), esp_backtrace_print, rtosDEBUG_SEMA);
+	P("sh%s %d %p H=%s R=%s (%lu)" strNL, pcMess, esp_cpu_get_core_id(), pSH, pcHldr, pcTaskGetName(NULL), tElap);
+	if (rtosDEBUG_SEMA > 0 && (tElap == 0))
+		esp_backtrace_print(rtosDEBUG_SEMA);
 }
 
 /**
@@ -72,7 +75,8 @@ void xRtosSemaphoreSetMatch(SemaphoreHandle_t * Match) { pSHmatch = Match; }
 
 SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 	*pSH = xSemaphoreCreateMutex();
-	IF_EXEC_3(rtosDEBUG_SEMA > 0 && xRtosSemaphoreCheck(pSH), P, "shINIT %p=%p" strNL, pSH, *pSH);			// report the event
+	if (rtosDEBUG_SEMA > 0 && xRtosSemaphoreCheck(pSH))
+		P("shINIT %p=%p" strNL, pSH, *pSH);				// report the event
 	IF_myASSERT(debugRESULT, *pSH != 0);
 	return *pSH;
 }
@@ -80,11 +84,13 @@ SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	// if scheduler not (yet) running, make it...
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) {
-		IF_EXEC_3(rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH), vRtosSemaphoreReport, pSH, "E_GIVE", 0);
-		return pdFALSE;// pdTRUE;
+		if (rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH))
+			vRtosSemaphoreReport(pSH, "E_GIVE", 0);
+		return pdFALSE;
 	}
 	// if semaphore not initialized, do so now... 
-	if (*pSH == NULL) xRtosSemaphoreInit(pSH);
+	if (*pSH == NULL)
+		xRtosSemaphoreInit(pSH);
 	BaseType_t btSR, btHPTwoken = pdFALSE;
 #if	(rtosDEBUG_SEMA > -1)
 	TickType_t tStep, tElap = 0;
@@ -94,13 +100,15 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	} else {
 		tStep = pdMS_TO_TICKS(10000);
 	}
-	IF_EXEC_3(rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH), vRtosSemaphoreReport, pSH, "TAKE", tElap);
+	if (rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH))
+		vRtosSemaphoreReport(pSH, "TAKE", tElap);
 	do {	// loop here trying to take the semaphore
 		btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tStep);
 		if (btSR == pdTRUE)								// if successful
 			break;										// break out & return status
 		// report status
-		IF_EXEC_3(rtosDEBUG_SEMA > -1, vRtosSemaphoreReport, pSH, "TAKE", tElap);
+		if (rtosDEBUG_SEMA > -1)
+			vRtosSemaphoreReport(pSH, "TAKE", tElap);
 		if (tWait != portMAX_DELAY)						// if not indefinite wait
 			tWait -= tStep;								// adjust remaining time
 		tElap += tStep;									// update elapsed time
@@ -108,25 +116,31 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 #else
 	btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tWait);
 #endif
-	if (btHPTwoken == pdTRUE) portYIELD_FROM_ISR();
+	if (btHPTwoken == pdTRUE)
+		portYIELD_FROM_ISR();
 	return btSR;
 }
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSH == 0) {
-		IF_EXEC_3(rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH), vRtosSemaphoreReport, pSH, "E_TAKE", 0);
+		if (rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH))
+			vRtosSemaphoreReport(pSH, "E_TAKE", 0);
 		return pdFALSE;
 	}
 	BaseType_t btHPTwoken = pdFALSE;
 	BaseType_t btSR = halNVIC_CalledFromISR() ? xSemaphoreGiveFromISR(*pSH, &btHPTwoken) : xSemaphoreGive(*pSH);
-	IF_EXEC_3(rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH), vRtosSemaphoreReport, pSH, "GIVE", 0);
-	if (btHPTwoken == pdTRUE) portYIELD_FROM_ISR(); 
+	if (rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH))
+		vRtosSemaphoreReport(pSH, "GIVE", 0);
+	if (btHPTwoken == pdTRUE)
+		portYIELD_FROM_ISR(); 
 	return btSR;
 }
 
 void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
-	if (*pSH) vSemaphoreDelete(*pSH);
-	IF_EXEC_2(rtosDEBUG_SEMA > 0 && xRtosSemaphoreCheck(pSH), P, "shDEL %p" strNL, pSH);
+	if (*pSH)
+		vSemaphoreDelete(*pSH);
+	if (rtosDEBUG_SEMA > 0 && xRtosSemaphoreCheck(pSH))
+		P("shDEL %p" strNL, pSH);
 	*pSH = 0;
 }
 
@@ -180,23 +194,27 @@ static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 static TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 	IF_myASSERT(debugPARAM, xTaskNumber != 0);
 	for (int i = 0; i <= NumTasks; ++i) {
-		if (sTS[i].xTaskNumber == xTaskNumber) return &sTS[i];
+		if (sTS[i].xTaskNumber == xTaskNumber)
+			return &sTS[i];
 	}
 	return NULL;
 }
 
 bool bRtosTaskIsIdleTask(TaskHandle_t xHandle) {
 	for (int i = 0; i < portNUM_PROCESSORS; ++i) {
-		 if (xHandle == IdleHandle[i]) return 1;
+		 if (xHandle == IdleHandle[i])
+		 	return 1;
 	}
 	return 0;
 }
 
 int	xRtosReportTasks(report_t * psR) {
 	int	iRV = 0;										// reset the character output counter
-	if (psR == NULL || psR->sFM.u32Val == 0) return erINV_PARA;
+	if (psR == NULL || psR->sFM.u32Val == 0)
+		return erINV_PARA;
 	if (NumTasks == 0) {								// first time once only
-		for (int i = 0; i < portNUM_PROCESSORS; ++i) IdleHandle[i] = xTaskGetIdleTaskHandleForCore(i);
+		for (int i = 0; i < portNUM_PROCESSORS; ++i)
+			IdleHandle[i] = xTaskGetIdleTaskHandleForCore(i);
 	}
 	memset(sTS, 0, sizeof(sTS));
 	u64_t TotalAdj;
@@ -213,14 +231,16 @@ int	xRtosReportTasks(report_t * psR) {
 #endif
 
 	TotalAdj /= (100ULL / portNUM_PROCESSORS);			// will be used to calc % for each task...
-	if (TotalAdj == 0ULL)			return 0;
+	if (TotalAdj == 0ULL)
+		return 0;
 	Active.U64val = 0;									// reset overall active running total
 #if (portNUM_PROCESSORS > 1)
 	memset(&Cores[0], 0, sizeof(Cores));				// reset time/core running totals
 #endif
 	for (int a = 0; a < NumTasks; ++a) {				// determine value of highest numbered task
 		TaskStatus_t * psTS = &sTS[a];
-		if (psTS->xTaskNumber > MaxNum) MaxNum = psTS->xTaskNumber;
+		if (psTS->xTaskNumber > MaxNum)
+			MaxNum = psTS->xTaskNumber;
 	}
 	xPrintFxSaveLock(psR);
 	iRV += wprintfx(psR, "%C", xpfCOL(colourFG_CYAN,0));
