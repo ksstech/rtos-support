@@ -464,11 +464,10 @@ TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara)
 void vTaskSetTerminateFlags(const EventBits_t uxTaskMask) {
 	if (uxTaskMask == 0) (EventBits_t)
 		pvTaskGetThreadLocalStoragePointer(NULL, appFRTLSP_EVT_MASK);
-#if (halUSE_BSP == 1 && appGUI == 4)
-	if (uxTaskMask & taskGUI_MASK) {
+	#if (halUSE_BSP == 1 && appGUI == 4)
+	if (uxTaskMask & taskGUI_MASK)
 		vGuiDeInit();
-	}
-#endif
+	#endif
 	halEventUpdateDeleteTasks(uxTaskMask, 1);			// first set the delete flag
 	halEventUpdateRunTasks(uxTaskMask, 1);				// then enable to run to start the  delete
 }
