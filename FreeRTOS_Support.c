@@ -25,14 +25,15 @@
 #define	debugPARAM					(debugFLAG_GLOBAL & debugFLAG & 0x4000)
 #define	debugRESULT					(debugFLAG_GLOBAL & debugFLAG & 0x8000)
 
-#define P							RP
-#define IF_P						IF_RP
+#define SP							RP
+#define IF_SP						IF_RP
 
 // ##################################### Semaphore support #########################################
 
-SemaphoreHandle_t * pSHmatch = NULL;
-SemaphoreHandle_t * MonitorList[] = { &shUARTmux, /* &shTaskInfo &SL_VarMux &SL_NetMux */ };
-static bool SemaphoreTrack = 0;
+#if	(rtosDEBUG_SEMA > 0)
+
+SemaphoreHandle_t * pSHmatch = NULL;	
+SemaphoreHandle_t * MonitorList[] = { &shUARTmux, 		/* &shTaskInfo &SL_VarMux &SL_NetMux */ };
 
 /**
  * @brief	match semaphore address provided against list entries
@@ -41,8 +42,9 @@ static bool SemaphoreTrack = 0;
 */
 static bool xRtosSemaphoreCheckList(SemaphoreHandle_t * pSH) {
 	for(int i = 0; i < NO_MEM(MonitorList); ++i) {
-		if (MonitorList[i] == pSH)
+		if (MonitorList[i] == pSH) {
 			return 1;
+		}
 	}
 	return 0;
 }
@@ -55,9 +57,11 @@ static bool xRtosSemaphoreCheckList(SemaphoreHandle_t * pSH) {
 */
 static void vRtosSemaphoreReport(SemaphoreHandle_t * pSH, const char * pcMess, TickType_t tElap) {
 	char *pcHldr = pcTaskGetName(xSemaphoreGetMutexHolder(*pSH));
-	P("sh%s %d %p H=%s R=%s (%lu)" strNL, pcMess, esp_cpu_get_core_id(), pSH, pcHldr, pcTaskGetName(NULL), tElap);
-	if (rtosDEBUG_SEMA > 0 && (tElap == 0))
-		esp_backtrace_print(rtosDEBUG_SEMA);
+	SP("sh%s %d %p H=%s R=%s (%lu)" strNL, pcMess, esp_cpu_get_core_id(), pSH, pcHldr, pcTaskGetName(NULL), tElap);
+	int Option = xOptionGet(ioFRlevel);
+	if (Option > 2 && (tElap == 0)) {
+		esp_backtrace_print(Option);
+	}
 }
 
 /**
@@ -66,71 +70,85 @@ static void vRtosSemaphoreReport(SemaphoreHandle_t * pSH, const char * pcMess, T
  * @return		1 if a match or specified in table or tracking enabled, else 0
  */
 static bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
-	return (SemaphoreTrack || (pSHmatch && (pSH == pSHmatch)) || xRtosSemaphoreCheckList(pSH)) ? 1 : 0;
+	return ((pSHmatch && (pSH == pSHmatch)) || xRtosSemaphoreCheckList(pSH)) ? 1 : 0;
 }
-
-void xRtosSemaphoreSetTrack(bool State) { SemaphoreTrack = State; }
 
 void xRtosSemaphoreSetMatch(SemaphoreHandle_t * Match) { pSHmatch = Match; }
 
+#endif
+
 SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 	*pSH = xSemaphoreCreateMutex();
-	if (rtosDEBUG_SEMA > 0 && xRtosSemaphoreCheck(pSH))
-		P("shINIT %p=%p" strNL, pSH, *pSH);				// report the event
+	#if	(rtosDEBUG_SEMA > 0)
+		if (xOptionGet(ioFRlevel) > 1 && xRtosSemaphoreCheck(pSH))
+			SP("shINIT %p=%p" strNL, pSH, *pSH);				// report the event
+	#endif
 	IF_myASSERT(debugRESULT, *pSH != 0);
 	return *pSH;
 }
 
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
+	#if	(rtosDEBUG_SEMA > 0)
+		int Option = xOptionGet(ioFRlevel);
+	#endif
 	// if scheduler not (yet) running, make it...
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) {
-		if (rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH))
-			vRtosSemaphoreReport(pSH, "E_GIVE", 0);
+		#if	(rtosDEBUG_SEMA > 0)
+			if ((Option > 0) && xRtosSemaphoreCheck(pSH))
+				vRtosSemaphoreReport(pSH, "E_TAKE", 0);
+		#endif
 		return pdFALSE;
 	}
 	// if semaphore not initialized, do so now... 
 	if (*pSH == NULL)
 		xRtosSemaphoreInit(pSH);
 	BaseType_t btSR, btHPTwoken = pdFALSE;
-#if	(rtosDEBUG_SEMA > -1)
-	TickType_t tStep, tElap = 0;
-	if (tWait != portMAX_DELAY) {
-		tWait = u32RoundUP(tWait, 10);
-		tStep = tWait / 10;
-	} else {
-		tStep = pdMS_TO_TICKS(10000);
-	}
-	if (rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH))
-		vRtosSemaphoreReport(pSH, "TAKE", tElap);
-	do {	// loop here trying to take the semaphore
-		btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tStep);
-		if (btSR == pdTRUE)								// if successful
-			break;										// break out & return status
-		// report status
-		if (rtosDEBUG_SEMA > -1)
+	#if	(rtosDEBUG_SEMA > 0)
+		TickType_t tStep, tElap = 0;
+		if (tWait != portMAX_DELAY) {
+			tWait = u32RoundUP(tWait, 10);
+			tStep = tWait / 10;
+		} else {
+			tStep = pdMS_TO_TICKS(10000);
+		}
+		if ((Option > 0) && xRtosSemaphoreCheck(pSH))
 			vRtosSemaphoreReport(pSH, "TAKE", tElap);
-		if (tWait != portMAX_DELAY)						// if not indefinite wait
-			tWait -= tStep;								// adjust remaining time
-		tElap += tStep;									// update elapsed time
-	} while (tWait > tStep);							// and try again....
-#else
-	btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tWait);
-#endif
+		do {	// loop here trying to take the semaphore
+			btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tStep);
+			if (btSR == pdTRUE)								// if successful
+				break;										// break out & return status
+		// report status
+			if (Option > 1)
+				vRtosSemaphoreReport(pSH, "TAKE", tElap);
+			if (tWait != portMAX_DELAY)						// if not indefinite wait
+				tWait -= tStep;								// adjust remaining time
+			tElap += tStep;									// update elapsed time
+		} while (tWait > tStep);							// and try again....
+	#else
+		btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tWait);
+	#endif
 	if (btHPTwoken == pdTRUE)
 		portYIELD_FROM_ISR();
 	return btSR;
 }
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
+	#if	(rtosDEBUG_SEMA > 0)
+		int Option = xOptionGet(ioFRlevel);
+	#endif
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSH == 0) {
-		if (rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH))
-			vRtosSemaphoreReport(pSH, "E_TAKE", 0);
+		#if	(rtosDEBUG_SEMA > 0)
+			if ((Option > 0) && xRtosSemaphoreCheck(pSH))
+				vRtosSemaphoreReport(pSH, "E_GIVE", 0);
+		#endif
 		return pdFALSE;
 	}
 	BaseType_t btHPTwoken = pdFALSE;
 	BaseType_t btSR = halNVIC_CalledFromISR() ? xSemaphoreGiveFromISR(*pSH, &btHPTwoken) : xSemaphoreGive(*pSH);
-	if (rtosDEBUG_SEMA > -1 && xRtosSemaphoreCheck(pSH))
-		vRtosSemaphoreReport(pSH, "GIVE", 0);
+	#if	(rtosDEBUG_SEMA > 0)
+		if ((Option > 0) && xRtosSemaphoreCheck(pSH))
+			vRtosSemaphoreReport(pSH, "GIVE", 0);
+	#endif
 	if (btHPTwoken == pdTRUE)
 		portYIELD_FROM_ISR(); 
 	return btSR;
@@ -139,8 +157,10 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	if (*pSH)
 		vSemaphoreDelete(*pSH);
-	if (rtosDEBUG_SEMA > 0 && xRtosSemaphoreCheck(pSH))
-		P("shDEL %p" strNL, pSH);
+	#if	(rtosDEBUG_SEMA > 0)
+		if ((xOptionGet(ioFRlevel) > 1) && xRtosSemaphoreCheck(pSH))
+			SP("shDEL %p" strNL, pSH);
+	#endif
 	*pSH = 0;
 }
 

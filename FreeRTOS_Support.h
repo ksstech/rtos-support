@@ -57,26 +57,22 @@ void vApplicationMallocFailedHook(void);
 
 // ##################################### Semaphore support #########################################
 
-#if (appPRODUCTION > 0)			/* -1=disable, 0=block only, >0=all incl return addresses */
-	#define rtosDEBUG_SEMA			-1	
+#if (appPRODUCTION > 0)
+	#define rtosDEBUG_SEMA			0	
 #else
-	#define rtosDEBUG_SEMA			-1
-	#if (rtosDEBUG_SEMA > -1)
-		extern SemaphoreHandle_t * pSHmatch;
-	#endif
+	#define rtosDEBUG_SEMA			1
+	extern SemaphoreHandle_t * pSHmatch;
 #endif
 
-/**
- * @brief
- * @param[in]	State 0/1 to dis/enable tracking
- */
-void xRtosSemaphoreSetTrack(bool State);
+#if	(rtosDEBUG_SEMA > 0)
 
 /**
  * @brief
  * @param[in]	pSH pointer to semaphore handle
  */
 void xRtosSemaphoreSetMatch(SemaphoreHandle_t * Match);
+
+#endif
 
 /**
  * @brief
