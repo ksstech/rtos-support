@@ -363,7 +363,8 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 		BaseType_t bActive = xTimerIsTimerActive(thTmr); 
 		iRV = wprintfx(psR, "%C%s%C\t#%lu  Auto=%c  Run=%c", xpfCOL(colourFG_CYAN,0), pcTimerGetName(thTmr), xpfCOL(attrRESET,0),
 			uxTimerGetTimerNumber(thTmr), uxTimerGetReloadMode(thTmr) ? CHR_Y : CHR_N, bActive ? CHR_Y : CHR_N);
-		if (bActive) iRV += wprintfx(psR, "  tPeriod=%#'lu  tExpiry=%#'lu  tRemain=%#'ld", tPer, tExp, tRem);
+		if (bActive)
+			iRV += wprintfx(psR, "  tPeriod=%#'lu  tExpiry=%#'lu  tRemain=%#'ld", tPer, tExp, tRem);
 	} else {
 		iRV = wprintfx(psR, "\t%p Invalid Timer handle", thTmr);
 	}
