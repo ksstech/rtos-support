@@ -416,7 +416,10 @@ BaseType_t __real_xTaskCreatePinnedToCore(TaskFunction_t, const char * const, co
 BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
 	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
 	TaskHandle_t TempHandle;
-	BaseType_t btRV = __real_xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, &TempHandle, xCoreID);
+	u32_t StackSize = usStackDepth;
+	if (strcmp(pcName, "wifi") == 0)					/* if task being created is "wifi" */
+		StackSize += StackSize >> 2;					/* add 25% to requested stack */
+	BaseType_t btRV = __real_xTaskCreatePinnedToCore(pxTaskCode, pcName, StackSize, pvParameters, uxPriority, &TempHandle, xCoreID);
 	vTaskAllocateMask(TempHandle);
 	if (pxCreatedTask) *pxCreatedTask = TempHandle;
 	return btRV;
