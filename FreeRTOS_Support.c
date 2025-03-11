@@ -421,7 +421,8 @@ BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char 
 		StackSize += StackSize >> 2;					/* add 25% to requested stack */
 	BaseType_t btRV = __real_xTaskCreatePinnedToCore(pxTaskCode, pcName, StackSize, pvParameters, uxPriority, &TempHandle, xCoreID);
 	vTaskAllocateMask(TempHandle);
-	if (pxCreatedTask) *pxCreatedTask = TempHandle;
+	if (pxCreatedTask)
+		*pxCreatedTask = TempHandle;
 	return btRV;
 }
 
