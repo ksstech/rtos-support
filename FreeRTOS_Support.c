@@ -59,7 +59,7 @@ static void vRtosSemaphoreReport(SemaphoreHandle_t * pSH, const char * pcMess, T
 	char *pcHldr = pcTaskGetName(xSemaphoreGetMutexHolder(*pSH));
 	SP("sh%s %d %p H=%s R=%s (%lu)" strNL, pcMess, esp_cpu_get_core_id(), pSH, pcHldr, pcTaskGetName(NULL), tElap);
 	int Option = xOptionGet(ioFRlevel);
-	if (Option > 2 && (tElap == 0)) {
+	if (Option >= 3 && (tElap == 0)) {
 		esp_backtrace_print(Option);
 	}
 }
@@ -91,19 +91,25 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	#if	(rtosDEBUG_SEMA > 0)
 		int Option = xOptionGet(ioFRlevel);
 	#endif
-	// if scheduler not (yet) running, make it...
+	// step 1: if scheduler not (yet) running, fake a result...
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) {
 		#if	(rtosDEBUG_SEMA > 0)
-			if ((Option > 0) && xRtosSemaphoreCheck(pSH))
-				vRtosSemaphoreReport(pSH, "E_TAKE", 0);
+		if ((Option >= 1) && xRtosSemaphoreCheck(pSH)) {
+			vRtosSemaphoreReport(pSH, "E_TAKE", 0);
+		}
 		#endif
 		return pdFALSE;
 	}
-	// if semaphore not initialized, do so now... 
-	if (*pSH == NULL)
+
+	// step 2: if semaphore not initialized, do so now... 
+	if (*pSH == NULL) {
 		xRtosSemaphoreInit(pSH);
+	}
+
+	// step 3: handle the actual TAKE request
 	BaseType_t btSR, btHPTwoken = pdFALSE;
-	#if	(rtosDEBUG_SEMA > 0)
+	#if	(rtosDEBUG_SEMA > 0)		/* DEBUG enabled **********************************************/
+		// step 3a: setup steps for breaking up the wait period
 		TickType_t tStep, tElap = 0;
 		if (tWait != portMAX_DELAY) {
 			tWait = u32RoundUP(tWait, 10);
@@ -111,24 +117,30 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 		} else {
 			tStep = pdMS_TO_TICKS(10000);
 		}
-		if ((Option > 0) && xRtosSemaphoreCheck(pSH))
+
+		// step 3b: 
+		if ((Option >= 2) && xRtosSemaphoreCheck(pSH))
 			vRtosSemaphoreReport(pSH, "TAKE", tElap);
+
 		do {	// loop here trying to take the semaphore
 			btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tStep);
 			if (btSR == pdTRUE)								// if successful
 				break;										// break out & return status
 		// report status
-			if (Option > 1)
-				vRtosSemaphoreReport(pSH, "TAKE", tElap);
+			if (Option >= 1)								// if report level match
+				vRtosSemaphoreReport(pSH, "TAKE", tElap);	// report current time info
 			if (tWait != portMAX_DELAY)						// if not indefinite wait
 				tWait -= tStep;								// adjust remaining time
 			tElap += tStep;									// update elapsed time
 		} while (tWait > tStep);							// and try again....
-	#else
+	#else							/* DEBUG disabled *********************************************/
 		btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tWait);
 	#endif
-	if (btHPTwoken == pdTRUE)
+
+	// step 4: based on result, yield if required
+	if (btHPTwoken == pdTRUE) {
 		portYIELD_FROM_ISR();
+	}
 	return btSR;
 }
 
@@ -136,21 +148,28 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 	#if	(rtosDEBUG_SEMA > 0)
 		int Option = xOptionGet(ioFRlevel);
 	#endif
+
+	// step 1: if scheduler not (yet) running, fake a result...
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSH == 0) {
 		#if	(rtosDEBUG_SEMA > 0)
-			if ((Option > 0) && xRtosSemaphoreCheck(pSH))
-				vRtosSemaphoreReport(pSH, "E_GIVE", 0);
+		if ((Option >= 1) && xRtosSemaphoreCheck(pSH)) {
+			vRtosSemaphoreReport(pSH, "E_GIVE", 0);
+		}
 		#endif
 		return pdFALSE;
 	}
+
+	// step 2: handle the actual GIVE request
 	BaseType_t btHPTwoken = pdFALSE;
 	BaseType_t btSR = halNVIC_CalledFromISR() ? xSemaphoreGiveFromISR(*pSH, &btHPTwoken) : xSemaphoreGive(*pSH);
 	#if	(rtosDEBUG_SEMA > 0)
-		if ((Option > 0) && xRtosSemaphoreCheck(pSH))
-			vRtosSemaphoreReport(pSH, "GIVE", 0);
+	if ((Option >= 2) && xRtosSemaphoreCheck(pSH)) {
+		vRtosSemaphoreReport(pSH, "GIVE", 0);
+	}
 	#endif
-	if (btHPTwoken == pdTRUE)
-		portYIELD_FROM_ISR(); 
+	if (btHPTwoken == pdTRUE) {
+		portYIELD_FROM_ISR();
+	}
 	return btSR;
 }
 
