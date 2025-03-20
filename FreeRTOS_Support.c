@@ -501,13 +501,9 @@ TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara)
 	return thRV;
 }
 
-/**
- * @brief	Set/clear all flags to force task[s] to initiate an organised shutdown
- * @param	mask indicating the task[s] to terminate
- */
-void vTaskSetTerminateFlags(const EventBits_t uxTaskMask) {
-	if (uxTaskMask == 0) (EventBits_t)
-		pvTaskGetThreadLocalStoragePointer(NULL, appFRTLSP_EVT_MASK);
+void vTaskSetTerminateFlags(EventBits_t uxTaskMask) {
+	if (uxTaskMask == 0)
+		uxTaskMask = (EventBits_t) pvTaskGetThreadLocalStoragePointer(NULL, appFRTLSP_EVT_MASK);
 	#if (halUSE_BSP == 1 && appGUI == 4)
 	if (uxTaskMask & taskGUI_MASK)
 		vGuiDeInit();
