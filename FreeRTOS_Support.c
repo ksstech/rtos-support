@@ -537,7 +537,7 @@ void vTaskDumpStack(void * pTCB) {
 		pTCB = xTaskGetCurrentTaskHandle();
 	void * pxTOS = (void *) * ((u32_t *) pTCB) ;
 	void * pxStack = (void *) * ((u32_t *) pTCB + 12);		// 48 bytes / 4 = 12
-	wprintfx(NULL, "Cur SP : %p - Stack HWM : %p" strNL, pxTOS,
+	PX("Cur SP : %p - Stack HWM : %p" strNL, pxTOS,
 		(u8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t)));
 }
 
