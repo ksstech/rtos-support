@@ -533,7 +533,8 @@ void vTaskSetTerminateFlags(EventBits_t uxTaskMask) {
    	}
  */
 void vTaskDumpStack(void * pTCB) {
-	if (pTCB == NULL) pTCB = xTaskGetCurrentTaskHandle();
+	if (pTCB == NULL)
+		pTCB = xTaskGetCurrentTaskHandle();
 	void * pxTOS = (void *) * ((u32_t *) pTCB) ;
 	void * pxStack = (void *) * ((u32_t *) pTCB + 12);		// 48 bytes / 4 = 12
 	wprintfx(NULL, "Cur SP : %p - Stack HWM : %p" strNL, pxTOS,
