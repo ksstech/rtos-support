@@ -42,9 +42,8 @@ SemaphoreHandle_t * MonitorList[] = { &shUARTmux, 		/* &shTaskInfo &SL_VarMux &S
 */
 static bool xRtosSemaphoreCheckList(SemaphoreHandle_t * pSH) {
 	for(int i = 0; i < NO_MEM(MonitorList); ++i) {
-		if (MonitorList[i] == pSH) {
+		if (MonitorList[i] == pSH)
 			return 1;
-		}
 	}
 	return 0;
 }
@@ -102,9 +101,8 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	}
 
 	// step 2: if semaphore not initialized, do so now... 
-	if (*pSH == NULL) {
+	if (*pSH == NULL)
 		xRtosSemaphoreInit(pSH);
-	}
 
 	// step 3: handle the actual TAKE request
 	BaseType_t btSR, btHPTwoken = pdFALSE;
@@ -138,9 +136,8 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	#endif
 
 	// step 4: based on result, yield if required
-	if (btHPTwoken == pdTRUE) {
+	if (btHPTwoken == pdTRUE)
 		portYIELD_FROM_ISR();
-	}
 	return btSR;
 }
 
@@ -167,9 +164,8 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 		vRtosSemaphoreReport(pSH, "GIVE", 0);
 	}
 	#endif
-	if (btHPTwoken == pdTRUE) {
+	if (btHPTwoken == pdTRUE)
 		portYIELD_FROM_ISR();
-	}
 	return btSR;
 }
 
@@ -541,7 +537,8 @@ void vTaskDumpStack(void * pTCB) {
 		(u8_t *) pxStack + (uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t)));
 }
 
-//#include "freertos/task_snapshot.h"
+#if 0
+
 // note for ESP32S3, you must alter esp_backtrace_print_from_frame to whitelist 0x400559DD
 // as a valid memory address. see: https://github.com/espressif/esp-idf/issues/11512#issuecomment-1566943121
 // Otherwise nearly all the backtraces will print as corrupt.
@@ -552,7 +549,9 @@ void vTaskDumpStack(void * pTCB) {
 //		 /*whitelist*/  esp_cpu_process_stack_pc(stk_frame.pc) == 0x400559DD ||
 //						/* Ignore the first corrupted PC in case of InstrFetchProhibited */
 //					   (stk_frame.exc_frame && ((XtExcFrame *)stk_frame.exc_frame)->exccause == EXCCAUSE_INSTR_PROHIBITED)));
-/*
+
+#include "freertos/task_snapshot.h"
+
 esp_err_t IRAM_ATTR esp_backtrace_print_all_tasks(int depth, bool panic) {
 	u32_t task_count = uxTaskGetNumberOfTasks();
 	TaskSnapshot_t* snapshots = (TaskSnapshot_t*) calloc(task_count * sizeof(TaskSnapshot_t), 1);
@@ -574,4 +573,4 @@ esp_err_t IRAM_ATTR esp_backtrace_print_all_tasks(int depth, bool panic) {
 	free(snapshots);
 	return err;
 }
-*/
+#endif
