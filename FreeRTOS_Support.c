@@ -281,19 +281,19 @@ int	xRtosReportTasks(report_t * psR) {
 		if (psTS->xTaskNumber > MaxNum)
 			MaxNum = psTS->xTaskNumber;
 	}
-	xPrintFxSaveLock(psR);
-	iRV += report(psR, "%C", xpfCOL(colourFG_CYAN,0));
-	if (psR->sFM.bTskNum)			iRV += report(psR, "T# ");
-	if (psR->sFM.bPrioX)			iRV += report(psR, "Pc/Pb ");
-	iRV += report(psR, configFREERTOS_TASKLIST_HDR_DETAIL);
-	if (psR->sFM.bState)			iRV += report(psR, "S ");
-	if (psR->sFM.bStack)			iRV += report(psR, "LowS ");
+	repSET(XLock,sLO);
+	iRV += xReport(psR, "%C", xpfCOL(colourFG_CYAN,0));
+	if (psR->sFM.bTskNum)			iRV += xReport(psR, "T# ");
+	if (psR->sFM.bPrioX)			iRV += xReport(psR, "Pc/Pb ");
+	iRV += xReport(psR, configFREERTOS_TASKLIST_HDR_DETAIL);
+	if (psR->sFM.bState)			iRV += xReport(psR, "S ");
+	if (psR->sFM.bStack)			iRV += xReport(psR, "LowS ");
 #if (portNUM_PROCESSORS > 1)
-	if (psR->sFM.bCore)				iRV += report(psR, "X ");
+	if (psR->sFM.bCore)				iRV += xReport(psR, "X ");
 #endif
-	iRV += report(psR, " Util Ticks");
-	if (debugTRACK && psR->sFM.bXtras) iRV += report(psR, "|Stack Base|-Task TCB-|   LSP    |");
-	iRV += report(psR, "%C" strNL, xpfCOL(attrRESET,0));
+	iRV += xReport(psR, " Util Ticks");
+	if (debugTRACK && psR->sFM.bXtras) iRV += xReport(psR, "|Stack Base|-Task TCB-|   LSP    |");
+	iRV += xReport(psR, "%C" strNL, xpfCOL(attrRESET,0));
 
 	u32_t Units, Fracts, TaskMask = 0x1;
 	// display individual task info
@@ -306,29 +306,29 @@ int	xRtosReportTasks(report_t * psR) {
 		// Check for invalid Core ID, often happens in process of shutting down tasks.
 		if ((psTS->xCoreID != tskNO_AFFINITY) &&
 			INRANGE(0, psTS->xCoreID, portNUM_PROCESSORS-1) == 0) {
-			iRV += report(psR, "%d CoreID=%d skipped !!!" strNL, a, psTS->xCoreID);
+			iRV += xReport(psR, "%d CoreID=%d skipped !!!" strNL, a, psTS->xCoreID);
 			goto next;
 		}
-		if (psR->sFM.bTskNum)		iRV += report(psR, "%2u ", psTS->xTaskNumber);
-		if (psR->sFM.bPrioX)		iRV += report(psR, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
-		iRV += report(psR, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
-		if (psR->sFM.bState)		iRV += report(psR, "%c ", TaskState[psTS->eCurrentState]);
-		if (psR->sFM.bStack)		iRV += report(psR, "%4u ", psTS->usStackHighWaterMark);
+		if (psR->sFM.bTskNum)		iRV += xReport(psR, "%2u ", psTS->xTaskNumber);
+		if (psR->sFM.bPrioX)		iRV += xReport(psR, "%2u/%2u ", psTS->uxCurrentPriority, psTS->uxBasePriority);
+		iRV += xReport(psR, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
+		if (psR->sFM.bState)		iRV += xReport(psR, "%c ", TaskState[psTS->eCurrentState]);
+		if (psR->sFM.bStack)		iRV += xReport(psR, "%4u ", psTS->usStackHighWaterMark);
 		#if (portNUM_PROCESSORS > 1)
 			int c = (psTS->xCoreID == tskNO_AFFINITY) ? 2 : psTS->xCoreID;
-			if (psR->sFM.bCore)		iRV += report(psR, "%c ", caMCU[c]);
+			if (psR->sFM.bCore)		iRV += xReport(psR, "%c ", caMCU[c]);
 		#endif
 		// Calculate & display individual task utilisation.
 		Units = psTS->ulRunTimeCounter / TotalAdj;
 		Fracts = ((psTS->ulRunTimeCounter * 100) / TotalAdj) % 100;
-		iRV += report(psR, "%2lu.%02lu %#'5llu", Units, Fracts, psTS->ulRunTimeCounter);
+		iRV += xReport(psR, "%2lu.%02lu %#'5llu", Units, Fracts, psTS->ulRunTimeCounter);
 		#if (debugTRACK)
 		if (debugTRACK && psR->sFM.bXtras) {
-			iRV += report(psR, " %p %p", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
-			iRV += report(psR, " %p", pvTaskGetThreadLocalStoragePointer(psTS->xHandle, 1));
+			iRV += xReport(psR, " %p %p", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
+			iRV += xReport(psR, " %p", pvTaskGetThreadLocalStoragePointer(psTS->xHandle, 1));
 		}
 		#endif
-		if (psR->sFM.bNL)			iRV += report(psR, strNL);
+		if (psR->sFM.bNL)			iRV += xReport(psR, strNL);
 		// For idle task(s) we do not want to add RunTime % to the task or Core RunTime
 		if (bRtosTaskIsIdleTask(psTS->xHandle) == 0) {	// NOT an IDLE task
 			Active.U64val += psTS->ulRunTimeCounter;	// Update total active time
@@ -343,17 +343,17 @@ next:
 	Units = Active.U64val / TotalAdj;	// Calculate & display total for "real" tasks utilization.
 	Fracts = ((Active.U64val * 100) / TotalAdj) % 100;
 #if	(portNUM_PROCESSORS > 1)
-	iRV += report(psR, "%u Tasks %lu.%02lu%% [", NumTasks, Units, Fracts);
+	iRV += xReport(psR, "%u Tasks %lu.%02lu%% [", NumTasks, Units, Fracts);
 	for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
 		Units = Cores[i].U64val / TotalAdj;
 		Fracts = ((Cores[i].U64val * 100) / TotalAdj) % 100;
-		iRV += report(psR, "%c=%lu.%02lu%c", caMCU[i], Units, Fracts, i < 2 ? ' ' : ']');
+		iRV += xReport(psR, "%c=%lu.%02lu%c", caMCU[i], Units, Fracts, i < 2 ? ' ' : ']');
 	}
 #else
-	iRV += report(psR, "%u Tasks %lu.%02lu%%", NumTasks, Units, Fracts);
+	iRV += xReport(psR, "%u Tasks %lu.%02lu%%", NumTasks, Units, Fracts);
 #endif
-	iRV += report(psR, psR->sFM.bNL ? strNLx2 : strNL);
-	xPrintFxRestoreUnLock(psR);
+	repSET(XLock,sUL);
+	iRV += xReport(psR, psR->sFM.bNL ? strNLx2 : strNL);
 	return iRV;
 }
 
@@ -362,7 +362,7 @@ static u32_t g_HeapBegin;
 void vRtosHeapSetup(void) { g_HeapBegin = xPortGetFreeHeapSize(); }
 
 int xRtosReportMemory(report_t * psR) {
-	return report(psR, "%CFreeRTOS:%C %#'u -> %#'u <- %#'u%s", xpfCOL(colourFG_CYAN,0), xpfCOL(attrRESET,0),
+	return xReport(psR, "%CFreeRTOS:%C %#'u -> %#'u <- %#'u%s", xpfCOL(colourFG_CYAN,0), xpfCOL(attrRESET,0),
 		xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin, fmTST(aNL) ? strNLx2 : strNL);
 }
 
@@ -380,15 +380,15 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 		TickType_t tExp = xTimerGetExpiryTime(thTmr);
 		i32_t tRem = tExp - xTaskGetTickCount();
 		BaseType_t bActive = xTimerIsTimerActive(thTmr); 
-		iRV = report(psR, "%C%s%C\t#%lu  Auto=%c  Run=%c", xpfCOL(colourFG_CYAN,0), pcTimerGetName(thTmr), xpfCOL(attrRESET,0),
+		iRV = xReport(psR, "%C%s%C\t#%lu  Auto=%c  Run=%c", xpfCOL(colourFG_CYAN,0), pcTimerGetName(thTmr), xpfCOL(attrRESET,0),
 			uxTimerGetTimerNumber(thTmr), uxTimerGetReloadMode(thTmr) ? CHR_Y : CHR_N, bActive ? CHR_Y : CHR_N);
 		if (bActive)
-			iRV += report(psR, "  tPeriod=%#'lu  tExpiry=%#'lu  tRemain=%#'ld", tPer, tExp, tRem);
+			iRV += xReport(psR, "  tPeriod=%#'lu  tExpiry=%#'lu  tRemain=%#'ld", tPer, tExp, tRem);
 	} else {
-		iRV = report(psR, "\t%p Invalid Timer handle", thTmr);
+		iRV = xReport(psR, "\t%p Invalid Timer handle", thTmr);
 	}
 	if (fmTST(aNL))
-		iRV += report(psR, strNL);
+		iRV += xReport(psR, strNL);
 	return iRV;
 }
 
