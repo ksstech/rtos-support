@@ -169,12 +169,12 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 }
 
 void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
-	if (*pSH)
-		vSemaphoreDelete(*pSH);
 	#if	(rtosSEMA_DEBUG > 0)
 		if ((OPT_GET(ioFRlevel) > 1) && xRtosSemaphoreCheck(pSH))
 			SP("shDEL %p" strNL, pSH);
 	#endif
+	if (*pSH)
+		vSemaphoreDelete(*pSH);
 	*pSH = 0;
 }
 
