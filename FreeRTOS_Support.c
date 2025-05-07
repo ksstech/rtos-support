@@ -5,11 +5,14 @@
 #include "hal_memory.h"
 #include "hal_nvic.h"
 #include "hal_stdio.h"
-#include "report.h"
+#include "hal_usart.h"
 #include "syslog.h"
 #include "systiming.h"
 #include "errors_events.h"
 #include "utilitiesX.h"
+
+#include "esp_debug_helpers.h"
+
 #if (halUSE_BSP == 1 && appGUI == 4)
     #include "gui_main.hpp"
 #endif

@@ -10,7 +10,6 @@
 #include "freertos/event_groups.h"
 
 #include "definitions.h"
-#include "esp_debug_helpers.h"
 #include "hal_options.h"
 
 #ifdef __cplusplus
