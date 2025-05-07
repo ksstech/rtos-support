@@ -29,7 +29,7 @@
 
 // ##################################### Semaphore support #########################################
 
-#if	(rtosDEBUG_SEMA > 0)
+#if	(rtosSEMA_DEBUG > 0)
 
 SemaphoreHandle_t * pSHmatch = NULL;	
 SemaphoreHandle_t * MonitorList[] = { &shUARTmux, 		/* &shTaskInfo &SL_VarMux &SL_NetMux */ };
