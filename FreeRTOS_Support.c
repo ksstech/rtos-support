@@ -2,7 +2,6 @@
 
 #include "hal_platform.h"
 #include "FreeRTOS_Support.h"
-#include "hal_options.h"
 #include "hal_memory.h"
 #include "hal_nvic.h"
 #include "hal_stdio.h"
@@ -57,8 +56,8 @@ static bool xRtosSemaphoreCheckList(SemaphoreHandle_t * pSH) {
 static void vRtosSemaphoreReport(SemaphoreHandle_t * pSH, const char * pcMess, TickType_t tElap) {
 	char *pcHldr = pcTaskGetName(xSemaphoreGetMutexHolder(*pSH));
 	SP("sh%s %d %p H=%s R=%s (%lu)" strNL, pcMess, esp_cpu_get_core_id(), pSH, pcHldr, pcTaskGetName(NULL), tElap);
-	int Option = OPT_TEST(ioFRlevel);
 	if (Option >= 3 && (tElap == 0)) {
+	int Option = OPT_GET(ioFRlevel);
 		esp_backtrace_print(Option);
 	}
 }
@@ -79,7 +78,7 @@ void xRtosSemaphoreSetMatch(SemaphoreHandle_t * Match) { pSHmatch = Match; }
 SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 	*pSH = xSemaphoreCreateMutex();
 	#if	(rtosDEBUG_SEMA > 0)
-		if (OPT_TEST(ioFRlevel) > 1 && xRtosSemaphoreCheck(pSH))
+		if (OPT_GET(ioFRlevel) > 1 && xRtosSemaphoreCheck(pSH))
 			SP("shINIT %p=%p" strNL, pSH, *pSH);				// report the event
 	#endif
 	IF_myASSERT(debugRESULT, *pSH != 0);
@@ -88,7 +87,7 @@ SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	#if	(rtosDEBUG_SEMA > 0)
-		int Option = OPT_TEST(ioFRlevel);
+		int Option = OPT_GET(ioFRlevel);
 	#endif
 	// step 1: if scheduler not (yet) running, fake a result...
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) {
@@ -143,7 +142,7 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 	#if	(rtosDEBUG_SEMA > 0)
-		int Option = OPT_TEST(ioFRlevel);
+		int Option = OPT_GET(ioFRlevel);
 	#endif
 
 	// step 1: if scheduler not (yet) running, fake a result...
@@ -173,7 +172,7 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	if (*pSH)
 		vSemaphoreDelete(*pSH);
 	#if	(rtosDEBUG_SEMA > 0)
-		if ((OPT_TEST(ioFRlevel) > 1) && xRtosSemaphoreCheck(pSH))
+		if ((OPT_GET(ioFRlevel) > 1) && xRtosSemaphoreCheck(pSH))
 			SP("shDEL %p" strNL, pSH);
 	#endif
 	*pSH = 0;

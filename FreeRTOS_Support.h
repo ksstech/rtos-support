@@ -8,8 +8,10 @@
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "freertos/event_groups.h"
+
 #include "definitions.h"
 #include "esp_debug_helpers.h"
+#include "hal_options.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,12 +25,12 @@ extern "C" {
 #define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)" strNL,x,y,y-x);
 
 #if (appOPTIONS > 0)
-    #define OPT_TEST(opt)   xOptionGet(opt)
+    #define OPT_GET(opt)   xOptionGet(opt)
 #else
-    #define OPT_TEST(opt)   0
+    #define OPT_GET(opt)   0
 #endif
 
-#define MESSAGE(mess,...)	IF_PX(debugTRACK && OPT_TEST(ioUpDown), mess, ##__VA_ARGS__)
+#define MESSAGE(mess,...)	IF_PX(debugTRACK && OPT_GET(ioUpDown), mess, ##__VA_ARGS__)
 #define TASK_START(name) 	MESSAGE("[%s] starting" strNL, name)
 #define TASK_STOP(name) 	MESSAGE("[%s] stopping" strNL, name)
 
