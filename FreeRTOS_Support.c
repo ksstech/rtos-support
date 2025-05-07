@@ -254,14 +254,15 @@ int	xRtosReportTasks(report_t * psR) {
 	u64_t TotalAdj;
 	// Get up-to-date task status
 #if (portNUM_PROCESSORS > 1)
-	xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+	BaseType_t btRV = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 #endif
 
 	NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &TotalAdj);
 	IF_myASSERT(debugPARAM, INRANGE(1, NumTasks, configFR_MAX_TASKS));
 
 #if (portNUM_PROCESSORS > 1)
-	xRtosSemaphoreGive(&shTaskInfo);
+	if (btRV == pdTRUE)
+		xRtosSemaphoreGive(&shTaskInfo);
 #endif
 
 	TotalAdj /= (100ULL / portNUM_PROCESSORS);			// will be used to calc % for each task...
