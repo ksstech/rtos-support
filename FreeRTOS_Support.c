@@ -56,6 +56,17 @@ static bool xRtosSemaphoreCheckList(SemaphoreHandle_t * pSH) {
 }
 
 /**
+ * @brief		check whether semaphore activity should be tracked based on various criteria
+ * @param[in]	pSH - pointer to (address of) SemaphoreHandle_t to be checked
+ * @return		1 if a match or specified in table or tracking enabled, else 0
+ */
+static bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
+	return ((pSHmatch && (pSH == pSHmatch)) || xRtosSemaphoreCheckList(pSH)) ? 1 : 0;
+}
+
+void xRtosSemaphoreSetMatch(SemaphoreHandle_t * Match) { pSHmatch = Match; }
+
+/**
  * @brief	report details regarding semaphore handler, receiver, elapsed time etc..
  * @param	pSH	pointer to semaphore handle
  * @param	pcMess string indicating type of event
@@ -69,17 +80,6 @@ static void vRtosSemaphoreReport(SemaphoreHandle_t * pSH, const char * pcMess, T
 		esp_backtrace_print(Option);
 	}
 }
-
-/**
- * @brief		check whether semaphore activity should be tracked based on various criteria
- * @param[in]	pSH - pointer to (address of) SemaphoreHandle_t to be checked
- * @return		1 if a match or specified in table or tracking enabled, else 0
- */
-static bool xRtosSemaphoreCheck(SemaphoreHandle_t * pSH) {
-	return ((pSHmatch && (pSH == pSHmatch)) || xRtosSemaphoreCheckList(pSH)) ? 1 : 0;
-}
-
-void xRtosSemaphoreSetMatch(SemaphoreHandle_t * Match) { pSHmatch = Match; }
 
 #endif
 
