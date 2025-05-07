@@ -31,8 +31,8 @@
 
 #if	(rtosSEMA_DEBUG > 0)
 
-SemaphoreHandle_t * pSHmatch = NULL;	
 SemaphoreHandle_t * MonitorList[] = { &shUARTmux, 		/* &shTaskInfo &SL_VarMux &SL_NetMux */ };
+SemaphoreHandle_t * pSHmatch = NULL;
 
 /**
  * @brief	match semaphore address provided against list entries
