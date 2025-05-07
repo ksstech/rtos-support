@@ -104,8 +104,8 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 		xRtosSemaphoreInit(pSH);
 
 	// step 3: handle the actual TAKE request
-	BaseType_t btSR, btHPTwoken = pdFALSE;
 	#if	(rtosDEBUG_SEMA > 0)		/* DEBUG enabled **********************************************/
+	BaseType_t btRV, btHPTwoken = pdFALSE;
 		// step 3a: setup steps for breaking up the wait period
 		TickType_t tStep, tElap = 0;
 		if (tWait != portMAX_DELAY) {
@@ -120,8 +120,8 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 			vRtosSemaphoreReport(pSH, "TAKE", tElap);
 
 		do {	// loop here trying to take the semaphore
-			btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tStep);
-			if (btSR == pdTRUE)								// if successful
+			btRV = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tStep);
+			if (btRV == pdTRUE)								// if successful
 				break;										// break out & return status
 		// report status
 			if (Option >= 1)								// if report level match
@@ -131,13 +131,13 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 			tElap += tStep;									// update elapsed time
 		} while (tWait > tStep);							// and try again....
 	#else							/* DEBUG disabled *********************************************/
-		btSR = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tWait);
+		btRV = halNVIC_CalledFromISR() ? xSemaphoreTakeFromISR(*pSH, &btHPTwoken) : xSemaphoreTake(*pSH, tWait);
 	#endif
 
 	// step 4: based on result, yield if required
 	if (btHPTwoken == pdTRUE)
 		portYIELD_FROM_ISR();
-	return btSR;
+	return btRV;
 }
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
@@ -157,15 +157,15 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 
 	// step 2: handle the actual GIVE request
 	BaseType_t btHPTwoken = pdFALSE;
-	BaseType_t btSR = halNVIC_CalledFromISR() ? xSemaphoreGiveFromISR(*pSH, &btHPTwoken) : xSemaphoreGive(*pSH);
 	#if	(rtosDEBUG_SEMA > 0)
 	if ((Option >= 2) && xRtosSemaphoreCheck(pSH)) {
+	BaseType_t btRV = halNVIC_CalledFromISR() ? xSemaphoreGiveFromISR(*pSH, &btHPTwoken) : xSemaphoreGive(*pSH);
 		vRtosSemaphoreReport(pSH, "GIVE", 0);
 	}
 	#endif
 	if (btHPTwoken == pdTRUE)
 		portYIELD_FROM_ISR();
-	return btSR;
+	return btRV;
 }
 
 void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
@@ -406,14 +406,15 @@ static u32_t TaskTracker = 0xFF000000;					// reserve top 8 bits, used internall
 #if (appWRAP_TASKS == 1)
 void vTaskAllocateMask(TaskHandle_t xHandle) {
 	#if	(portNUM_PROCESSORS > 1)
-		BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+		BaseType_t btRV = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 	#endif
 		// Find next empty slot, mark as allocated, set as "LSP" in new task TCB
 		u32_t Mask = 0x80000000 >> __builtin_clzl(~TaskTracker);
 		TaskTracker |= Mask;
 		vTaskSetThreadLocalStoragePointer(xHandle, appFRTLSP_EVT_MASK, (void *)Mask);
 	#if	(portNUM_PROCESSORS > 1)
-		if (btSR == pdTRUE) xRtosSemaphoreGive(&shTaskInfo);
+		if (btRV == pdTRUE)
+			xRtosSemaphoreGive(&shTaskInfo);
 	#endif
 	}
 	
@@ -478,7 +479,7 @@ TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara)
 	TASK_START(psTP->pcName);
 	IF_myASSERT(debugTRACK, __builtin_popcountl(psTP->xMask) == 1);	// single bit set in mask ?
 	#if	(portNUM_PROCESSORS > 1)
-		BaseType_t btSR = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+		BaseType_t btRV = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 	#endif
 	IF_myASSERT(debugTRACK, (TaskTracker & psTP->xMask) == 0);		// Same bit not already set ?
 	TaskTracker |= psTP->xMask;
@@ -489,7 +490,7 @@ TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara)
 	#endif
 	vTaskSetThreadLocalStoragePointer(thRV, appFRTLSP_EVT_MASK, (void *)psTP->xMask);
 	#if	(portNUM_PROCESSORS > 1)
-		if (btSR == pdTRUE)
+		if (btRV == pdTRUE)
 			xRtosSemaphoreGive(&shTaskInfo);
 	#endif
 	MESSAGE("TH=%p  TT=x%08X  TM=x%08X" strNL, thRV, TaskTracker, pvTaskGetThreadLocalStoragePointer(thRV, appFRTLSP_EVT_MASK));
