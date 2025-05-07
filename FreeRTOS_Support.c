@@ -78,7 +78,6 @@ static void vRtosSemaphoreReport(SemaphoreHandle_t * pSH, const char * pcMess, T
 	int Option = OPT_GET(ioFRlevel);
 	if (Option >= rtosSEMA_STACK && (tElap == 0))
 		esp_backtrace_print(Option);
-	}
 }
 
 #endif
