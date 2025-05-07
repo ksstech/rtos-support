@@ -66,13 +66,13 @@ void vApplicationMallocFailedHook(void);
 // ##################################### Semaphore support #########################################
 
 #if (appPRODUCTION > 0)
-	#define rtosDEBUG_SEMA			0	
+	#define rtosSEMA_DEBUG			0	
 #else
-	#define rtosDEBUG_SEMA			1
+	#define rtosSEMA_DEBUG			1
 	extern SemaphoreHandle_t * pSHmatch;
 #endif
 
-#if	(rtosDEBUG_SEMA > 0)
+#if	(rtosSEMA_DEBUG > 0)
 
 /**
  * @brief

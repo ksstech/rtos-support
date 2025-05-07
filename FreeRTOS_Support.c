@@ -77,7 +77,7 @@ void xRtosSemaphoreSetMatch(SemaphoreHandle_t * Match) { pSHmatch = Match; }
 
 SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 	*pSH = xSemaphoreCreateMutex();
-	#if	(rtosDEBUG_SEMA > 0)
+	#if	(rtosSEMA_DEBUG > 0)
 		if (OPT_GET(ioFRlevel) > 1 && xRtosSemaphoreCheck(pSH))
 			SP("shINIT %p=%p" strNL, pSH, *pSH);				// report the event
 	#endif
@@ -86,13 +86,13 @@ SemaphoreHandle_t xRtosSemaphoreInit(SemaphoreHandle_t * pSH) {
 }
 
 BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
-	#if	(rtosDEBUG_SEMA > 0)
+	#if	(rtosSEMA_DEBUG > 0)
 		int Option = OPT_GET(ioFRlevel);
 	#endif
 	// step 1: if scheduler not (yet) running, fake a result...
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) {
-		#if	(rtosDEBUG_SEMA > 0)
 		if ((Option >= 1) && xRtosSemaphoreCheck(pSH)) {
+		#if	(rtosSEMA_DEBUG > 0)
 			vRtosSemaphoreReport(pSH, "E_TAKE", 0);
 		}
 		#endif
@@ -104,8 +104,8 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 		xRtosSemaphoreInit(pSH);
 
 	// step 3: handle the actual TAKE request
-	#if	(rtosDEBUG_SEMA > 0)		/* DEBUG enabled **********************************************/
 	BaseType_t btRV, btHPTwoken = pdFALSE;
+	#if	(rtosSEMA_DEBUG > 0)		/* DEBUG enabled **********************************************/
 		// step 3a: setup steps for breaking up the wait period
 		TickType_t tStep, tElap = 0;
 		if (tWait != portMAX_DELAY) {
@@ -141,14 +141,14 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 }
 
 BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
-	#if	(rtosDEBUG_SEMA > 0)
+	#if	(rtosSEMA_DEBUG > 0)
 		int Option = OPT_GET(ioFRlevel);
 	#endif
 
 	// step 1: if scheduler not (yet) running, fake a result...
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING || *pSH == 0) {
-		#if	(rtosDEBUG_SEMA > 0)
 		if ((Option >= 1) && xRtosSemaphoreCheck(pSH)) {
+		#if	(rtosSEMA_DEBUG > 0)
 			vRtosSemaphoreReport(pSH, "E_GIVE", 0);
 		}
 		#endif
@@ -157,9 +157,9 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 
 	// step 2: handle the actual GIVE request
 	BaseType_t btHPTwoken = pdFALSE;
-	#if	(rtosDEBUG_SEMA > 0)
 	if ((Option >= 2) && xRtosSemaphoreCheck(pSH)) {
 	BaseType_t btRV = halNVIC_CalledFromISR() ? xSemaphoreGiveFromISR(*pSH, &btHPTwoken) : xSemaphoreGive(*pSH);
+	#if	(rtosSEMA_DEBUG > 0)
 		vRtosSemaphoreReport(pSH, "GIVE", 0);
 	}
 	#endif
@@ -171,7 +171,7 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH) {
 void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	if (*pSH)
 		vSemaphoreDelete(*pSH);
-	#if	(rtosDEBUG_SEMA > 0)
+	#if	(rtosSEMA_DEBUG > 0)
 		if ((OPT_GET(ioFRlevel) > 1) && xRtosSemaphoreCheck(pSH))
 			SP("shDEL %p" strNL, pSH);
 	#endif
