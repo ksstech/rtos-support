@@ -23,12 +23,6 @@ extern "C" {
 #define	MALLOC_MARK()	u32_t y,x=xPortGetFreeHeapSize();
 #define	MALLOC_CHECK()	y=xPortGetFreeHeapSize();IF_TRACK(y<x,"%u->%u (%d)" strNL,x,y,y-x);
 
-#if (appOPTIONS > 0)
-    #define OPT_GET(opt)   xOptionGet(opt)
-#else
-    #define OPT_GET(opt)   0
-#endif
-
 #define MESSAGE(mess,...)	IF_PX(debugTRACK && OPT_GET(ioUpDown), mess, ##__VA_ARGS__)
 #define TASK_START(name) 	MESSAGE("[%s] starting" strNL, name)
 #define TASK_STOP(name) 	MESSAGE("[%s] stopping" strNL, name)
