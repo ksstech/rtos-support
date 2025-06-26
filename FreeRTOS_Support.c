@@ -176,9 +176,10 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 		if ((OPT_GET(ioFRlevel) > 1) && xRtosSemaphoreCheck(pSH))
 			SP("shDEL %p" strNL, pSH);
 	#endif
-	if (*pSH)
-		vSemaphoreDelete(*pSH);
-	*pSH = 0;
+	if (*pSH) {
+		vSemaphoreDelete(*pSH);							// delete the semaphore
+		*pSH = 0;										// clear the handle storage
+	}
 }
 
 // ################################### Task status reporting #######################################
