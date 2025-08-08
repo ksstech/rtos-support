@@ -99,7 +99,7 @@ BaseType_t xRtosSemaphoreTake(SemaphoreHandle_t * pSH, TickType_t tWait) {
 	// step 1: if scheduler not (yet) running, fake a result...
 	if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING) {
 		#if	(rtosSEMA_DEBUG > 0)
-		if ((Option >= rtosSEMA_EARLY) && xRtosSemaphoreCheck(pSH))
+		if (Option >= rtosSEMA_EARLY && xRtosSemaphoreCheck(pSH))
 			vRtosSemaphoreReport(pSH, "E_TAKE", 0);
 		#endif
 		return pdFALSE;
