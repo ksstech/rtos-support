@@ -182,6 +182,16 @@ void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH) {
 	}
 }
 
+BaseType_t xRtosSemaphoreCheckCurrent(SemaphoreHandle_t * pSH) {
+	// check whether the current task holds the semaphore
+	if (pSH == NULL || *pSH == NULL)
+		return pdFALSE;									// no semaphore handle provided or not initialized
+	TaskHandle_t xHdlr = xSemaphoreGetMutexHolder(*pSH);
+	if (xHdlr == NULL)
+		return pdFALSE;									// no holder, so not held
+	return (xHdlr == xTaskGetCurrentTaskHandle());		// return whether current task is holder
+}
+
 // ################################### Task status reporting #######################################
 
 #if		(CONFIG_FREERTOS_MAX_TASK_NAME_LEN == 16)

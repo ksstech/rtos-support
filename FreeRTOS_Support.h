@@ -102,6 +102,13 @@ BaseType_t xRtosSemaphoreGive(SemaphoreHandle_t * pSH);
  */
 void vRtosSemaphoreDelete(SemaphoreHandle_t * pSH);
 
+/**
+ * @brief	check whether the current task holds the semaphore
+ * @param	pSH	pointer to SemaphoreHandle_t to be checked
+ * @return	pdTRUE if current task holds the semaphore, else pdFALSE
+ */
+BaseType_t xRtosSemaphoreCheckCurrent(SemaphoreHandle_t * pSH);
+
 // ################################### Task status manipulation ####################################
 
 #define _EGset(EG,ebX)					xEventGroupSetBits(EG,ebX)
