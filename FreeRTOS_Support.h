@@ -10,6 +10,7 @@
 #include "freertos/event_groups.h"
 
 #include "definitions.h"
+#include "options.h"
 
 #ifdef __cplusplus
 extern "C" {
