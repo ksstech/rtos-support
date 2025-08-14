@@ -271,7 +271,8 @@ int	xRtosReportTasks(report_t * psR) {
 	BaseType_t btRV = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 #endif
 
-	NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &TotalAdj);
+	u64_t TotalRem;										// Used to calculate RTOS internal use
+	NumTasks = uxTaskGetSystemState(sTS, configFR_MAX_TASKS, &TotalRem);
 	IF_myASSERT(debugPARAM, INRANGE(1, NumTasks, configFR_MAX_TASKS));
 
 #if (portNUM_PROCESSORS > 1)
@@ -279,7 +280,9 @@ int	xRtosReportTasks(report_t * psR) {
 		xRtosSemaphoreGive(&shTaskInfo);
 #endif
 
-	TotalAdj /= (100ULL / portNUM_PROCESSORS);			// will be used to calc % for each task...
+	TotalRem *= portNUM_PROCESSORS;						// Adjust overhead for all cores
+	TotalAdj = TotalRem / 100ULL;						// will be used to calc % for each task...
+	
 	if (TotalAdj == 0ULL)
 		return 0;
 	Active.U64val = 0;									// reset overall active running total
@@ -331,7 +334,7 @@ int	xRtosReportTasks(report_t * psR) {
 		TotalRem -= psTS->ulRunTimeCounter;				// Adjust overhead for this task
 		// Calculate & display individual task utilisation.
 		Units = psTS->ulRunTimeCounter / TotalAdj;
-		Fracts = ((psTS->ulRunTimeCounter * 100) / TotalAdj) % 100;
+		Fracts = (((psTS->ulRunTimeCounter * 100) / TotalAdj) + 50) % 100;
 		iRV += xReport(psR, "%2lu.%02lu %#'5llu", Units, Fracts, psTS->ulRunTimeCounter);
 	#if (debugTRACK)
 		if (debugTRACK && psR->sFM.bXtras) {
@@ -363,6 +366,11 @@ next:
 #else
 	iRV += xReport(psR, "%u Tasks %lu.%02lu%%", NumTasks, Units, Fracts);
 #endif
+	// Display remaining ticks as RTOS overhead.
+	Units = TotalRem / TotalAdj;
+	Fracts = ((TotalRem * 100) / TotalAdj) % 100;
+	iRV += xReport(psR, " RTOS %lu.%02lu%%", Units, Fracts);
+	// all done...
 	repSET(XLock,sUL);
 	iRV += xReport(psR, psR->sFM.bNL ? strNLx2 : strNL);
 	return iRV;
