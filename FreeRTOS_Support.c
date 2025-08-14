@@ -431,22 +431,83 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 
 static u32_t TaskTracker = 0xFF000000;					// reserve top 8 bits, used internally in FreeRTOS.
 
+TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara) {
+	TASK_START(psTP->pcName);
+	IF_myASSERT(debugTRACK, __builtin_popcountl(psTP->xMask) == 1);	// single bit set in mask ?
+#if	(portNUM_PROCESSORS > 1)
+	BaseType_t btRV = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+#endif
+	IF_myASSERT(debugTRACK, (TaskTracker & psTP->xMask) == 0);		// Same bit not already set ?
+	TaskTracker |= psTP->xMask;
 #if (appWRAP_TASKS == 1)
-void vTaskAllocateMask(TaskHandle_t xHandle) {
-	#if	(portNUM_PROCESSORS > 1)
-		BaseType_t btRV = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
-	#endif
-		// Find next empty slot, mark as allocated, set as "LSP" in new task TCB
-		u32_t Mask = 0x80000000 >> __builtin_clzl(~TaskTracker);
-		TaskTracker |= Mask;
-		vTaskSetThreadLocalStoragePointer(xHandle, appFRTLSP_EVT_MASK, (void *)Mask);
-	#if	(portNUM_PROCESSORS > 1)
-		if (btRV == pdTRUE)
-			xRtosSemaphoreGive(&shTaskInfo);
-	#endif
+	TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(psTP->pxTaskCode, psTP->pcName, psTP->usStackDepth, pvPara, psTP->uxPriority, psTP->pxStackBuffer, psTP->pxTaskBuffer, psTP->xCoreID);
+#else
+	TaskHandle_t thRV = xTaskCreateStaticPinnedToCore(psTP->pxTaskCode, psTP->pcName, psTP->usStackDepth, pvPara, psTP->uxPriority, psTP->pxStackBuffer, psTP->pxTaskBuffer, psTP->xCoreID);
+#endif
+	vTaskSetThreadLocalStoragePointer(thRV, appFRTLSP_EVT_MASK, (void *)psTP->xMask);
+#if	(portNUM_PROCESSORS > 1)
+	if (btRV == pdTRUE)
+		xRtosSemaphoreGive(&shTaskInfo);
+#endif
+	MESSAGE("TH=%p  TT=x%08X  TM=x%08X" strNL, thRV, TaskTracker, pvTaskGetThreadLocalStoragePointer(thRV, appFRTLSP_EVT_MASK));
+	return thRV;
+}
+
+void vTaskSetTerminateFlags(EventBits_t uxTaskMask) {
+	if (uxTaskMask == 0)
+		uxTaskMask = (EventBits_t) pvTaskGetThreadLocalStoragePointer(NULL, appFRTLSP_EVT_MASK);
+#if (halUSE_BSP == 1 && appGUI == 4)
+	// Support for GUI task de-initialization when using LVGL with BSP
+	if (uxTaskMask & taskGUI_MASK)
+		vGuiDeInit();
+#endif
+	halEventUpdateDeleteTasks(uxTaskMask, 1);			// first set the delete flag
+	halEventUpdateRunTasks(uxTaskMask, 1);				// then enable to run to start the  delete
+}
+
+#if (appWRAP_TASKS == 1)
+/**
+ * @brief		Wrapper around vTaskDelete
+ * @param[in]	xHandle Task handle of the task to be deleted.
+ * @note		Assigns unique event mask to FreeRTOS task, updating TaskTracker to mark mask as allocated, storing in task's thread-local storage.
+ * 				Includes support for multi-processor systems, conditional handling for a "main" task mask, and ensures thread safety using a semaphore when required.
+ */
+static void vTaskAllocateMask(TaskHandle_t xHandle) {
+	u32_t Mask;
+#if	(portNUM_PROCESSORS > 1)
+	BaseType_t btRV = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
+#endif
+#ifdef rtosFIX_MAIN_MASK
+	#warning "Using rtosFIX_MAIN_MASK to set 'main' task mask"
+	if (strcmp(pcTaskGetName(xHandle), "main") == 0) {
+		Mask = taskCONSOLE_MASK;						// Use mask as defined 
 	}
+	else
+#endif
+	{
+		// Find next empty slot, mark as allocated, set as "LSP" in new task TCB
+		Mask = 0x80000000 >> __builtin_clzl(~TaskTracker);
+	}
+	TaskTracker |= Mask;
+	vTaskSetThreadLocalStoragePointer(xHandle, appFRTLSP_EVT_MASK, (void *)Mask);
+#if	(portNUM_PROCESSORS > 1)
+	if (btRV == pdTRUE)
+		xRtosSemaphoreGive(&shTaskInfo);
+#endif
+}
 	
-BaseType_t __real_xTaskCreate(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *);
+/**
+ * @brief		Wrapper around xTaskCreate
+ * @param[in]	pxTaskCode Function pointer to the task to be created.
+ * @param[in]	pcName Name of the task, used for debugging and identification.
+ * @param[in]	usStackDepth Stack depth for the task, in words.
+ * @param[in]	pvParameters Pointer to parameters passed to the task.
+ * @param[in]	uxPriority Priority of the task, with 0 being the lowest priority.
+ * @param[in]	pxCreatedTask Pointer to a TaskHandle_t where the created task handle will be stored.
+ * @return		pdPASS or pdFAIL
+ * @note		Create FreeRTOS task and allocates a task mask
+ * 				Optionally logs stack pointer information, asserting the task handle is not NULL.
+ */
 BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask) {
 	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
 	BaseType_t btRV = __real_xTaskCreate(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxCreatedTask);
@@ -455,21 +516,47 @@ BaseType_t __wrap_xTaskCreate(TaskFunction_t pxTaskCode, const char * const pcNa
 	return btRV;
 }
 
-BaseType_t __real_xTaskCreatePinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *, const BaseType_t);
-BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
-	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
+/**
+ * @brief		Wrapper around xTaskCreatePinnedToCore
+ * @param[in]	pxTaskCode Function pointer to the task to be created.
+ * @param[in]	pcName Name of the task, used for debugging and identification.
+ * @param[in]	usStackDepth Stack depth for the task, in words.
+ * @param[in]	pvParameters Pointer to parameters passed to the task.
+ * @param[in]	uxPriority Priority of the task, with 0 being the lowest priority.
+ * @param[in]	pxCreatedTask Pointer to a TaskHandle_t where the created task handle will be stored.
+ * @param[in]	xCoreID Core ID to pin the task to, with tskNO_AFFINITY meaning no specific core.
+ * @return		pdPASS or pdFAIL
+ * @note		Create FreeRTOS task pinned to a specific core and allocates a task mask
+ * 				Optionally logs stack pointer information, asserting the task handle is not NULL.
+ */
+BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, u32_t usStackDepth, void * pvParameters, UBaseType_t uxPriority, TaskHandle_t * pxCreatedTask, const BaseType_t xCoreID) {
 	TaskHandle_t TempHandle;
-	u32_t StackSize = usStackDepth;
+	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
+#ifdef rtosFIX_WIFI_STACK
+	#warning "Using rtosFIX_WIFI_STACK to adjust stack size for 'wifi' task"
 	if (strcmp(pcName, "wifi") == 0)					/* if task being created is "wifi" */
-		StackSize += StackSize >> 2;					/* add 25% to requested stack */
-	BaseType_t btRV = __real_xTaskCreatePinnedToCore(pxTaskCode, pcName, StackSize, pvParameters, uxPriority, &TempHandle, xCoreID);
+		usStackDepth += usStackDepth >> 2;				/* add 25% to requested stack */
+#endif
+	BaseType_t btRV = __real_xTaskCreatePinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, &TempHandle, xCoreID);
 	vTaskAllocateMask(TempHandle);
 	if (pxCreatedTask)
 		*pxCreatedTask = TempHandle;
 	return btRV;
 }
 
-TaskHandle_t __real_xTaskCreateStatic(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const);
+/**
+ * @brief		Wrapper around xTaskCreateStatic
+ * @param[in]	pxTaskCode Function pointer to the task to be created.
+ * @param[in]	pcName Name of the task, used for debugging and identification.
+ * @param[in]	usStackDepth Stack depth for the task, in words.
+ * @param[in]	pvParameters Pointer to parameters passed to the task.
+ * @param[in]	uxPriority Priority of the task, with 0 being the lowest priority.
+ * @param[in]	pxStackBuffer Pointer to the stack buffer for the task.
+ * @param[in]	pxTaskBuffer Pointer to the static task structure for the task.
+ * @return		TaskHandle_t Handle of the created task, or NULL if creation failed.
+ * @note		Create statically allocated FreeRTOS task and allocates a task mask
+ * 				Optionally logs stack pointer information, asserting the task handle is not NULL.
+ */
 TaskHandle_t __wrap_xTaskCreateStatic(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer) {
 	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
 	TaskHandle_t thRV = __real_xTaskCreateStatic(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer);
@@ -478,7 +565,20 @@ TaskHandle_t __wrap_xTaskCreateStatic(TaskFunction_t pxTaskCode, const char * co
 	return thRV;
 }
 
-TaskHandle_t __real_xTaskCreateStaticPinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const, const BaseType_t);
+/**
+ * @brief		Wrapper around xTaskCreateStaticPinnedToCore
+ * @param[in]	pxTaskCode Function pointer to the task to be created.
+ * @param[in]	pcName Name of the task, used for debugging and identification.
+ * @param[in]	usStackDepth Stack depth for the task, in words.
+ * @param[in]	pvParameters Pointer to parameters passed to the task.
+ * @param[in]	uxPriority Priority of the task, with 0 being the lowest priority.
+ * @param[in]	pxStackBuffer Pointer to the stack buffer for the task.
+ * @param[in]	pxTaskBuffer Pointer to the static task structure for the task.
+ * @param[in]	xCoreID Core ID to pin the task to, with tskNO_AFFINITY meaning no specific core.
+ * @return		TaskHandle_t Handle of the created task, or NULL if creation failed.
+ * @note		Create statically allocated FreeRTOS task pinned to a specific core and allocates a task mask
+ * 				Optionally logs stack pointer information, asserting the task handle is not NULL.
+ */
 TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, const char * const pcName, const u32_t usStackDepth, void * const pvParameters, UBaseType_t uxPriority, StackType_t * const pxStackBuffer, StaticTask_t * const pxTaskBuffer, const BaseType_t xCoreID) {
 	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
 	TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(pxTaskCode, pcName, usStackDepth, pvParameters, uxPriority, pxStackBuffer, pxTaskBuffer, xCoreID);
@@ -487,7 +587,12 @@ TaskHandle_t __wrap_xTaskCreateStaticPinnedToCore(TaskFunction_t pxTaskCode, con
 	return thRV;
 }
 
-void __real_vTaskDelete(TaskHandle_t xHandle);
+/**
+ * @brief		Wrapper around FreeRTOS vTaskDelete, performs additional operations before deleting a task
+ * @param[in]	xHandle Handle of task to be deleted.
+ * @note		Retrieves task's name and event bits, clears associated task tracking and event flags.
+ * 				Logs the operation, and then calls the real vTaskDelete to delete the task.
+ */
 void __wrap_vTaskDelete(TaskHandle_t xHandle) {
 	char caName[CONFIG_FREERTOS_MAX_TASK_NAME_LEN+1];
 	strncpy(caName, pcTaskGetName(xHandle), CONFIG_FREERTOS_MAX_TASK_NAME_LEN);
@@ -502,39 +607,6 @@ void __wrap_vTaskDelete(TaskHandle_t xHandle) {
 	__real_vTaskDelete(xHandle);
 }
 #endif
-
-TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara) {
-	TASK_START(psTP->pcName);
-	IF_myASSERT(debugTRACK, __builtin_popcountl(psTP->xMask) == 1);	// single bit set in mask ?
-	#if	(portNUM_PROCESSORS > 1)
-		BaseType_t btRV = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
-	#endif
-	IF_myASSERT(debugTRACK, (TaskTracker & psTP->xMask) == 0);		// Same bit not already set ?
-	TaskTracker |= psTP->xMask;
-	#if (appWRAP_TASKS == 1)
-		TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(psTP->pxTaskCode, psTP->pcName, psTP->usStackDepth, pvPara, psTP->uxPriority, psTP->pxStackBuffer, psTP->pxTaskBuffer, psTP->xCoreID);
-	#else
-		TaskHandle_t thRV = xTaskCreateStaticPinnedToCore(psTP->pxTaskCode, psTP->pcName, psTP->usStackDepth, pvPara, psTP->uxPriority, psTP->pxStackBuffer, psTP->pxTaskBuffer, psTP->xCoreID);
-	#endif
-	vTaskSetThreadLocalStoragePointer(thRV, appFRTLSP_EVT_MASK, (void *)psTP->xMask);
-	#if	(portNUM_PROCESSORS > 1)
-		if (btRV == pdTRUE)
-			xRtosSemaphoreGive(&shTaskInfo);
-	#endif
-	MESSAGE("TH=%p  TT=x%08X  TM=x%08X" strNL, thRV, TaskTracker, pvTaskGetThreadLocalStoragePointer(thRV, appFRTLSP_EVT_MASK));
-	return thRV;
-}
-
-void vTaskSetTerminateFlags(EventBits_t uxTaskMask) {
-	if (uxTaskMask == 0)
-		uxTaskMask = (EventBits_t) pvTaskGetThreadLocalStoragePointer(NULL, appFRTLSP_EVT_MASK);
-	#if (halUSE_BSP == 1 && appGUI == 4)
-	if (uxTaskMask & taskGUI_MASK)
-		vGuiDeInit();
-	#endif
-	halEventUpdateDeleteTasks(uxTaskMask, 1);			// first set the delete flag
-	halEventUpdateRunTasks(uxTaskMask, 1);				// then enable to run to start the  delete
-}
 
 // ####################################### Debug support ###########################################
 

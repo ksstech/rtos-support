@@ -130,18 +130,32 @@ int xRtosReportTimer(struct report_t * psRprt, TimerHandle_t thTimer);
 // ################################## Task creation/deletion #######################################
 
 /**
- * @brief
- * @param[in]
- * @param[in]
- * @return
+ * @brief		Creates a FreeRTOS task with additional tracking and validation based on a bitmask
+ * @param[in]	psTP pointer to task parameter structure
+ * @param[in]	pvPara pointer to task parameter
+ * @return		TaskHandle_t of the created task
+ * @note		Ensures bitmask has a single bit set, verifies no duplicate bit is already tracked.
+ * 				Ppdates task tracker and associates bitmask with task using thread-local storage.
+ * 				Supporting multi-core systems and optional task wrapping.
  */
 TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara);
 
 /**
  * @brief	Set/clear all flags to force task[s] to initiate an organised shutdown
  * @param[in]	uxTaskMask indicating the task[s] to terminate
+ * @note		Sets termination flags for tasks specified by uxTaskMask.
+ * 				Optionally handles GUI task de-initialisation when using LVGL with BSP.
+ * 				Updates task states to mark them for deletion and enable their termination process.
  */
 void vTaskSetTerminateFlags(EventBits_t uxTaskMask);
+
+#if (appWRAP_TASKS == 1)
+BaseType_t __real_xTaskCreate(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *);
+BaseType_t __real_xTaskCreatePinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, TaskHandle_t *, const BaseType_t);
+TaskHandle_t __real_xTaskCreateStatic(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const);
+TaskHandle_t __real_xTaskCreateStaticPinnedToCore(TaskFunction_t, const char * const, const u32_t, void *, UBaseType_t, StackType_t * const, StaticTask_t * const, const BaseType_t);
+void __real_vTaskDelete(TaskHandle_t xHandle);
+#endif
 
 // ####################################### Debug support ###########################################
 
