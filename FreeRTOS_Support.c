@@ -241,16 +241,16 @@ static TaskStatus_t	sTS[configFR_MAX_TASKS] = { 0 };
 
 static TaskStatus_t * psRtosStatsFindWithNumber(UBaseType_t xTaskNumber) {
 	IF_myASSERT(debugPARAM, xTaskNumber != 0);
-	for (int i = 0; i <= NumTasks; ++i) {
-		if (sTS[i].xTaskNumber == xTaskNumber)
-			return &sTS[i];
+	for (int t = 0; t <= NumTasks; ++t) {
+		if (sTS[t].xTaskNumber == xTaskNumber)
+			return &sTS[t];
 	}
 	return NULL;
 }
 
 bool bRtosTaskIsIdleTask(TaskHandle_t xHandle) {
-	for (int i = 0; i < portNUM_PROCESSORS; ++i) {
-		 if (xHandle == IdleHandle[i])
+	for (int c = 0; c < portNUM_PROCESSORS; ++c) {
+		 if (xHandle == IdleHandle[c])
 		 	return 1;
 	}
 	return 0;
@@ -261,8 +261,8 @@ int	xRtosReportTasks(report_t * psR) {
 	if (psR == NULL || psR->sFM.u32Val == 0)
 		return erINV_PARA;
 	if (NumTasks == 0) {								// first time once only
-		for (int i = 0; i < portNUM_PROCESSORS; ++i)
-			IdleHandle[i] = xTaskGetIdleTaskHandleForCore(i);
+		for (int c = 0; c < portNUM_PROCESSORS; ++c)
+			IdleHandle[c] = xTaskGetIdleTaskHandleForCore(c);
 	}
 	memset(sTS, 0, sizeof(sTS));
 	u64_t TotalAdj;
@@ -354,10 +354,10 @@ next:
 	Fracts = ((Active.U64val * 100) / TotalAdj) % 100;
 #if	(portNUM_PROCESSORS > 1)
 	iRV += xReport(psR, "%u Tasks %lu.%02lu%% [", NumTasks, Units, Fracts);
-	for(int i = 0; i <= portNUM_PROCESSORS; ++i) {
-		Units = Cores[i].U64val / TotalAdj;
-		Fracts = ((Cores[i].U64val * 100) / TotalAdj) % 100;
-		iRV += xReport(psR, "%c=%lu.%02lu%c", caMCU[i], Units, Fracts, i < 2 ? ' ' : ']');
+	for(int c = 0; c <= portNUM_PROCESSORS; ++c) {
+		Units = Cores[c].U64val / TotalAdj;
+		Fracts = ((Cores[c].U64val * 100) / TotalAdj) % 100;
+		iRV += xReport(psR, "%c=%lu.%02lu%c", caMCU[c], Units, Fracts, c < 2 ? ' ' : ']');
 	}
 #else
 	iRV += xReport(psR, "%u Tasks %lu.%02lu%%", NumTasks, Units, Fracts);
@@ -576,11 +576,11 @@ esp_err_t IRAM_ATTR esp_backtrace_print_all_tasks(int depth, bool panic) {
 	u32_t len = got < task_count ? got : task_count;
 	print_str("printing all tasks:\n\n", panic);
 	esp_err_t err = ESP_OK;
-	for (u32_t i = 0; i < len; i++) {
-		TaskHandle_t handle = (TaskHandle_t) snapshots[i].pxTCB;
+	for (u32_t t = 0; t < len; t++) {
+		TaskHandle_t handle = (TaskHandle_t) snapshots[t].pxTCB;
 		char* name = pcTaskGetName(handle);
 		print_str(name ? name : "No Name", panic);
-		XtExcFrame* xtf = (XtExcFrame*)snapshots[i].pxTopOfStack;
+		XtExcFrame* xtf = (XtExcFrame*)snapshots[t].pxTopOfStack;
 		esp_backtrace_frame_t frame = { .pc = xtf->pc, .sp = xtf->a1, .next_pc = xtf->a0, .exc_frame = xtf };
 		esp_err_t nerr = esp_backtrace_print_from_frame(depth, &frame, panic);
 		if (nerr != ESP_OK) err = nerr;
