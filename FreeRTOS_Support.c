@@ -324,27 +324,28 @@ int	xRtosReportTasks(report_t * psR) {
 		iRV += xReport(psR, configFREERTOS_TASKLIST_FMT_DETAIL, psTS->pcTaskName);
 		if (psR->sFM.bState)		iRV += xReport(psR, "%c ", TaskState[psTS->eCurrentState]);
 		if (psR->sFM.bStack)		iRV += xReport(psR, "%4u ", psTS->usStackHighWaterMark);
-		#if (portNUM_PROCESSORS > 1)
-			int c = (psTS->xCoreID == tskNO_AFFINITY) ? 2 : psTS->xCoreID;
-			if (psR->sFM.bCore)		iRV += xReport(psR, "%c ", caMCU[c]);
-		#endif
+	#if (portNUM_PROCESSORS > 1)
+		int c = (psTS->xCoreID == tskNO_AFFINITY) ? 2 : psTS->xCoreID;
+		if (psR->sFM.bCore)		iRV += xReport(psR, "%c ", caMCU[c]);
+	#endif
+		TotalRem -= psTS->ulRunTimeCounter;				// Adjust overhead for this task
 		// Calculate & display individual task utilisation.
 		Units = psTS->ulRunTimeCounter / TotalAdj;
 		Fracts = ((psTS->ulRunTimeCounter * 100) / TotalAdj) % 100;
 		iRV += xReport(psR, "%2lu.%02lu %#'5llu", Units, Fracts, psTS->ulRunTimeCounter);
-		#if (debugTRACK)
+	#if (debugTRACK)
 		if (debugTRACK && psR->sFM.bXtras) {
 			iRV += xReport(psR, " %p %p", pxTaskGetStackStart(psTS->xHandle), psTS->xHandle);
 			iRV += xReport(psR, " %p", pvTaskGetThreadLocalStoragePointer(psTS->xHandle, 1));
 		}
-		#endif
+	#endif
 		if (psR->sFM.bNL)			iRV += xReport(psR, strNL);
 		// For idle task(s) we do not want to add RunTime % to the task or Core RunTime
 		if (bRtosTaskIsIdleTask(psTS->xHandle) == 0) {	// NOT an IDLE task
 			Active.U64val += psTS->ulRunTimeCounter;	// Update total active time
-			#if (portNUM_PROCESSORS > 1)
-				Cores[c].U64val += psTS->ulRunTimeCounter;	// Update core active time
-			#endif
+		#if (portNUM_PROCESSORS > 1)
+			Cores[c].U64val += psTS->ulRunTimeCounter;	// Update core active time
+		#endif
 		}
 next:
 		TaskMask <<= 1;
@@ -367,6 +368,8 @@ next:
 	return iRV;
 }
 
+// ################################### RTOS memory reporting #######################################
+
 static u32_t g_HeapBegin;
 
 void vRtosHeapSetup(void) { g_HeapBegin = xPortGetFreeHeapSize(); }
@@ -375,6 +378,8 @@ int xRtosReportMemory(report_t * psR) {
 	return xReport(psR, "%CFreeRTOS:%C %#'u -> %#'u <- %#'u%s", xpfCOL(colourFG_CYAN,0), xpfCOL(attrRESET,0),
 		xPortGetMinimumEverFreeHeapSize(), xPortGetFreeHeapSize(), g_HeapBegin, fmTST(aNL) ? strNLx2 : strNL);
 }
+
+// #################################### RTOS timer reporting #######################################
 
 /**
  * @brief	report config & status of timer specified
