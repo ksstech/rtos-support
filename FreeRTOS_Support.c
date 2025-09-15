@@ -13,7 +13,7 @@
 
 #include "esp_debug_helpers.h"
 
-#if (halUSE_BSP == 1 && appGUI == 4)
+#if (halUSE_BSP == 1 && cmakeGUI == 4)
     #include "gui_main.hpp"
 #endif
 #include <string.h>
@@ -439,7 +439,7 @@ TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara)
 #endif
 	IF_myASSERT(debugTRACK, (TaskTracker & psTP->xMask) == 0);		// Same bit not already set ?
 	TaskTracker |= psTP->xMask;
-#if (appWRAP_TASKS == 1)
+#if (cmakeWRAP_TASKS == 1)
 	TaskHandle_t thRV = __real_xTaskCreateStaticPinnedToCore(psTP->pxTaskCode, psTP->pcName, psTP->usStackDepth, pvPara, psTP->uxPriority, psTP->pxStackBuffer, psTP->pxTaskBuffer, psTP->xCoreID);
 #else
 	TaskHandle_t thRV = xTaskCreateStaticPinnedToCore(psTP->pxTaskCode, psTP->pcName, psTP->usStackDepth, pvPara, psTP->uxPriority, psTP->pxStackBuffer, psTP->pxTaskBuffer, psTP->xCoreID);
@@ -456,7 +456,7 @@ TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara)
 void vTaskSetTerminateFlags(EventBits_t uxTaskMask) {
 	if (uxTaskMask == 0)
 		uxTaskMask = (EventBits_t) pvTaskGetThreadLocalStoragePointer(NULL, appFRTLSP_EVT_MASK);
-#if (halUSE_BSP == 1 && appGUI == 4)
+#if (halUSE_BSP == 1 && cmakeGUI == 4)
 	// Support for GUI task de-initialization when using LVGL with BSP
 	if (uxTaskMask & taskGUI_MASK)
 		vGuiDeInit();
@@ -465,7 +465,7 @@ void vTaskSetTerminateFlags(EventBits_t uxTaskMask) {
 	halEventUpdateRunTasks(uxTaskMask, 1);				// then enable to run to start the  delete
 }
 
-#if (appWRAP_TASKS == 1)
+#if (cmakeWRAP_TASKS == 1)
 /**
  * @brief		Wrapper around vTaskDelete
  * @param[in]	xHandle Task handle of the task to be deleted.
