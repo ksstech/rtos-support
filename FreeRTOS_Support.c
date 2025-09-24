@@ -478,7 +478,7 @@ static void vTaskAllocateMask(TaskHandle_t xHandle) {
 	BaseType_t btRV = xRtosSemaphoreTake(&shTaskInfo, portMAX_DELAY);
 #endif
 #ifdef rtosFIX_MAIN_MASK
-	#warning "Using rtosFIX_MAIN_MASK to set 'main' task mask"
+//	#warning "Using rtosFIX_MAIN_MASK to set 'main' task mask"
 	if (strcmp(pcTaskGetName(xHandle), "main") == 0) {
 		Mask = taskCONSOLE_MASK;						// Use mask as defined 
 	}
