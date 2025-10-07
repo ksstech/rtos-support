@@ -533,7 +533,6 @@ BaseType_t __wrap_xTaskCreatePinnedToCore(TaskFunction_t pxTaskCode, const char 
 	TaskHandle_t TempHandle;
 	IF_RP(debugTASKS, "[SP=%p  %s]" strNL, esp_cpu_get_sp(), pcName);
 #ifdef rtosFIX_WIFI_STACK
-	#warning "Using rtosFIX_WIFI_STACK to adjust stack size for 'wifi' task"
 	if (strcmp(pcName, "wifi") == 0)					/* if task being created is "wifi" */
 		usStackDepth += usStackDepth >> 2;				/* add 25% to requested stack */
 #endif
