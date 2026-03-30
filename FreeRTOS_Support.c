@@ -431,6 +431,7 @@ int xRtosReportTimer(report_t * psR, TimerHandle_t thTmr) {
 
 static u32_t TaskTracker = 0xFF000000;					// reserve top 8 bits, used internally in FreeRTOS.
 
+#ifdef appFRTLSP_EVT_MASK && (appFRTLSP_EVT_MASK > 0)
 TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara) {
 	TASK_START(psTP->pcName);
 	IF_myASSERT(debugTRACK, __builtin_popcountl(psTP->xMask) == 1);	// single bit set in mask ?
@@ -452,7 +453,9 @@ TaskHandle_t xTaskCreateWithMask(const task_param_t * psTP, void * const pvPara)
 	MESSAGE("TH=%p  TT=x%08X  TM=x%08X" strNL, thRV, TaskTracker, pvTaskGetThreadLocalStoragePointer(thRV, appFRTLSP_EVT_MASK));
 	return thRV;
 }
+#endif
 
+#ifdef appFRTLSP_EVT_MASK && (appFRTLSP_EVT_MASK > 0)
 void vTaskSetTerminateFlags(EventBits_t uxTaskMask) {
 	if (uxTaskMask == 0)
 		uxTaskMask = (EventBits_t) pvTaskGetThreadLocalStoragePointer(NULL, appFRTLSP_EVT_MASK);
@@ -464,6 +467,7 @@ void vTaskSetTerminateFlags(EventBits_t uxTaskMask) {
 	halEventUpdateDeleteTasks(uxTaskMask, 1);			// first set the delete flag
 	halEventUpdateRunTasks(uxTaskMask, 1);				// then enable to run to start the  delete
 }
+#endif
 
 #if (cmakeWRAP_TASKS == 1)
 /**
